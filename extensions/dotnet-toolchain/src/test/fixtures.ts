@@ -102,6 +102,8 @@ export function createDotnetDetectionAdapter(options: IDotnetDetectionFixtureOpt
 export interface IInMemoryFileSystem extends IFileSystemAdapter {
 	addFile(filePath: string): void;
 	addLink(linkPath: string, target: string): void;
+	/** Paths passed to `realpath`, in call order, for workspace-safety assertions. */
+	readonly realpaths: readonly string[];
 }
 
 function normalizePath(filePath: string): string {
@@ -114,12 +116,15 @@ function normalizePath(filePath: string): string {
 export function createInMemoryFileSystem(): IInMemoryFileSystem {
 	const files = new Set<string>();
 	const links = new Map<string, string>();
+	const realpaths: string[] = [];
 	return {
+		realpaths,
 		addFile: filePath => { files.add(normalizePath(filePath)); },
 		addLink: (linkPath, target) => { links.set(normalizePath(linkPath), target); },
 		exists: async filePath => files.has(normalizePath(filePath)) || links.has(normalizePath(filePath)),
 		realpath: async filePath => {
 			const normalized = normalizePath(filePath);
+			realpaths.push(normalized);
 			return links.get(normalized) ?? (files.has(normalized) ? normalized : undefined);
 		},
 	};
