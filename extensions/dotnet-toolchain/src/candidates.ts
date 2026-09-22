@@ -87,6 +87,11 @@ function executableIn(root: string, platform: NodeJS.Platform): string {
 	return platformPath(platform).join(root, executableName(platform));
 }
 
+/** Home-scoped managed root shared by detection and installation: `<home>/.walker/dotnet`. */
+export function dotnetManagedRoot(home: string, platform: NodeJS.Platform): string {
+	return platformPath(platform).join(home, '.walker', 'dotnet');
+}
+
 /** Expands every local process PATH entry into an ordered candidate or a recorded exclusion. */
 function pathCandidates(environment: ICandidateEnvironment): readonly PlannedCandidate[] {
 	const separator = environment.platform === 'win32' ? ';' : ':';
@@ -131,7 +136,7 @@ function systemRoots(environment: ICandidateEnvironment): readonly string[] {
 function plannedCandidates(environment: ICandidateEnvironment): readonly PlannedCandidate[] {
 	const platform = environment.platform;
 	return [
-		{ executable: platformPath(platform).join(environment.home, '.walker', 'dotnet', executableName(platform)), origin: 'managed' },
+		{ executable: executableIn(dotnetManagedRoot(environment.home, platform), platform), origin: 'managed' },
 		...pathCandidates(environment),
 		...userRoots(environment).map(root => ({ executable: executableIn(root, platform), origin: 'user' as const })),
 		...systemRoots(environment).map(root => ({ executable: executableIn(root, platform), origin: 'system' as const })),
