@@ -421,6 +421,18 @@ suite('OnboardingVariationA — first step', () => {
 		const shell = toolchainShellOf(container);
 		assert.ok(shell.textContent?.includes('Set up .NET toolchain'), 'the first step is named Set up .NET toolchain');
 		assert.ok(container.textContent?.includes(`Welcome to ${product.nameLong}`), 'the Walker welcome branding is preserved');
+		assert.ok(shell.classList.contains('onboarding-a-signin'), 'the toolchain shell retains its shared layout class');
+		const brandIcon = shell.querySelector<HTMLElement>('.onboarding-a-signin-brand .onboarding-a-signin-brand-icon');
+		assert.ok(brandIcon, 'the Walker hero brand remains present');
+		assert.ok(shell.querySelector('.onboarding-a-signin-content .onboarding-a-signin-content-main'), 'the toolchain content keeps its shared layout containers');
+		const toolchainActions = shell.querySelectorAll<HTMLButtonElement>('.onboarding-a-toolchain-actions button');
+		assert.strictEqual(toolchainActions.length, 3, 'setup, recheck, and diagnostics controls remain available');
+		for (const action of toolchainActions) {
+			const style = window.getComputedStyle(action);
+			assert.notStrictEqual(style.display, 'none', 'toolchain actions are not hidden');
+			assert.notStrictEqual(style.visibility, 'hidden', 'toolchain actions remain visible');
+			assert.ok(action.tabIndex >= 0, 'toolchain actions remain keyboard reachable');
+		}
 		assert.strictEqual(container.querySelector('.onboarding-a-provider-mark'), null, 'no provider marks');
 		assert.strictEqual(container.querySelector('.onboarding-a-provider-mark.github-enterprise'), null, 'no GHE provider mark');
 		assert.strictEqual(container.querySelector('.onboarding-a-signin-ghe-input'), null, 'no GHE instance input');
