@@ -20,15 +20,23 @@ import {
 import { dotnetInstallScriptPin } from '../scriptSource';
 import {
 	DOTNET_TRANSACTION_BACKUP_DIRECTORY_NAME,
+	DOTNET_TRANSACTION_FAILED_PUBLICATION_DIRECTORY_NAME,
 	DOTNET_TRANSACTION_JOURNAL_FILE,
 	DOTNET_TRANSACTION_SCHEMA_VERSION,
 	DOTNET_TRANSACTION_STAGE_DIRECTORY_NAME,
+	dotnetManagedExecutablePath,
 	dotnetTransactionPaths,
 	prepareDotnetInstallStage,
+	publishDotnetInstallStage,
+	type DotnetPublicationRestoration,
+	type DotnetPublishedSdkVerifier,
 	type DotnetStagePreparationFailureCode,
 	type DotnetStagePreparationResult,
+	type DotnetStagePublicationResult,
+	type IDotnetPublishedSdkVerificationContext,
 	type IDotnetStagePreparationLock,
 	type IDotnetStagedInstall,
+	type IDotnetTransactionJournal,
 } from '../transaction';
 import { withTempDirectory } from './fixtures';
 
@@ -573,6 +581,679 @@ suite('dotnet install stage preparation', () => {
 			}
 			assert.strictEqual(await pathExists(operationDirectory), true);
 			assert.strictEqual(await snapshotTree(managedRoot), before);
+			await lock.release();
+		});
+	});
+});
+
+const PUBLISHED_SDK_FILE = path.join('sdk', '11.0.100', 'MSBuild.dll');
+const PUBLISHED_SDK_BYTES = 'NEW-SDK-BYTES';
+
+/** One prepared publication with an optional pre-existing managed SDK. */
+interface IPreparedPublication {
+	readonly lock: IDotnetInstallLock;
+	readonly prepared: IDotnetStagedInstall;
+	readonly managedRoot: string | undefined;
+	readonly before: string | undefined;
+}
+
+/** Prepares a real owned stage, optionally with a pre-existing managed SDK, and stages a new SDK file. */
+async function preparePublication(home: string, withPriorSdk = true): Promise<IPreparedPublication> {
+	const managedRoot = withPriorSdk ? await seedManagedSdk(home) : undefined;
+	const before = managedRoot === undefined ? undefined : await snapshotTree(managedRoot);
+	const lock = await acquireLock(home);
+	const prepared = expectPrepared(await prepareDotnetInstallStage({ home, lock }));
+	await writeManagedFile(prepared.stageDirectory, PUBLISHED_SDK_FILE, PUBLISHED_SDK_BYTES);
+	return { lock, prepared, managedRoot, before };
+}
+
+/** Verifier that succeeds with the exact published executable it is handed. */
+function verifiedSdk(version = '11.0.100'): DotnetPublishedSdkVerifier {
+	return async (context: IDotnetPublishedSdkVerificationContext) => ({ kind: 'verified', executable: context.executable, sdkVersion: version });
+}
+
+/** Verifier that always fails as if the published executable could not run. */
+function failingSdk(code = 'sdk-not-executable', diagnostic = 'the published executable exited nonzero'): DotnetPublishedSdkVerifier {
+	return async () => ({ kind: 'failed', code, diagnostic });
+}
+
+/** Narrows a publication result to `published`. */
+function expectPublished(result: DotnetStagePublicationResult): Extract<DotnetStagePublicationResult, { kind: 'published' }> {
+	if (result.kind !== 'published') {
+		throw new Error(`expected a published install, received ${result.kind}`);
+	}
+	return result;
+}
+
+/** Narrows a publication result to one expected failure shape. */
+function expectPublicationFailed(result: DotnetStagePublicationResult, code: DotnetStagePreparationFailureCode, stage: 'publish' | 'verify', restoration: DotnetPublicationRestoration): Extract<DotnetStagePublicationResult, { kind: 'failed' }> {
+	if (result.kind !== 'failed') {
+		throw new Error(`expected publication failure ${code}, received ${result.kind}`);
+	}
+	assert.strictEqual(result.failure.code, code);
+	assert.strictEqual(result.failure.stage, stage);
+	assert.strictEqual(result.restoration, restoration);
+	assert.strictEqual(result.failure.diagnostic.length > 0, true);
+	return result;
+}
+
+/** The owned path a failed publication tree is moved aside to. */
+function failedPublicationPath(home: string): string {
+	return path.join(dotnetTransactionPaths(home, OPERATION_DIRECTORY).operationDirectory, DOTNET_TRANSACTION_FAILED_PUBLICATION_DIRECTORY_NAME);
+}
+
+/** Reads the persisted transaction journal back from disk. */
+async function readJournal(prepared: IDotnetStagedInstall): Promise<IDotnetTransactionJournal> {
+	return JSON.parse(await fs.readFile(prepared.journalPath, 'utf8')) as IDotnetTransactionJournal;
+}
+
+/** Injects one rename fault selected by source or destination path. */
+function renameFault(predicate: (source: string, destination: string) => boolean, error: NodeJS.ErrnoException): (source: string, destination: string) => Promise<void> {
+	return async (source, destination) => {
+		if (predicate(source, destination)) {
+			throw error;
+		}
+		await fs.rename(source, destination);
+	};
+}
+
+suite('dotnet install stage publication', () => {
+	test('publishes a verified stage over a pre-existing managed SDK and retains the old SDK as backup', async () => {
+		await withTempDirectory('dotnet-txn-publish-', async home => {
+			const { lock, prepared, before } = await preparePublication(home);
+			let context: IDotnetPublishedSdkVerificationContext | undefined;
+			const result = expectPublished(await publishDotnetInstallStage({
+				home,
+				lock,
+				prepared,
+				verifyPublished: async verificationContext => {
+					context = verificationContext;
+					return { kind: 'verified', executable: verificationContext.executable, sdkVersion: '11.0.100' };
+				},
+			}));
+
+			const expectedManaged = dotnetManagedRoot(home, process.platform);
+			const expectedExecutable = dotnetManagedExecutablePath(home, process.platform);
+			assert.strictEqual(result.published.managedDirectory, expectedManaged);
+			assert.strictEqual(result.published.executable, expectedExecutable);
+			assert.strictEqual(result.published.sdkVersion, '11.0.100');
+			assert.strictEqual(result.published.backupRetained, true);
+			assert.deepStrictEqual(context, { home, managedDirectory: expectedManaged, executable: expectedExecutable });
+
+			const published = await snapshotTree(expectedManaged);
+			for (const line of before!.split('\n')) {
+				assert.strictEqual(published.includes(line), true, `missing pre-existing entry ${line}`);
+			}
+			assert.strictEqual(published.includes(PUBLISHED_SDK_BYTES), true);
+			assert.strictEqual(await fs.readFile(path.join(expectedManaged, 'dotnet'), 'utf8'), '#!/bin/sh\nexit 0\n');
+			assert.strictEqual(await snapshotTree(result.published.backupDirectory), before);
+			assert.strictEqual(await pathExists(prepared.stageDirectory), false);
+
+			const journal = await readJournal(prepared);
+			assert.strictEqual(journal.step, 'committed');
+			assert.strictEqual((await fs.readFile(prepared.journalPath, 'utf8')).includes(home), false);
+			const busy = await inspectDotnetInstallLock({ home });
+			assert.strictEqual(busy.kind, 'busy');
+			if (busy.kind === 'busy') {
+				assert.strictEqual(busy.owner.phase, 'verifying');
+			}
+			await lock.release();
+		});
+	});
+
+	test('publishes a first install without a backup when no managed SDK exists', async () => {
+		await withTempDirectory('dotnet-txn-first-', async home => {
+			const { lock, prepared, managedRoot } = await preparePublication(home, false);
+			assert.strictEqual(managedRoot, undefined);
+			const result = expectPublished(await publishDotnetInstallStage({ home, lock, prepared, verifyPublished: verifiedSdk() }));
+
+			assert.strictEqual(result.published.managedDirectory, dotnetManagedRoot(home, process.platform));
+			assert.strictEqual(result.published.backupRetained, false);
+			assert.strictEqual(await fs.readFile(path.join(result.published.managedDirectory, PUBLISHED_SDK_FILE), 'utf8'), PUBLISHED_SDK_BYTES);
+			assert.deepStrictEqual(await fs.readdir(result.published.backupDirectory), []);
+			assert.strictEqual(await pathExists(prepared.stageDirectory), false);
+			assert.strictEqual((await readJournal(prepared)).step, 'committed');
+			await lock.release();
+		});
+	});
+
+	test('executes the published managed SDK and restores the original SDK when verification fails', async () => {
+		await withTempDirectory('dotnet-txn-verifyfail-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(
+				await publishDotnetInstallStage({ home, lock, prepared, verifyPublished: failingSdk() }),
+				'verify-failed', 'verify', 'restored');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.backupDirectory), false);
+			assert.strictEqual(await fs.readFile(path.join(failedPublicationPath(home), PUBLISHED_SDK_FILE), 'utf8'), PUBLISHED_SDK_BYTES);
+			assert.strictEqual(result.failure.diagnostic.includes('restored'), true);
+			await lock.release();
+		});
+	});
+
+	test('treats an unexpected verification exception as a verification failure and restores the original SDK', async () => {
+		await withTempDirectory('dotnet-txn-verifythrow-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(
+				await publishDotnetInstallStage({
+					home, lock, prepared,
+					verifyPublished: async () => {
+						throw new Error('probe transport crashed');
+					},
+				}),
+				'verify-failed', 'verify', 'restored');
+
+			assert.strictEqual(result.failure.diagnostic.includes('probe transport crashed'), true);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			await lock.release();
+		});
+	});
+
+	test('cancels before finalization without touching the managed SDK', async () => {
+		await withTempDirectory('dotnet-txn-pubcancel-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const renames: string[] = [];
+			const result = await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				cancellation: { isCancellationRequested: true },
+				fileOperations: {
+					rename: async (source, destination) => {
+						renames.push(`${source}->${destination}`);
+						await fs.rename(source, destination);
+					},
+				},
+			});
+
+			assert.strictEqual(result.kind, 'canceled');
+			if (result.kind === 'canceled') {
+				assert.strictEqual(result.removed, true);
+			}
+			assert.deepStrictEqual(renames, []);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.journalPath), false);
+			const busy = await inspectDotnetInstallLock({ home });
+			assert.strictEqual(busy.kind, 'busy');
+			if (busy.kind === 'busy') {
+				assert.strictEqual(busy.owner.phase, 'preparing');
+			}
+			await lock.release();
+		});
+	});
+
+	test('defers cancellation requested during the non-interruptible finalization', async () => {
+		await withTempDirectory('dotnet-txn-finalize-', async home => {
+			const { lock, prepared } = await preparePublication(home);
+			let canceled = false;
+			const result = expectPublished(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				cancellation: { get isCancellationRequested() { return canceled; } },
+				fileOperations: {
+					rename: async (source, destination) => {
+						canceled = true;
+						await fs.rename(source, destination);
+					},
+				},
+			}));
+
+			assert.strictEqual(result.published.sdkVersion, '11.0.100');
+			assert.strictEqual(await fs.readFile(path.join(result.published.managedDirectory, PUBLISHED_SDK_FILE), 'utf8'), PUBLISHED_SDK_BYTES);
+			await lock.release();
+		});
+	});
+
+	test('refuses to publish when the prepared paths do not match the owned transaction', async () => {
+		await withTempDirectory('dotnet-txn-mismatch-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const renames: string[] = [];
+			const forged: IDotnetStagedInstall = { ...prepared, operationDirectory: path.join(home, 'elsewhere') };
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared: forged, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					rename: async (source, destination) => {
+						renames.push(source);
+						await fs.rename(source, destination);
+					},
+				},
+			}), 'unexpected-publication-state', 'publish', 'none-needed');
+
+			assert.strictEqual(result.retained, false);
+			assert.deepStrictEqual(renames, []);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			await lock.release();
+		});
+	});
+
+	test('refuses to publish through a symlinked managed root', async () => {
+		await withTempDirectory('dotnet-txn-publink-', async home => {
+			const { lock, prepared } = await preparePublication(home, false);
+			const external = path.join(home, 'external-managed');
+			await fs.mkdir(external, { recursive: true });
+			await fs.writeFile(path.join(external, 'dotnet'), 'EXTERNAL', 'utf8');
+			const managedRoot = dotnetManagedRoot(home, process.platform);
+			await fs.symlink(external, managedRoot, 'dir');
+
+			const result = expectPublicationFailed(
+				await publishDotnetInstallStage({ home, lock, prepared, verifyPublished: verifiedSdk() }),
+				'unsafe-managed-root', 'publish', 'none-needed');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(await fs.readFile(path.join(external, 'dotnet'), 'utf8'), 'EXTERNAL');
+			assert.strictEqual((await fs.lstat(managedRoot)).isSymbolicLink(), true);
+			await lock.release();
+		});
+	});
+
+	test('reports recovery-required when the reserved backup already contains data', async () => {
+		await withTempDirectory('dotnet-txn-backupdata-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			await fs.writeFile(path.join(prepared.backupDirectory, 'leftover'), 'LEFTOVER', 'utf8');
+			const result = expectPublicationFailed(
+				await publishDotnetInstallStage({ home, lock, prepared, verifyPublished: verifiedSdk() }),
+				'unexpected-publication-state', 'publish', 'recovery-required');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(await fs.readFile(path.join(prepared.backupDirectory, 'leftover'), 'utf8'), 'LEFTOVER');
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			await lock.release();
+		});
+	});
+
+	test('reports a sharing violation on the backup rename without modifying the managed tree', async () => {
+		await withTempDirectory('dotnet-txn-sharing-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					rename: renameFault(() => true, Object.assign(new Error('held open'), { code: 'EBUSY' })),
+				},
+			}), 'sharing-violation', 'publish', 'none-needed');
+
+			assert.strictEqual(result.retained, false);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.operationDirectory), false);
+			await lock.release();
+		});
+	});
+
+	test('refuses to publish when the staged install is missing', async () => {
+		await withTempDirectory('dotnet-txn-nostage-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			await fs.rm(prepared.stageDirectory, { recursive: true });
+			const result = expectPublicationFailed(
+				await publishDotnetInstallStage({ home, lock, prepared, verifyPublished: verifiedSdk() }),
+				'unexpected-publication-state', 'publish', 'none-needed');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			await lock.release();
+		});
+	});
+});
+
+suite('dotnet install publication fault matrix', () => {
+	test('journals every publication step before its rename and never records an absolute home path', async () => {
+		await withTempDirectory('dotnet-txn-journalorder-', async home => {
+			const { lock, prepared } = await preparePublication(home);
+			const events: string[] = [];
+			expectPublished(await publishDotnetInstallStage({
+				home, lock, prepared,
+				verifyPublished: async context => {
+					events.push(`verify:${path.basename(context.executable)}`);
+					return { kind: 'verified', executable: context.executable, sdkVersion: '11.0.100' };
+				},
+				fileOperations: {
+					writeJournal: async (journalPath, journal) => {
+						events.push(`journal:${journal.step}`);
+						await fs.writeFile(journalPath, JSON.stringify(journal), { mode: 0o600 });
+					},
+					rename: async (source, destination) => {
+						events.push(`rename:${path.basename(source)}->${path.basename(destination)}`);
+						await fs.rename(source, destination);
+					},
+				},
+			}));
+
+			assert.deepStrictEqual(events, [
+				'journal:backup-pending',
+				'rename:dotnet->backup',
+				'journal:publish-pending',
+				'rename:stage->dotnet',
+				'journal:verify-pending',
+				'verify:dotnet',
+				'journal:committed',
+			]);
+			const journalText = await fs.readFile(prepared.journalPath, 'utf8');
+			assert.strictEqual(journalText.includes(home), false);
+			assert.strictEqual((JSON.parse(journalText) as IDotnetTransactionJournal).step, 'committed');
+			await lock.release();
+		});
+	});
+
+	test('restores the original SDK when the stage rename fails after the backup rename', async () => {
+		await withTempDirectory('dotnet-txn-stagerename-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					rename: renameFault(source => source === prepared.stageDirectory, Object.assign(new Error('held open'), { code: 'EPERM' })),
+				},
+			}), 'sharing-violation', 'publish', 'restored');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.backupDirectory), false);
+			assert.strictEqual(await fs.readFile(path.join(prepared.stageDirectory, PUBLISHED_SDK_FILE), 'utf8'), PUBLISHED_SDK_BYTES);
+			await lock.release();
+		});
+	});
+
+	test('classifies a cross-device stage rename and restores the original SDK', async () => {
+		await withTempDirectory('dotnet-txn-crossdevice-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					rename: renameFault(source => source === prepared.stageDirectory, Object.assign(new Error('cross-device link'), { code: 'EXDEV' })),
+				},
+			}), 'cross-device', 'publish', 'restored');
+
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			await lock.release();
+		});
+	});
+
+	test('removes only owned data when the first journal write fails before any rename', async () => {
+		await withTempDirectory('dotnet-txn-journalfirst-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					writeJournal: async () => {
+						throw Object.assign(new Error('journal io'), { code: 'EIO' });
+					},
+				},
+			}), 'journal-failed', 'publish', 'none-needed');
+
+			assert.strictEqual(result.retained, false);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.operationDirectory), false);
+			await lock.release();
+		});
+	});
+
+	test('restores the original SDK when the publish-pending journal write fails after the backup rename', async () => {
+		await withTempDirectory('dotnet-txn-journalpublish-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					writeJournal: async (journalPath, journal) => {
+						if (journal.step === 'publish-pending') {
+							throw Object.assign(new Error('journal io'), { code: 'EIO' });
+						}
+						await fs.writeFile(journalPath, JSON.stringify(journal), { mode: 0o600 });
+					},
+				},
+			}), 'journal-failed', 'publish', 'restored');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.backupDirectory), false);
+			assert.strictEqual(await pathExists(prepared.stageDirectory), true);
+			await lock.release();
+		});
+	});
+
+	test('restores the original SDK when the verification journal write fails after publication', async () => {
+		await withTempDirectory('dotnet-txn-journalverify-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					writeJournal: async (journalPath, journal) => {
+						if (journal.step === 'verify-pending') {
+							throw Object.assign(new Error('journal io'), { code: 'EIO' });
+						}
+						await fs.writeFile(journalPath, JSON.stringify(journal), { mode: 0o600 });
+					},
+				},
+			}), 'journal-failed', 'publish', 'restored');
+
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await fs.readFile(path.join(failedPublicationPath(home), PUBLISHED_SDK_FILE), 'utf8'), PUBLISHED_SDK_BYTES);
+			await lock.release();
+		});
+	});
+
+	test('restores the original SDK when the committed journal write fails after verification', async () => {
+		await withTempDirectory('dotnet-txn-journalcommitted-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					writeJournal: async (journalPath, journal) => {
+						if (journal.step === 'committed') {
+							throw Object.assign(new Error('journal io'), { code: 'EIO' });
+						}
+						await fs.writeFile(journalPath, JSON.stringify(journal), { mode: 0o600 });
+					},
+				},
+			}), 'journal-failed', 'publish', 'restored');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await fs.readFile(path.join(failedPublicationPath(home), PUBLISHED_SDK_FILE), 'utf8'), PUBLISHED_SDK_BYTES);
+			await lock.release();
+		});
+	});
+
+	test('restores the original SDK when a rename completes and the process is interrupted immediately after', async () => {
+		await withTempDirectory('dotnet-txn-interrupted-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					rename: async (source, destination) => {
+						if (source === managedRoot) {
+							// Simulates loss of the process immediately after the atomic backup rename completed.
+							await fs.rename(source, destination);
+							throw Object.assign(new Error('process lost'), { code: 'EIO' });
+						}
+						await fs.rename(source, destination);
+					},
+				},
+			}), 'backup-rename-failed', 'publish', 'restored');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.backupDirectory), false);
+			await lock.release();
+		});
+	});
+
+	test('retains both trees and reports recovery-required when the restore rename fails', async () => {
+		await withTempDirectory('dotnet-txn-restorefail-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: failingSdk(),
+				fileOperations: {
+					rename: renameFault(source => source === prepared.backupDirectory, Object.assign(new Error('restore denied'), { code: 'EPERM' })),
+				},
+			}), 'verify-failed', 'verify', 'recovery-required');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(result.failure.diagnostic.includes('recovery'), true);
+			assert.strictEqual(await snapshotTree(prepared.backupDirectory), before);
+			assert.strictEqual(await pathExists(managedRoot!), false);
+			assert.strictEqual(await fs.readFile(path.join(failedPublicationPath(home), PUBLISHED_SDK_FILE), 'utf8'), PUBLISHED_SDK_BYTES);
+			await lock.release();
+		});
+	});
+
+	test('retains every copy and reports recovery-required when the failed publication cannot be moved aside', async () => {
+		await withTempDirectory('dotnet-txn-asidefail-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: failingSdk(),
+				fileOperations: {
+					rename: renameFault((_source, destination) => destination === failedPublicationPath(home), Object.assign(new Error('in use'), { code: 'EBUSY' })),
+				},
+			}), 'verify-failed', 'verify', 'recovery-required');
+
+			assert.strictEqual(result.retained, true);
+			const published = await snapshotTree(managedRoot!);
+			for (const line of before!.split('\n')) {
+				assert.strictEqual(published.includes(line), true, `missing pre-existing entry ${line}`);
+			}
+			assert.strictEqual(published.includes(PUBLISHED_SDK_BYTES), true);
+			assert.strictEqual(await snapshotTree(prepared.backupDirectory), before);
+			await lock.release();
+		});
+	});
+
+	test('never removes a path outside the owned operation directory', async () => {
+		await withTempDirectory('dotnet-txn-totalremove-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const precious = path.join(home, 'precious');
+			await fs.mkdir(precious);
+			await fs.writeFile(path.join(precious, 'keep.txt'), 'KEEP', 'utf8');
+			const removed: string[] = [];
+			expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: failingSdk(),
+				fileOperations: {
+					remove: async directory => {
+						removed.push(directory);
+						await fs.rm(directory, { recursive: true, force: false });
+					},
+				},
+			}), 'verify-failed', 'verify', 'restored');
+
+			assert.strictEqual(removed.length > 0, true);
+			assert.strictEqual(removed.every(directory => directory === prepared.backupDirectory || directory.startsWith(prepared.operationDirectory + path.sep)), true);
+			assert.strictEqual(await fs.readFile(path.join(precious, 'keep.txt'), 'utf8'), 'KEEP');
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			await lock.release();
+		});
+	});
+
+	test('reports a lock that no longer belongs to the operation before moving anything', async () => {
+		await withTempDirectory('dotnet-txn-publock-', async home => {
+			const { prepared, managedRoot, before } = await preparePublication(home);
+			const lock = forgedLock({}, async () => ({ kind: 'retained', reason: 'token-mismatch', detail: 'another owner now holds the lock' }));
+			const renames: string[] = [];
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					rename: async (source, destination) => {
+						renames.push(source);
+						await fs.rename(source, destination);
+					},
+				},
+			}), 'lock-update-failed', 'publish', 'none-needed');
+
+			assert.strictEqual(result.retained, false);
+			assert.deepStrictEqual(renames, []);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.operationDirectory), false);
+		});
+	});
+
+	test('restores the original SDK when the stage rename completes and the process is interrupted immediately after', async () => {
+		await withTempDirectory('dotnet-txn-interrupted-publish-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const result = expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					rename: async (source, destination) => {
+						if (source === prepared.stageDirectory) {
+							// Simulates loss of the process immediately after the atomic publish rename completed.
+							await fs.rename(source, destination);
+							throw Object.assign(new Error('process lost'), { code: 'EIO' });
+						}
+						await fs.rename(source, destination);
+					},
+				},
+			}), 'stage-rename-failed', 'publish', 'restored');
+
+			assert.strictEqual(result.retained, true);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.backupDirectory), false);
+			assert.strictEqual(await fs.readFile(path.join(failedPublicationPath(home), PUBLISHED_SDK_FILE), 'utf8'), PUBLISHED_SDK_BYTES);
+			await lock.release();
+		});
+	});
+
+	test('restores the original SDK when a journal write completes and is reported as failed', async () => {
+		await withTempDirectory('dotnet-txn-journallost-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			expectPublicationFailed(await publishDotnetInstallStage({
+				home, lock, prepared, verifyPublished: verifiedSdk(),
+				fileOperations: {
+					writeJournal: async (journalPath, journal) => {
+						await fs.writeFile(journalPath, JSON.stringify(journal), { mode: 0o600 });
+						if (journal.step === 'verify-pending') {
+							throw Object.assign(new Error('write reported as lost'), { code: 'EIO' });
+						}
+					},
+				},
+			}), 'journal-failed', 'publish', 'restored');
+
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
+			assert.strictEqual(await pathExists(prepared.backupDirectory), false);
+			await lock.release();
+		});
+	});
+
+	test('journals the first-install step order without a backup rename', async () => {
+		await withTempDirectory('dotnet-txn-firstorder-', async home => {
+			const { lock, prepared } = await preparePublication(home, false);
+			const events: string[] = [];
+			expectPublished(await publishDotnetInstallStage({
+				home, lock, prepared,
+				verifyPublished: async context => {
+					events.push('verify');
+					return { kind: 'verified', executable: context.executable, sdkVersion: '11.0.100' };
+				},
+				fileOperations: {
+					writeJournal: async (journalPath, journal) => {
+						events.push(`journal:${journal.step}`);
+						await fs.writeFile(journalPath, JSON.stringify(journal), { mode: 0o600 });
+					},
+					rename: async (source, destination) => {
+						events.push(`rename:${path.basename(source)}->${path.basename(destination)}`);
+						await fs.rename(source, destination);
+					},
+				},
+			}));
+
+			assert.deepStrictEqual(events, [
+				'journal:backup-pending',
+				'journal:publish-pending',
+				'rename:stage->dotnet',
+				'journal:verify-pending',
+				'verify',
+				'journal:committed',
+			]);
+			await lock.release();
+		});
+	});
+
+	test('refuses to publish a symlinked staged install', async () => {
+		await withTempDirectory('dotnet-txn-stagelink-', async home => {
+			const { lock, prepared, managedRoot, before } = await preparePublication(home);
+			const external = path.join(home, 'external-stage');
+			await fs.rm(prepared.stageDirectory, { recursive: true });
+			await fs.mkdir(external);
+			await fs.symlink(external, prepared.stageDirectory, 'dir');
+			const result = expectPublicationFailed(
+				await publishDotnetInstallStage({ home, lock, prepared, verifyPublished: verifiedSdk() }),
+				'unexpected-publication-state', 'publish', 'none-needed');
+
+			assert.strictEqual(result.retained, true);
+			assert.deepStrictEqual(await fs.readdir(external), []);
+			assert.strictEqual(await snapshotTree(managedRoot!), before);
 			await lock.release();
 		});
 	});

@@ -72,3 +72,47 @@ proxy setting is persisted.
   before proxy support is claimed.
 - Offline tests never touch the network or a real home directory; retrieval tests inject the
   transport, writer, and clock, and the exclusive-writer test uses only the OS temporary root.
+
+## Publication, restoration, and manual recovery (`src/transaction.ts`)
+
+Publication is the only point where `~/.walker/dotnet` changes. Inside the owned operation
+directory `<home>/.walker/dotnet-install-<nonce>/` the journal records the step that is about to run
+*before* each rename, the pre-existing managed tree is renamed into `backup/` instead of being
+deleted, and the staged tree is renamed into `~/.walker/dotnet`. The published managed SDK is then
+executed through the injected verifier; only a successful execution is reported Ready. Cancellation
+is honored only before the short finalization section begins: once finalization starts it runs to a
+verified commit or to a completed restore, and the pre-existing backup is always retained.
+
+When publication or verification fails, Walker restores the pre-publication managed state from the
+backup and keeps the whole operation directory for inspection. The journal `step` says what was
+true on disk when the failure happened:
+
+| Journal `step` | What is on disk | What happens / what to do |
+| --- | --- | --- |
+| `preparing` (scaffold) | Managed tree untouched | The failure was before finalization; retry setup. |
+| `backup-pending` | Managed tree untouched | Nothing was published; retry setup. |
+| `publish-pending` | Managed tree is in `backup/`; `stage/` is intact | Restore `backup/` to `~/.walker/dotnet` before retrying. |
+| `verify-pending` | `stage/` is at `~/.walker/dotnet`; `backup/` holds the old tree | Move the failed publication aside, then restore `backup/`. |
+| `rollback-pending` | Restoration is in progress | Inspect both locations and restore `backup/` if it still holds data. |
+| `rolled-back` | The managed path is back to its pre-publication state | Retry setup; the retained operation directory is disposable. |
+| `committed` | Publication verified; `backup/` holds the old SDKs | Setup succeeded; the retained backup may be inspected or deleted by the user. |
+
+If Walker exits during finalization, do not delete or rewrite anything first. Close **all** Walker
+windows, confirm no installer process remains, then:
+
+1. `cd ~/.walker` and list `dotnet-install-*/` directories; the `journal.json` inside each one
+   names the step and the relative `backup` directory. Only touch the directory matching the
+   interrupted operation recorded in the lock metadata.
+2. If `backup/` contains data and `~/.walker/dotnet` is missing, move that `backup/` to
+   `~/.walker/dotnet` after confirming the directory from step 1.
+3. If `~/.walker/dotnet` holds a failed publication and `backup/` holds the old tree, move the
+   failed publication aside first (for example to the operation directory's `failed-publication/`),
+   then restore `backup/` to `~/.walker/dotnet`.
+4. Only after `~/.walker/dotnet` is correct, remove the stale `dotnet-install.lock` directory and
+   invoke Recheck.
+
+Retained backups are deliberate: Walker never deletes pre-existing SDK data automatically. After
+setup is verified Ready and the old SDKs are no longer wanted, the user may delete the whole
+retained `dotnet-install-*/` operation directory (journal, `backup/`, empty `stage/`, downloaded
+script). Never delete `~/.walker/dotnet` itself as a cleanup shortcut, and never follow a
+`~/.walker/dotnet` symlink.
