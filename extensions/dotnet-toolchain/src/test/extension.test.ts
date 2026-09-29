@@ -462,6 +462,26 @@ suite('dotnet extension manifest', () => {
 			assert.strictEqual(typeof nls[key], 'string', `${key} must exist in package.nls.json`);
 		}
 	});
+
+	test('declares a standard bundled entrypoint and preserves package resources', async () => {
+		const root = path.join(__dirname, '..', '..');
+		const [buildConfig, ignoreFile] = await Promise.all([
+			fs.readFile(path.join(root, 'esbuild.mts'), 'utf8'),
+			fs.readFile(path.join(root, '.vscodeignore'), 'utf8'),
+		]);
+		assert.match(buildConfig, /platform: 'node'/);
+		assert.match(buildConfig, /'extension': path\.join\(srcDir, 'extension\.ts'\)/);
+		assert.match(buildConfig, /outdir: outDir/);
+		assert.match(buildConfig, /path\.join\(import\.meta\.dirname, 'dist'\)/);
+
+		const ignored = ignoreFile.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+		for (const requiredExclusion of ['src/**', 'test/**', 'out/**', 'tsconfig*.json', '**/*.tsbuildinfo', 'esbuild*.mts']) {
+			assert.ok(ignored.includes(requiredExclusion), `${requiredExclusion} must not ship`);
+		}
+		for (const requiredResource of ['dist/**', 'package.json', 'package.nls.json', 'README.md']) {
+			assert.ok(!ignored.includes(requiredResource), `${requiredResource} must remain packageable`);
+		}
+	});
 });
 
 suite('vscode host adapter', () => {

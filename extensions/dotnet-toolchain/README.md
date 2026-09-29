@@ -148,3 +148,79 @@ setup is verified Ready and the old SDKs are no longer wanted, the user may dele
 retained `dotnet-install-*/` operation directory (journal, `backup/`, empty `stage/`, downloaded
 script). Never delete `~/.walker/dotnet` itself as a cleanup shortcut, and never follow a
 `~/.walker/dotnet` symlink.
+
+## D1 packaged verification (Linux, 2026-09-29)
+
+### Build and package evidence
+
+`build/lib/extensions.ts` discovers local extensions from `extensions/*/package.json`, builds standard
+`esbuild.mts` extensions, and rewrites a bundled manifest's `main` from `/out/` to `/dist/`. The
+static `compilations` array in `build/gulpfile.extensions.ts` separately controls compile/typecheck
+coverage; it omitted this extension's `tsconfig.json`. D1 adds that one config to the array so
+`build-fast` and extension packaging compile/typecheck the extension instead of relying only on its
+local scripts.
+
+The packaged extension at `/home/marialez/Work/VSCode-linux-x64/resources/app/extensions/dotnet-toolchain`
+was inspected after Linux packaging reached `package-linux-x64`:
+
+- Packaged `package.json` has `main: "./dist/extension"`, `extensionKind: ["ui"]`, `onStartupFinished`
+  and explicit activation events for all five `walker.dotnet.*` commands.
+- `dist/extension.js` (70,316 bytes), its source map (338,585 bytes), and `package.nls.json` (342 bytes)
+  exist in the package. Manifest localization tokens remain intact and resolve through the packaged
+  `package.nls.json` strings.
+- `esbuild.mts` selects `src/extension.ts` and `dist/`; `.vscodeignore` excludes source/tests/configs
+  while leaving `dist/**`, the manifest, localization, and README packageable.
+- `npm run gulp vscode-linux-x64` completed `package-linux-x64` in 26.1 seconds and bundled
+  `dotnet-toolchain/esbuild.mts` with zero errors, but the top-level task exited 1 afterward at the
+  existing Copilot `prepareBuiltInCopilotRipgrepShim` failure (`extensions/copilot/node_modules/@github/copilot/sdk`
+  absent in the package). No Copilot source was changed. The packaged Walker executable and toolchain
+  extension artifacts were nevertheless present for the isolated activation smokes below; this is not
+  a claim that the entire product package task passed.
+
+### Commands and results
+
+Commands ran from the repository root with Node 24.18.0 first on `PATH`:
+
+| Command | Result |
+| --- | --- |
+| `npm run test --prefix extensions/dotnet-toolchain` | 258 passing, exit 0; includes packaging-resource assertion and discovery, selection, offline transport, installer, host, and Windows/macOS platform fixtures. |
+| `npm run compile --prefix extensions/dotnet-toolchain` | Exit 0. |
+| `npx tsc --noEmit -p extensions/dotnet-toolchain/tsconfig.json` | Exit 0; only existing npm warnings for unknown project config keys. |
+| `npm run build-fast` | Exit 0 after D1 registration fix; log includes `extensions/dotnet-toolchain/tsconfig.json` with 0 errors. |
+| `npm run transpile-client` | Passed in the earlier D1 run. |
+| `./scripts/test.sh --run vs/workbench/contrib/welcomeOnboarding/test/common/dotnetToolchain.test` | Passed in the earlier D1 run. |
+| `./scripts/test.sh --run vs/workbench/contrib/welcomeOnboarding/test/common/onboardingTypes.test` | Passed in the earlier D1 run. |
+| `./scripts/test.sh --run vs/workbench/contrib/welcomeOnboarding/test/browser/onboardingVariationA.test` | Passed in the earlier D1 run. |
+| `npm run typecheck-client` | Passed in the earlier D1 run. |
+| `npm run gulp vscode-linux-x64` | `package-linux-x64` and .NET bundle/typecheck completed; final exit 1 at the unrelated Copilot shim failure above. |
+
+### Isolated packaged-app results
+
+Each recorded smoke run used the packaged desktop binary, a fresh `--user-data-dir`, a test-only
+`--extensions-dir`, `HOME`/XDG/TMP directories under `/tmp`, a minimal system `PATH`,
+`--force-disable-user-env`, and telemetry/update/Copilot disabled. A temporary smoke-reader extension
+invoked the packaged `walker.dotnet.getState` command and wrote only state snapshots to its own
+temporary directory. The recorded runs used `--log error`, never `--log trace --verbose`; the earlier
+startup-diagnostic incident is redacted in `apply-progress.md`.
+
+| Scenario | Captured packaged result | Limit |
+| --- | --- | --- |
+| Runtime-only | An isolated `dotnet` fixture returned runtime 10.0.11 with no SDK; command snapshot was `runtimeOnly`, `local`. | No install started. |
+| Split install and restart | A read-only symlink in isolated HOME exposed the pre-existing SDK; snapshot was `ready`, version `10.0.401`, executable `/tmp/walker-dotnet-d1c-split-home-45Xz7C/home/.local/share/dotnet/dotnet`. A second packaged process with a fresh profile and the same isolated HOME returned the same Ready version/path. | This is conventional user-root discovery, not a managed install at `.walker/dotnet`. The target was only read. |
+| Canceled chooser | From `runtimeOnly`, the packaged test extension invoked `walker.dotnet.setup`, closed the actual QuickPick with `workbench.action.closeQuickOpen`, and observed `runtimeOnly` afterward. The isolated `~/.walker` contained only Walker's `argv.json`; no install lock or SDK tree was created. | Command-driven cancellation, not a keyboard-driven visual check. |
+| Shared-home contention | Two packaged profiles sharing an isolated HOME both reported `installing`, `progress.phase: installing`, `otherWindow: true` against a validated live-owner lock fixture. | The owner was a live test process, not a first Walker installer; no concurrent SDK writers were started. |
+| Unavailable extension | Launch with `--disable-extension vscode.dotnet-toolchain` made `walker.dotnet.getState` return `command not found`. | Packaged command unavailability confirmed; rendered onboarding fallback not visually inspected. |
+
+### System before/after evidence and unverified gaps
+
+Read-only checks before and after the D1 runs were identical:
+
+- `which dotnet` → `/home/marialez/.local/share/dotnet/dotnet`.
+- `dotnet --list-sdks` → `10.0.401 [/home/marialez/.local/share/dotnet/sdk]`.
+- `ls /usr/share/dotnet` → `dotnet`, `host`, `shared`.
+- `sha256sum ~/.bashrc` → `e089de15726d7dd70ce2518f8cb857f0c82c3fec4aa0cca576d251bd89aa5b36`.
+- PATH was byte-for-byte identical before/after. No managed install was performed, and the real user SDK, system SDK/runtime directory, shell profile, and PATH were not written.
+
+Still unverified: positive LTS selection and confirmation, a real official managed install and direct managed-SDK verification/restart, a packaged offline-failure-and-retry run, visual unavailable-fallback rendering, native macOS/Windows installation/cancel/rename/locality, and a live supported-proxy install. The extension fixtures cover offline failures, proxy mapping/rejection, Windows/macOS roots, and platform installer arguments, but are not native installer smokes. The Linux UI smoke could not safely accept the explicit confirmation: `xdotool` is absent; available `wtype` did not move focus from the existing Ghostty window to the isolated Walker window, and `grim` timed out. I did not bypass the chooser/confirmation or trigger installation by another path. No proxy support claim is made. All 38 session-created `/tmp` scratch
+roots and every spawned application/proxy process group were removed after evidence capture; exact paths are
+listed in `openspec/changes/dotnet-toolchain/apply-progress.md`.
