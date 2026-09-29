@@ -254,13 +254,14 @@ function createToolchainStepHarness(
 	store: Pick<DisposableStore, 'add'>,
 	handleCommand: (id: string) => Promise<unknown>,
 ): { readonly root: HTMLElement; readonly status: HTMLElement; readonly details: HTMLElement; readonly setup: HTMLButtonElement; readonly recheck: HTMLButtonElement; readonly output: HTMLButtonElement; readonly calls: string[]; readonly scheduler: TestToolchainScheduler; readonly step: DotnetToolchainStep } {
-	const root = document.body.appendChild($('div.dotnet-toolchain-step-test'));
+	const root = document.body.appendChild($('div.dotnet-toolchain-step-test.onboarding-a-toolchain'));
 	store.add(toDisposable(() => root.remove()));
-	const status = root.appendChild($('div'));
-	const details = root.appendChild($('div'));
-	const setup = root.appendChild($<HTMLButtonElement>('button'));
-	const recheck = root.appendChild($<HTMLButtonElement>('button'));
-	const output = root.appendChild($<HTMLButtonElement>('button'));
+	const status = root.appendChild($('p.onboarding-a-toolchain-status'));
+	const details = root.appendChild($('p.onboarding-a-toolchain-details'));
+	const actions = root.appendChild($('div.onboarding-a-toolchain-actions'));
+	const setup = actions.appendChild($<HTMLButtonElement>('button.onboarding-a-toolchain-action'));
+	const recheck = actions.appendChild($<HTMLButtonElement>('button.onboarding-a-toolchain-action'));
+	const output = actions.appendChild($<HTMLButtonElement>('button.onboarding-a-toolchain-action'));
 	const calls: string[] = [];
 	const commandService = new class extends mock<ICommandService>() {
 		override executeCommand<R = unknown>(id: string, ..._args: unknown[]): Promise<R | undefined> {
@@ -289,6 +290,14 @@ suite('DotnetToolchainStep command client', () => {
 		];
 		const harness = createToolchainStepHarness(disposables, id => Promise.resolve(id === DOTNET_TOOLCHAIN_COMMANDS.getState ? states.shift() ?? toolchainSnapshot('ready', 4) : undefined));
 		await flushAsync();
+		assert.strictEqual(harness.status.getAttribute('role'), 'status');
+		assert.strictEqual(harness.status.getAttribute('aria-live'), 'polite');
+		assert.strictEqual(harness.status.getAttribute('aria-atomic'), 'true');
+		assert.strictEqual(harness.status.getAttribute('aria-busy'), 'true');
+		assert.strictEqual(harness.setup.getAttribute('aria-disabled'), 'true');
+		for (const action of [harness.setup, harness.recheck, harness.output]) {
+			assert.ok(action.tabIndex >= 0, 'busy actions remain keyboard reachable');
+		}
 		assert.ok(harness.status.textContent?.includes('Installing'));
 		harness.recheck.focus();
 		for (const expected of ['Verifying', 'failed', 'SDK ready']) {
@@ -298,9 +307,31 @@ suite('DotnetToolchainStep command client', () => {
 			assert.strictEqual(document.activeElement, harness.recheck, 'state updates do not steal focus');
 		}
 		assert.ok(harness.details.textContent?.includes('/home/test/.walker/dotnet/dotnet'), 'ready state shows the verified executable');
+		assert.strictEqual(harness.status.getAttribute('aria-busy'), 'false');
+		assert.strictEqual(harness.setup.getAttribute('aria-disabled'), 'false');
 		assert.ok(harness.calls.filter(id => id === DOTNET_TOOLCHAIN_COMMANDS.getState).length >= 4, 'terminal states keep polling while visible');
 		harness.step.dispose();
 		assert.strictEqual(harness.scheduler.pendingCount, 0, 'disposing the visible step clears its poll timer');
+	});
+
+	test('preserves long verified executable paths in the responsive detail hook', async () => {
+		const executable = `/home/test/.walker/dotnet/${'managed-sdk-installation/'.repeat(16)}dotnet`;
+		const ready = {
+			...toolchainSnapshot('ready', 1),
+			verified: { executable, sdkVersion: '10.0.401' },
+		};
+		const harness = createToolchainStepHarness(disposables, id => Promise.resolve(id === DOTNET_TOOLCHAIN_COMMANDS.getState ? ready : undefined));
+		harness.root.style.width = '320px';
+		await flushAsync();
+		assert.ok(harness.root.classList.contains('onboarding-a-toolchain'), 'the account-free shell exposes its responsive layout hook');
+		assert.ok(harness.details.classList.contains('onboarding-a-toolchain-details'), 'the executable path uses the wrapping detail hook');
+		assert.strictEqual(harness.details.textContent, executable, 'the full verified path remains available to assistive technology');
+		assert.strictEqual(harness.details.title, executable, 'the full path remains available as a tooltip');
+		assert.strictEqual(harness.root.querySelectorAll('.onboarding-a-toolchain-actions button').length, 3, 'all actions remain rendered in a compact shell');
+		for (const action of harness.root.querySelectorAll<HTMLButtonElement>('.onboarding-a-toolchain-actions button')) {
+			assert.ok(action.tabIndex >= 0, 'compact-shell actions remain keyboard reachable');
+		}
+		harness.step.dispose();
 	});
 
 	test('times out slow state reads and ignores stale responses after retry', async () => {
@@ -428,9 +459,7 @@ suite('OnboardingVariationA — first step', () => {
 		const toolchainActions = shell.querySelectorAll<HTMLButtonElement>('.onboarding-a-toolchain-actions button');
 		assert.strictEqual(toolchainActions.length, 3, 'setup, recheck, and diagnostics controls remain available');
 		for (const action of toolchainActions) {
-			const style = window.getComputedStyle(action);
-			assert.notStrictEqual(style.display, 'none', 'toolchain actions are not hidden');
-			assert.notStrictEqual(style.visibility, 'hidden', 'toolchain actions remain visible');
+			assert.ok(action.classList.contains('onboarding-a-toolchain-action'), 'toolchain actions expose the account-free styling hook');
 			assert.ok(action.tabIndex >= 0, 'toolchain actions remain keyboard reachable');
 		}
 		assert.strictEqual(container.querySelector('.onboarding-a-provider-mark'), null, 'no provider marks');

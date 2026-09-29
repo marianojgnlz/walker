@@ -254,8 +254,8 @@
 	color: var(--vscode-editor-foreground);
 }
 
-/* Shared toolchain shell layout and Walker brand */
-.onboarding-a-signin {
+/* Account-free toolchain layout and Walker brand */
+.onboarding-a-toolchain {
 	display: grid;
 	grid-template-columns: auto auto;
 	position: relative;
@@ -265,12 +265,11 @@
 	width: 100%;
 	margin: 0 auto;
 	padding: 4px 0;
-	padding-bottom: 60px;
 	min-height: 0;
 	flex: 1;
 }
 
-.onboarding-a-signin-brand {
+.onboarding-a-toolchain .onboarding-a-signin-brand {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -278,7 +277,7 @@
 	align-self: center;
 }
 
-.onboarding-a-signin-brand-icon {
+.onboarding-a-toolchain .onboarding-a-signin-brand-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -294,7 +293,7 @@
 	background-size: 148px;
 }
 
-.onboarding-a-signin-content {
+.onboarding-a-toolchain .onboarding-a-signin-content {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
@@ -304,7 +303,7 @@
 	max-width: 500px;
 }
 
-.onboarding-a-signin-content-main {
+.onboarding-a-toolchain .onboarding-a-signin-content-main {
 	display: flex;
 	flex: 1 1 auto;
 	flex-direction: column;
@@ -313,7 +312,7 @@
 	min-width: 0;
 }
 
-.onboarding-a-signin-title {
+.onboarding-a-toolchain .onboarding-a-signin-title {
 	margin: 0;
 	font-size: 22px;
 	font-weight: 600;
@@ -321,12 +320,85 @@
 	color: var(--vscode-foreground);
 }
 
-.onboarding-a-signin-subtitle {
+.onboarding-a-toolchain .onboarding-a-signin-subtitle {
 	margin: 0;
 	font-size: 14px;
 	line-height: 1.45;
 	color: var(--vscode-descriptionForeground);
-	white-space: nowrap;
+	overflow-wrap: anywhere;
+}
+
+.onboarding-a-toolchain-description {
+	margin: 0;
+	color: var(--vscode-descriptionForeground);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.onboarding-a-toolchain-status {
+	min-width: 0;
+	margin: 0;
+	color: var(--vscode-editor-foreground);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.onboarding-a-toolchain-details {
+	min-width: 0;
+	max-width: 100%;
+	margin: 0;
+	color: var(--vscode-descriptionForeground);
+	font-family: var(--monaco-monospace-font);
+	font-size: 12px;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.onboarding-a-toolchain-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	min-width: 0;
+	margin-top: 4px;
+}
+
+.onboarding-a-toolchain-action {
+	flex: 0 1 auto;
+	min-width: 0;
+	padding: 6px 12px;
+	border: 1px solid var(--vscode-widget-border, transparent);
+	border-radius: 4px;
+	background: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+	cursor: pointer;
+	font-family: inherit;
+	font-size: 13px;
+	transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.onboarding-a-toolchain-action:not([aria-disabled="true"]):hover {
+	background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.onboarding-a-toolchain-action[aria-disabled="true"] {
+	color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+	cursor: default;
+}
+
+.onboarding-a-toolchain-action:focus-visible {
+	outline: 2px solid var(--vscode-focusBorder);
+	outline-offset: 2px;
+}
+
+.monaco-workbench.hc-black .onboarding-a-toolchain-action,
+.monaco-workbench.hc-light .onboarding-a-toolchain-action {
+	border-color: var(--vscode-contrastBorder);
+}
+
+.monaco-workbench.hc-black .onboarding-a-toolchain-action:focus-visible,
+.monaco-workbench.hc-light .onboarding-a-toolchain-action:focus-visible {
+	outline-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
 }
 
 /* Personalize step */
@@ -572,80 +644,43 @@
 	vertical-align: middle;
 }
 
-/* Sign-in icon row */
-.onboarding-a-signin-icon-row {
-	display: flex;
-	gap: 12px;
-	justify-content: center;
-}
-
-.onboarding-a-signin-icon-btn {
-	min-width: 40px;
-	height: 40px;
-	padding: 0 10px;
-	border-radius: 8px;
-	border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.1));
-	background: var(--vscode-editor-background);
-	color: var(--vscode-editor-foreground);
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	transition: background 0.12s ease, border-color 0.12s ease;
-	outline: none;
-	font-size: 13px;
-	font-weight: 600;
-	font-family: inherit;
-	white-space: nowrap;
-}
-
-.onboarding-a-signin-icon-btn:hover {
-	background: var(--vscode-list-hoverBackground);
-	border-color: var(--vscode-focusBorder);
-}
-
-.onboarding-a-signin-icon-btn:focus-visible {
-	outline: 2px solid var(--vscode-focusBorder);
-	outline-offset: 2px;
-}
-
 @media (max-width: 720px) {
-	.onboarding-a-signin {
+	.onboarding-a-toolchain {
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
-		gap: 20px;
+		gap: 16px;
 		min-height: 0;
 		width: 100%;
 	}
 
-	.onboarding-a-signin-brand {
+	.onboarding-a-toolchain .onboarding-a-signin-brand {
 		flex-basis: auto;
 		width: 100%;
 		justify-content: flex-start;
 	}
 
-	.onboarding-a-signin-brand-icon {
+	.onboarding-a-toolchain .onboarding-a-signin-brand-icon {
 		width: 124px;
 		height: 124px;
-		border-radius: 24px;
-	}
-
-	.onboarding-a-signin-brand-icon {
 		background-size: 78px;
 	}
 
-	.onboarding-a-signin-content {
+	.onboarding-a-toolchain .onboarding-a-signin-content {
 		max-width: none;
 		width: 100%;
 	}
 
-	.onboarding-a-signin-content-main {
+	.onboarding-a-toolchain .onboarding-a-signin-content-main {
 		justify-content: flex-start;
 	}
 
-	.onboarding-a-signin-icon-btn {
+	.onboarding-a-toolchain-actions {
 		width: 100%;
+	}
+
+	.onboarding-a-toolchain-action {
+		flex: 1 1 auto;
 	}
 
 	.onboarding-a-theme-grid {
@@ -671,7 +706,8 @@
 	.onboarding-a-overlay,
 	.onboarding-a-card,
 	.onboarding-a-progress-dot,
-	.onboarding-a-theme-card {
+	.onboarding-a-theme-card,
+	.onboarding-a-toolchain-action {
 		transition: none !important;
 	}
 }
