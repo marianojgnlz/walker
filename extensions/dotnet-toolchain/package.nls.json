@@ -1,0 +1,9 @@
+{
+	"displayName": ".NET Toolchain",
+	"description": "Detect and install a local .NET SDK for this machine without accounts, elevation, or system-wide changes.",
+	"category": ".NET Toolchain",
+	"command.recheck": "Check for Local .NET SDK",
+	"command.setup": "Set Up Local .NET SDK…",
+	"command.showOutput": "Show Output",
+	"command.showActions": "Show Actions"
+}

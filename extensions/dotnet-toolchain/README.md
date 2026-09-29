@@ -1,9 +1,41 @@
 # .NET Toolchain
 
 Built-in Walker extension that establishes local .NET SDK readiness without accounts, elevation,
-system-install changes, or workspace configuration. The implementation is landing in review units;
-until the command boundary is wired, the manifest stays inert and only pure TypeScript modules plus
-offline test suites exist here.
+system-install changes, or workspace configuration. The detection, transaction, and installer
+foundation previously landed in review units; the command boundary below wires that foundation to
+Walker commands and a status item while the packaged-activation slice (D1) still owns the shipping
+bundle and platform smoke runs.
+
+## Command boundary (`src/extension.ts`, `src/status.ts`)
+
+The manifest now activates the extension (`onStartupFinished` plus one explicit `onCommand:` event
+per registered command) with `extensionKind: ["ui"]`. The manifest alone cannot stop a browser or
+forced-remote host, so activation requires **both** `env.uiKind === Desktop` and a UI extension host
+(`context.extension.extensionKind === UI`) before constructing the installer controller. Unsupported
+hosts register the same commands, report a localized `unavailable` snapshot, and never start a probe
+or an install. `env.remoteName` is not a rejection condition: a desktop window with a remote
+workspace still operates on, and labels, the local machine.
+
+- Commands: `walker.dotnet.getState`, `walker.dotnet.recheck`, `walker.dotnet.setup`,
+  `walker.dotnet.showOutput`, `walker.dotnet.showActions`. `getState` is registered for the
+  onboarding client but intentionally not contributed to the palette.
+- `walker.dotnet.setup` accepts no parameters by contract: any externally supplied argument is
+  forwarded to the core prompter only to be ignored, so no channel, version, or destination can
+  bypass the explicit LTS / STS / exact-version chooser and final confirmation.
+- The status item shows a localized label per state (including a distinct "another window" label),
+  a literal plain-text tooltip with version/executable or failure stage and stable code, and opens the
+  actions menu (Setup / Check Again / Show Output as applicable). While another window owns the lock,
+  a one-second read-only refresh re-reads state until the foreign operation clears; it never writes.
+- Output lines are appended once per snapshot revision and are localized; the presenter surfaces only
+  controller-provided diagnostics (already credential-redacted in `src/download.ts`) and never dumps
+  environments or credentials. Progress runs under a cancellable notification, and cancellation is
+  reported exactly as the controller's terminal snapshot — never as success.
+- All presentation strings pass through `vscode.l10n.t` via a narrow facade; manifest strings live in
+  `package.nls.json`. Runtime `vscode` use is confined to the facade binding in `src/extension.ts`;
+  the presenter and every behavior behind it are covered by plain Node tests.
+
+Unavailable and failed states remain non-blocking: setup failures keep retry/recheck and output
+actions, and no startup path performs any install.
 
 ## Pinned official installer scripts
 

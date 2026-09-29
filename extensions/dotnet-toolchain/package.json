@@ -1,10 +1,54 @@
 {
 	"name": "dotnet-toolchain",
+	"displayName": "%displayName%",
+	"description": "%description%",
 	"publisher": "vscode",
 	"version": "0.0.1",
 	"license": "MIT",
 	"engines": {
 		"vscode": "^1.5.0"
+	},
+	"main": "./out/extension",
+	"extensionKind": [
+		"ui"
+	],
+	"capabilities": {
+		"virtualWorkspaces": true,
+		"untrustedWorkspaces": {
+			"supported": true
+		}
+	},
+	"activationEvents": [
+		"onStartupFinished",
+		"onCommand:walker.dotnet.getState",
+		"onCommand:walker.dotnet.recheck",
+		"onCommand:walker.dotnet.setup",
+		"onCommand:walker.dotnet.showOutput",
+		"onCommand:walker.dotnet.showActions"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "walker.dotnet.recheck",
+				"title": "%command.recheck%",
+				"category": "%category%"
+			},
+			{
+				"command": "walker.dotnet.setup",
+				"title": "%command.setup%",
+				"category": "%category%"
+			},
+			{
+				"command": "walker.dotnet.showOutput",
+				"title": "%command.showOutput%",
+				"category": "%category%"
+			},
+			{
+				"command": "walker.dotnet.showActions",
+				"title": "%command.showActions%",
+				"category": "%category%"
+			}
+		]
 	},
 	"scripts": {
 		"compile": "node ../../node_modules/typescript/bin/tsc6 -p tsconfig.json",
