@@ -170,8 +170,11 @@ function isProgressPhase(value: unknown): value is DotnetToolchainProgressPhase 
 	return typeof value === 'string' && (DOTNET_TOOLCHAIN_PROGRESS_PHASES as readonly string[]).includes(value);
 }
 
-/** Validation shared by acquisition inputs and persisted metadata. */
-function isValidOperationDirectory(value: unknown): value is string {
+/**
+ * Validation shared by acquisition inputs, persisted metadata, and the transaction layer: an
+ * operation directory is exactly one bounded, prefixed basename without traversal or separators.
+ */
+export function isValidDotnetOperationDirectory(value: unknown): value is string {
 	return typeof value === 'string' && OPERATION_DIRECTORY_PATTERN.test(value);
 }
 
@@ -213,7 +216,7 @@ function parseLockMetadata(text: string): IDotnetInstallLockMetadata | undefined
 	if (typeof value.pid !== 'number' || !Number.isInteger(value.pid) || value.pid < 1 || value.pid > MAX_OWNER_PID) {
 		return undefined;
 	}
-	if (!isProgressPhase(value.phase) || !isValidOperationDirectory(value.operationDirectory)) {
+	if (!isProgressPhase(value.phase) || !isValidDotnetOperationDirectory(value.operationDirectory)) {
 		return undefined;
 	}
 	if (value.diagnostics !== undefined && (typeof value.diagnostics !== 'string' || value.diagnostics.length > MAX_LOCK_DIAGNOSTICS_LENGTH)) {
@@ -422,7 +425,7 @@ export async function acquireDotnetInstallLock(options: IDotnetInstallLockAcquir
 	const walkerRoot = dotnetInstallWalkerRoot(options.home, platform);
 	const lockPath = dotnetInstallLockPath(options.home, platform);
 
-	if (!isValidOperationDirectory(options.operationDirectory) || !isProgressPhase(options.phase)
+	if (!isValidDotnetOperationDirectory(options.operationDirectory) || !isProgressPhase(options.phase)
 		|| (options.diagnostics !== undefined && (typeof options.diagnostics !== 'string' || options.diagnostics.length > MAX_LOCK_DIAGNOSTICS_LENGTH))) {
 		return { kind: 'failed', detail: 'refusing to acquire the install lock without valid owner metadata inputs' };
 	}
