@@ -264,6 +264,9 @@ suite('OnboardingVariationA — first step', () => {
 		const completed = waitFor(harness.service.onDidComplete);
 		footerButtons(container)[1].click();
 		await completed;
+		assert.strictEqual(container.querySelector('.onboarding-a-overlay'), null, 'completion removes onboarding');
+		await flushAsync();
+		assert.strictEqual(container.querySelector('.onboarding-a-overlay'), null, 'completion does not automatically replay onboarding');
 
 		assertNoAccountActivity(harness);
 	});
@@ -313,11 +316,14 @@ suite('OnboardingVariationA — first step', () => {
 		const { container } = harness;
 
 		toolchainShellOf(container);
+		let completed = false;
+		disposables.add(harness.service.onDidComplete(() => { completed = true; }));
 		const dismissed = waitFor(harness.service.onDidDismiss);
 		closeButtonOf(container).click();
 		await dismissed;
 
 		assert.strictEqual(container.querySelector('.onboarding-a-overlay'), null, 'close removes the overlay');
+		assert.strictEqual(completed, false, 'skipping does not fire the completion event');
 		assertNoAccountActivity(harness);
 	});
 });

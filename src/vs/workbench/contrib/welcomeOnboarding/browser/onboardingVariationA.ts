@@ -210,11 +210,11 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 				this._applyStepSelections(this.steps[this.currentStepIndex]);
 				this._logAction('complete');
 				this._dismiss('complete');
-			} else if (this.currentStepIndex === 0) {
-				this._logAction('continueWithoutSetup');
-				this._nextStep();
 			} else {
-				this._logAction('next');
+				const action = this.steps[this.currentStepIndex] === OnboardingStepId.DotnetToolchain
+					? 'continueWithoutSetup'
+					: 'next';
+				this._logAction(action);
 				this._nextStep();
 			}
 		}));
@@ -351,9 +351,8 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		this.stepFocusableElements.length = 0;
 
 		const stepId = this.steps[this.currentStepIndex];
-		// The first step renders the account-free .NET toolchain shell as its own hero
-		// (the step type rename and its localized title/subtitle are a later unit).
-		const useToolchainHero = stepId === OnboardingStepId.SignIn;
+		// The first step renders the account-free .NET toolchain shell as its own hero.
+		const useToolchainHero = stepId === OnboardingStepId.DotnetToolchain;
 		this.titleEl.style.display = useToolchainHero ? 'none' : '';
 		this.subtitleEl.style.display = useToolchainHero ? 'none' : '';
 		this.titleEl.textContent = getOnboardingStepTitle(stepId);
@@ -366,7 +365,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		clearNode(this.contentEl);
 
 		switch (stepId) {
-			case OnboardingStepId.SignIn:
+			case OnboardingStepId.DotnetToolchain:
 				this._renderToolchainStep(this.contentEl);
 				break;
 			case OnboardingStepId.Personalize:
@@ -382,7 +381,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 			"Step {0} of {1}: {2}",
 			this.currentStepIndex + 1,
 			this.steps.length,
-			useToolchainHero ? localize('onboarding.toolchain.title', "Set up .NET toolchain") : getOnboardingStepTitle(stepId)
+			getOnboardingStepTitle(stepId)
 		));
 	}
 
