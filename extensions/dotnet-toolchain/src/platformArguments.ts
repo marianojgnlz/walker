@@ -71,6 +71,13 @@ export interface IDotnetInstallInvocationRequest {
 	readonly stageDirectory: string;
 	/** Windows system root; defaults to {@link DEFAULT_WINDOWS_SYSTEM_ROOT}. */
 	readonly systemRoot?: string;
+	/**
+	 * Vetted script parameters appended after the fixed switches. Only the B2 proxy helper may
+	 * supply these, and they are ignored on Unix because its script uses environment variables.
+	 */
+	readonly proxyArguments?: readonly string[];
+	/** Builds the channel dry-run invocation instead of the real install (D2 channel resolution). */
+	readonly dryRun?: boolean;
 }
 
 /** Official-installer architecture per platform; absent entries are rejected before download. */
@@ -134,13 +141,14 @@ interface IScriptSwitchNames {
 	readonly installDir: string;
 	readonly architecture: string;
 	readonly noPath: string;
+	readonly dryRun: string;
 }
 
 /** Official-script switch spellings for one platform. */
 function scriptSwitchNames(platform: NodeJS.Platform): IScriptSwitchNames {
 	return platform === 'win32'
-		? { channel: '-Channel', version: '-Version', installDir: '-InstallDir', architecture: '-Architecture', noPath: '-NoPath' }
-		: { channel: '--channel', version: '--version', installDir: '--install-dir', architecture: '--architecture', noPath: '--no-path' };
+		? { channel: '-Channel', version: '-Version', installDir: '-InstallDir', architecture: '-Architecture', noPath: '-NoPath', dryRun: '-DryRun' }
+		: { channel: '--channel', version: '--version', installDir: '--install-dir', architecture: '--architecture', noPath: '--no-path', dryRun: '--dry-run' };
 }
 
 /**
@@ -160,12 +168,15 @@ export async function buildDotnetInstallInvocation(request: IDotnetInstallInvoca
 		return { kind: 'failed', failure: prerequisites.failure };
 	}
 	const names = scriptSwitchNames(environment.platform);
+	const proxyArguments = environment.platform === 'win32' ? request.proxyArguments ?? [] : [];
 	const args = [
 		...(environment.platform === 'win32' ? ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath] : [scriptPath]),
 		...(selection.kind === 'channel' ? [names.channel, selection.channel] : [names.version, selection.version]),
 		names.installDir, stageDirectory,
 		names.architecture, prerequisites.prerequisites.architecture,
 		names.noPath,
+		...(request.dryRun === true ? [names.dryRun] : []),
+		...proxyArguments,
 	];
 	return { kind: 'invocation', invocation: { executable: prerequisites.prerequisites.interpreter, args, cwd: stageDirectory } };
 }

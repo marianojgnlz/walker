@@ -256,6 +256,49 @@ suite('dotnet install invocation', () => {
 		assert.strictEqual(result.kind === 'failed' && result.failure.code, 'unsupported-architecture');
 	});
 
+	test('appends the Unix dry-run switch and never leaks Windows proxy parameters', async () => {
+		const result = await buildDotnetInstallInvocation({
+			environment: linuxEnvironment(),
+			fileSystem: bashFileSystem(),
+			selection: { kind: 'channel', channel: 'LTS' },
+			scriptPath: SCRIPT_PATH,
+			stageDirectory: STAGE_DIRECTORY,
+			dryRun: true,
+			proxyArguments: ['-ProxyAddress', 'http://proxy.local:3128'],
+		});
+		assert.deepStrictEqual(result, {
+			kind: 'invocation',
+			invocation: {
+				executable: '/bin/bash',
+				cwd: STAGE_DIRECTORY,
+				args: [SCRIPT_PATH, '--channel', 'LTS', '--install-dir', STAGE_DIRECTORY, '--architecture', 'x64', '--no-path', '--dry-run'],
+			},
+		});
+	});
+
+	test('passes vetted PowerShell proxy parameters after the official script path', async () => {
+		const powerShell = windowsPowerShellPath(DEFAULT_WINDOWS_SYSTEM_ROOT);
+		const fileSystem = createInMemoryFileSystem();
+		fileSystem.addFile(powerShell);
+		const result = await buildDotnetInstallInvocation({
+			environment: windowsEnvironment(),
+			fileSystem,
+			selection: { kind: 'channel', channel: 'STS' },
+			scriptPath: 'C:\\x\\install.ps1',
+			stageDirectory: 'C:\\x\\stage',
+			dryRun: true,
+			proxyArguments: ['-ProxyAddress', 'http://proxy.local:3128'],
+		});
+		assert.deepStrictEqual(result, {
+			kind: 'invocation',
+			invocation: {
+				executable: powerShell,
+				cwd: 'C:\\x\\stage',
+				args: ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', 'C:\\x\\install.ps1', '-Channel', 'STS', '-InstallDir', 'C:\\x\\stage', '-Architecture', 'x64', '-NoPath', '-DryRun', '-ProxyAddress', 'http://proxy.local:3128'],
+			},
+		});
+	});
+
 	test('rejects relative script or stage paths', async () => {
 		const relativeScript = await buildDotnetInstallInvocation({
 			environment: linuxEnvironment(),

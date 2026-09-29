@@ -291,8 +291,12 @@ async function writeJournalScaffold(journalPath: string, journal: IDotnetTransac
 	await writeJournalAtomically(journalPath, journal, operations.writeFile);
 }
 
-/** Removes only the operation directory this call created; a missing directory is already clean. */
-async function removeOwnedOperationDirectory(operationDirectory: string, remove: (directory: string) => Promise<void>): Promise<boolean> {
+/**
+ * Removes only the operation directory a caller created for one installation; a missing directory is
+ * already clean. Exported so the install orchestrator can discard owned pre-publication data after a
+ * canceled or failed operation without touching the managed destination.
+ */
+export async function removeOwnedOperationDirectory(operationDirectory: string, remove: (directory: string) => Promise<void> = defaultFileOperations.remove): Promise<boolean> {
 	try {
 		await remove(operationDirectory);
 		return true;
