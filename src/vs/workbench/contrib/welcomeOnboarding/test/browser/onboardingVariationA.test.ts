@@ -7,13 +7,14 @@ import assert from 'assert';
 import { $ } from '../../../../../base/browser/dom.js';
 import { Event as VSCodeEvent } from '../../../../../base/common/event.js';
 import { DisposableStore, toDisposable } from '../../../../../base/common/lifecycle.js';
+import type { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { mock } from '../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { ICommandService } from '../../../../../platform/commands/common/commands.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { TestConfigurationService } from '../../../../../platform/configuration/test/common/testConfigurationService.js';
 import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
-import { IExtensionGalleryService, IExtensionManagementService } from '../../../../../platform/extensionManagement/common/extensionManagement.js';
+import { IExtensionGalleryService, IExtensionManagementService, type IExtensionInfo, type IExtensionQueryOptions, type IGalleryExtension, type ILocalExtension } from '../../../../../platform/extensionManagement/common/extensionManagement.js';
 import { IFileService } from '../../../../../platform/files/common/files.js';
 import { ILayoutService } from '../../../../../platform/layout/browser/layoutService.js';
 import { INotification, INotificationHandle, INotificationService } from '../../../../../platform/notification/common/notification.js';
@@ -78,6 +79,8 @@ interface IOnboardingHarness {
 	readonly executedCommands: ICommandInvocation[];
 	readonly accountServiceAccesses: string[];
 	readonly themesSet: string[];
+	readonly keymapGalleryRequests: string[];
+	readonly keymapInstallations: string[];
 }
 
 function createColorTheme(settingsId: string): IWorkbenchColorTheme {
@@ -96,7 +99,7 @@ function createColorTheme(settingsId: string): IWorkbenchColorTheme {
 	};
 }
 
-function createHarness(store: Pick<DisposableStore, 'add'>, handleCommand: (id: string, ...args: unknown[]) => Promise<unknown> = () => Promise.resolve(undefined)): IOnboardingHarness {
+function createHarness(store: Pick<DisposableStore, 'add'>, handleCommand: (id: string, ...args: unknown[]) => Promise<unknown> = () => Promise.resolve(undefined), detectOtherEditors = false): IOnboardingHarness {
 	const container = document.body.appendChild($('div.onboarding-test-host'));
 	store.add(toDisposable(() => container.remove()));
 
@@ -105,6 +108,9 @@ function createHarness(store: Pick<DisposableStore, 'add'>, handleCommand: (id: 
 	const executedCommands: ICommandInvocation[] = [];
 	const accountServiceAccesses: string[] = [];
 	const themesSet: string[] = [];
+	const keymapGalleryRequests: string[] = [];
+	const keymapInstallations: string[] = [];
+	const galleryExtension = new (mock<IGalleryExtension>())();
 	const colorThemes = [createColorTheme('Dark 2026')];
 
 	const instantiationService = workbenchInstantiationService(undefined, store);
@@ -128,14 +134,24 @@ function createHarness(store: Pick<DisposableStore, 'add'>, handleCommand: (id: 
 	});
 	instantiationService.stub(IDefaultAccountService, createAccountServiceProbe(accountServiceAccesses));
 	instantiationService.stub(IFileService, new class extends mock<IFileService>() {
-		override exists(): Promise<boolean> { return Promise.resolve(false); }
+		override exists(): Promise<boolean> { return Promise.resolve(detectOtherEditors); }
 	});
 	instantiationService.stub(INotificationService, notificationService);
-	instantiationService.stub(IExtensionGalleryService, new class extends mock<IExtensionGalleryService>() { });
-	instantiationService.stub(IExtensionManagementService, new class extends mock<IExtensionManagementService>() { });
+	instantiationService.stub(IExtensionGalleryService, new class extends mock<IExtensionGalleryService>() {
+		override getExtensions(extensionInfos: ReadonlyArray<IExtensionInfo>, _optionsOrToken?: IExtensionQueryOptions | CancellationToken, _token?: CancellationToken): Promise<IGalleryExtension[]> {
+			keymapGalleryRequests.push(...extensionInfos.map(extension => extension.id));
+			return Promise.resolve([galleryExtension]);
+		}
+	});
+	instantiationService.stub(IExtensionManagementService, new class extends mock<IExtensionManagementService>() {
+		override installFromGallery(_extension: IGalleryExtension): Promise<ILocalExtension> {
+			keymapInstallations.push('installed');
+			return Promise.resolve(new (mock<ILocalExtension>())());
+		}
+	});
 
 	const service = store.add(instantiationService.createInstance(OnboardingVariationA));
-	return { container, service, configurationService, notificationService, executedCommands, accountServiceAccesses, themesSet };
+	return { container, service, configurationService, notificationService, executedCommands, accountServiceAccesses, themesSet, keymapGalleryRequests, keymapInstallations };
 }
 
 function waitFor(event: VSCodeEvent<void>): Promise<void> {
@@ -481,6 +497,144 @@ suite('OnboardingVariationA — first step', () => {
 		assertNoAccountActivity(harness);
 	});
 
+	test('renders every toolchain command state in the visible first-run flow', async () => {
+		let current = toolchainSnapshot('checking', 1);
+		const expectedTransitions = [
+			{ snapshot: toolchainSnapshot('ready', 2), label: 'SDK ready' },
+			{ snapshot: toolchainSnapshot('runtimeOnly', 3), label: 'A .NET runtime was found' },
+			{ snapshot: toolchainSnapshot('missing', 4), label: 'No .NET SDK found' },
+			{ snapshot: toolchainSnapshot('installing', 5), label: 'Installing .NET SDK' },
+			{ snapshot: toolchainSnapshot('verifying', 6), label: 'Verifying .NET SDK' },
+			{ snapshot: toolchainSnapshot('failed', 7), label: 'Setup failed' },
+		];
+		const nextTransitions = [...expectedTransitions];
+		const harness = createHarness(disposables, id => {
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.getState) {
+				return Promise.resolve(current);
+			}
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.recheck) {
+				current = nextTransitions.shift()!.snapshot;
+				return Promise.resolve(current);
+			}
+			return Promise.resolve(undefined);
+		});
+		harness.service.show();
+		const status = harness.container.querySelector<HTMLElement>('.onboarding-a-toolchain-status')!;
+		assert.ok(status.textContent?.includes('Checking for a .NET SDK'), 'checking is visible before the first command response');
+		await flushAsync();
+		assert.ok(status.textContent?.includes('Checking for a .NET SDK'), 'the checking snapshot remains visible');
+
+		for (const transition of expectedTransitions) {
+			const recheck = harness.container.querySelectorAll<HTMLButtonElement>('.onboarding-a-toolchain-actions button')[1];
+			recheck.click();
+			await flushAsync();
+			assert.ok(status.textContent?.includes(transition.label), `expected ${transition.snapshot.state} to render`);
+			if (transition.snapshot.state === 'ready') {
+				assert.ok(harness.container.querySelector('.onboarding-a-toolchain-details')?.textContent?.includes('/home/test/.walker/dotnet/dotnet'), 'ready includes the verified executable path');
+			}
+			if (transition.snapshot.state === 'installing' || transition.snapshot.state === 'verifying') {
+				assert.strictEqual(status.getAttribute('aria-busy'), 'true');
+			}
+		}
+		assert.strictEqual(harness.container.querySelector<HTMLButtonElement>('.onboarding-a-toolchain-actions button')?.getAttribute('aria-disabled'), 'false', 'failed setup remains retryable');
+		assert.ok(harness.executedCommands.every(command => new Set<string>(Object.values(DOTNET_TOOLCHAIN_COMMANDS)).has(command.id)), 'only the documented toolchain commands are invoked');
+		assertNoAccountActivity(harness);
+	});
+
+	test('keeps canceled setup retryable and exposes install failure until a later retry', async () => {
+		let current = toolchainSnapshot('missing', 1);
+		let setupAttempts = 0;
+		const harness = createHarness(disposables, id => {
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.getState) {
+				return Promise.resolve(current);
+			}
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.setup) {
+				setupAttempts++;
+				current = setupAttempts === 1
+					? toolchainSnapshot('missing', 2)
+					: setupAttempts === 2
+						? toolchainSnapshot('failed', 3)
+						: toolchainSnapshot('ready', 4);
+				return Promise.resolve(current);
+			}
+			return Promise.resolve(current);
+		});
+		harness.service.show();
+		await flushAsync();
+		const setup = harness.container.querySelector<HTMLButtonElement>('.onboarding-a-toolchain-actions button')!;
+
+		setup.click();
+		await flushAsync();
+		assert.ok(harness.container.querySelector('.onboarding-a-toolchain-status')?.textContent?.includes('No .NET SDK found'), 'canceling before confirmation leaves the detected state intact');
+		assert.strictEqual(harness.container.querySelector('.onboarding-a-toolchain-status')?.getAttribute('aria-busy'), 'false', 'cancel does not imply an install started');
+
+		setup.click();
+		await flushAsync();
+		assert.ok(harness.container.querySelector('.onboarding-a-toolchain-status')?.textContent?.includes('Setup failed'), 'install failure stays visible');
+		assert.ok(harness.container.querySelector('.onboarding-a-toolchain-details')?.textContent?.includes('Show Output'), 'failure points to diagnostics');
+		assert.strictEqual(setup.getAttribute('aria-disabled'), 'false', 'failure permits retry');
+
+		setup.click();
+		await flushAsync();
+		assert.ok(harness.container.querySelector('.onboarding-a-toolchain-status')?.textContent?.includes('SDK ready'), 'a later explicit retry can report verified readiness');
+		assert.deepStrictEqual(harness.executedCommands.filter(command => command.id === DOTNET_TOOLCHAIN_COMMANDS.setup).map(command => command.args), [[], [], []], 'setup does not accept command arguments that bypass explicit selection');
+		assertNoAccountActivity(harness);
+	});
+
+	test('keeps unavailable or disabled extension support non-blocking without auth fallback', async () => {
+		let stateReads = 0;
+		const harness = createHarness(disposables, id => {
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.getState) {
+				stateReads++;
+				return stateReads === 1
+					? Promise.resolve(toolchainSnapshot('unavailable', 1))
+					: Promise.reject(new Error('toolchain extension is disabled'));
+			}
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.recheck) {
+				return Promise.reject(new Error('toolchain extension is disabled'));
+			}
+			return Promise.resolve(undefined);
+		});
+		harness.service.show();
+		await flushAsync();
+		const status = harness.container.querySelector<HTMLElement>('.onboarding-a-toolchain-status')!;
+		const actions = harness.container.querySelectorAll<HTMLButtonElement>('.onboarding-a-toolchain-actions button');
+		assert.ok(status.textContent?.includes('Local .NET setup is unavailable'), 'unsupported host explains local setup is unavailable');
+		assert.strictEqual(actions[0].getAttribute('aria-disabled'), 'true', 'setup cannot run without the extension');
+		assert.strictEqual(actions[1].textContent, 'Retry', 'unavailable state offers a retry');
+		actions[0].click();
+		actions[1].click();
+		await flushAsync();
+		assert.ok(status.textContent?.includes('Local .NET setup is unavailable'), 'activation failure remains a recoverable unavailable state');
+		assert.strictEqual(harness.executedCommands.some(command => command.id === DOTNET_TOOLCHAIN_COMMANDS.setup), false, 'disabled setup is not dispatched');
+		footerButtons(harness.container)[1].click();
+		assert.ok(harness.container.querySelector('.onboarding-a-personalize'), 'unavailable setup never blocks personalization');
+		assertNoAccountActivity(harness);
+	});
+
+	test('dismisses onboarding during setup and ignores its late completion', async () => {
+		const setupResult = deferred<unknown>();
+		const harness = createHarness(disposables, id => id === DOTNET_TOOLCHAIN_COMMANDS.setup
+			? setupResult.promise
+			: Promise.resolve(toolchainSnapshot('missing', 1)));
+		harness.service.show();
+		await flushAsync();
+		harness.container.querySelector<HTMLButtonElement>('.onboarding-a-toolchain-actions button')!.click();
+		await flushAsync();
+		assert.ok(harness.executedCommands.some(command => command.id === DOTNET_TOOLCHAIN_COMMANDS.setup), 'setup remains an explicit command while onboarding is open');
+		const stateReadsAtDismissal = harness.executedCommands.filter(command => command.id === DOTNET_TOOLCHAIN_COMMANDS.getState).length;
+		const dismissed = waitFor(harness.service.onDidDismiss);
+		closeButtonOf(harness.container).click();
+		const exitingOverlay = overlayOf(harness.container);
+		exitingOverlay.dispatchEvent(new Event('transitionend'));
+		await dismissed;
+		setupResult.resolve(toolchainSnapshot('ready', 2));
+		await flushAsync();
+		assert.strictEqual(harness.container.querySelector('.onboarding-a-overlay'), null, 'late setup completion cannot recreate dismissed UI');
+		assert.strictEqual(harness.executedCommands.filter(command => command.id === DOTNET_TOOLCHAIN_COMMANDS.getState).length, stateReadsAtDismissal, 'dismissal stops polling while the extension-owned setup may continue');
+		assertNoAccountActivity(harness);
+	});
+
 	test('dispatches visible setup through the injected command service without moving focus', async () => {
 		let snapshot = toolchainSnapshot('missing', 1);
 		const harness = createHarness(disposables, id => {
@@ -551,6 +705,27 @@ suite('OnboardingVariationA — first step', () => {
 		await flushAsync();
 		assert.strictEqual(container.querySelector('.onboarding-a-overlay'), null, 'completion does not automatically replay onboarding');
 
+		assertNoAccountActivity(harness);
+	});
+
+	test('preserves keymap detection, selection, and gallery installation', async () => {
+		const harness = createHarness(disposables, undefined, true);
+		harness.service.show();
+		await flushAsync();
+		harness.container.querySelector<HTMLButtonElement>('.onboarding-a-footer-right button:last-child')!.click();
+		const keymap = product.onboardingKeymaps?.find(option => option.id === 'sublime');
+		assert.ok(keymap?.extensionId, 'the product keymap choice has an extension');
+		const keymapPill = [...harness.container.querySelectorAll<HTMLButtonElement>('.onboarding-a-keymap-pill')]
+			.find(pill => pill.textContent?.includes(keymap.label));
+		assert.ok(keymapPill, 'a detected editor keymap remains selectable');
+		keymapPill.click();
+
+		const completed = waitFor(harness.service.onDidComplete);
+		harness.container.querySelector<HTMLButtonElement>('.onboarding-a-footer-right button:last-child')!.click();
+		await completed;
+		await flushAsync();
+		assert.deepStrictEqual(harness.keymapGalleryRequests, [keymap.extensionId], 'completion queries the selected keymap extension');
+		assert.deepStrictEqual(harness.keymapInstallations, ['installed'], 'completion installs the selected keymap through extension management');
 		assertNoAccountActivity(harness);
 	});
 
