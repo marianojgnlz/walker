@@ -13,6 +13,7 @@ import { ILayoutService } from '../../../../platform/layout/browser/layoutServic
 import { KeyCode } from '../../../../base/common/keyCodes.js';
 import { StandardKeyboardEvent } from '../../../../base/browser/keyboardEvent.js';
 import { localize } from '../../../../nls.js';
+import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { Codicon } from '../../../../base/common/codicons.js';
 import { renderIcon } from '../../../../base/browser/ui/iconLabel/iconLabels.js';
 import { IWorkbenchThemeService } from '../../../services/themes/common/workbenchThemeService.js';
@@ -35,6 +36,7 @@ import {
 	getOnboardingStepSubtitle,
 } from '../common/onboardingTypes.js';
 import { IOnboardingService } from '../common/onboardingService.js';
+import { DotnetToolchainStep } from './dotnetToolchainStep.js';
 
 type OnboardingStepViewClassification = {
 	owner: 'cwebster-99';
@@ -120,6 +122,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		@IPathService private readonly pathService: IPathService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IAccessibilityService private readonly accessibilityService: IAccessibilityService,
+		@ICommandService private readonly commandService: ICommandService,
 	) {
 		super();
 
@@ -261,6 +264,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 
 		this.overlay.classList.remove('visible');
 		this.overlay.classList.add('exiting');
+		this.stepDisposables.clear();
 
 		let handled = false;
 		const onTransitionEnd = () => {
@@ -432,6 +436,20 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 
 		const description = append(contentMain, $('p.onboarding-a-toolchain-description'));
 		description.textContent = localize('onboarding.toolchain.description', "Set up the .NET SDK on this machine to build and run .NET projects, or continue without setup.");
+
+		const status = append(contentMain, $('p.onboarding-a-toolchain-status'));
+		const details = append(contentMain, $('p.onboarding-a-toolchain-details'));
+		const actions = append(contentMain, $('div.onboarding-a-toolchain-actions'));
+		const setup = append(actions, $<HTMLButtonElement>('button.onboarding-a-toolchain-action'));
+		setup.type = 'button';
+		const recheck = append(actions, $<HTMLButtonElement>('button.onboarding-a-toolchain-action'));
+		recheck.type = 'button';
+		const output = append(actions, $<HTMLButtonElement>('button.onboarding-a-toolchain-action'));
+		output.type = 'button';
+		this.stepDisposables.add(new DotnetToolchainStep(this.commandService, { status, details, setup, recheck, output }));
+		this._registerStepFocusable(setup);
+		this._registerStepFocusable(recheck);
+		this._registerStepFocusable(output);
 	}
 
 	// =====================================================================

@@ -23,6 +23,8 @@ import { ColorScheme } from '../../../../../platform/theme/common/theme.js';
 import { IWorkbenchColorTheme, IWorkbenchThemeService } from '../../../../services/themes/common/workbenchThemeService.js';
 import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
 import { OnboardingVariationA } from '../../browser/onboardingVariationA.js';
+import { DotnetToolchainStep, type IDotnetToolchainStepScheduler } from '../../browser/dotnetToolchainStep.js';
+import { DOTNET_TOOLCHAIN_COMMANDS, DOTNET_TOOLCHAIN_SCHEMA_VERSION, type IDotnetToolchainSnapshot } from '../../common/dotnetToolchain.js';
 
 const chatSetupCommandId = 'workbench.action.chat.triggerSetup';
 
@@ -94,7 +96,7 @@ function createColorTheme(settingsId: string): IWorkbenchColorTheme {
 	};
 }
 
-function createHarness(store: Pick<DisposableStore, 'add'>): IOnboardingHarness {
+function createHarness(store: Pick<DisposableStore, 'add'>, handleCommand: (id: string, ...args: unknown[]) => Promise<unknown> = () => Promise.resolve(undefined)): IOnboardingHarness {
 	const container = document.body.appendChild($('div.onboarding-test-host'));
 	store.add(toDisposable(() => container.remove()));
 
@@ -113,7 +115,7 @@ function createHarness(store: Pick<DisposableStore, 'add'>): IOnboardingHarness 
 	instantiationService.stub(ICommandService, new class extends mock<ICommandService>() {
 		override executeCommand<R = unknown>(id: string, ...args: unknown[]): Promise<R | undefined> {
 			executedCommands.push({ id, args });
-			return Promise.resolve(undefined);
+			return handleCommand(id, ...args).then(value => value as R | undefined);
 		}
 	});
 	instantiationService.stub(IWorkbenchThemeService, new class extends mock<IWorkbenchThemeService>() {
@@ -192,11 +194,226 @@ function assertNoAccountActivity(harness: IOnboardingHarness): void {
 	assert.deepStrictEqual(harness.accountServiceAccesses, [], 'no default account service access');
 }
 
+interface IDeferred<T> {
+	readonly promise: Promise<T>;
+	resolve(value: T): void;
+	reject(error: Error): void;
+}
+
+function deferred<T>(): IDeferred<T> {
+	let resolve!: (value: T) => void;
+	let reject!: (error: Error) => void;
+	const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+		resolve = resolvePromise;
+		reject = rejectPromise;
+	});
+	return { promise, resolve, reject };
+}
+
+function toolchainSnapshot(state: IDotnetToolchainSnapshot['state'], revision: number): IDotnetToolchainSnapshot {
+	return {
+		schemaVersion: DOTNET_TOOLCHAIN_SCHEMA_VERSION,
+		revision,
+		state,
+		locality: 'local',
+		...(state === 'ready' ? { verified: { executable: '/home/test/.walker/dotnet/dotnet', sdkVersion: '10.0.401' } } : {}),
+	};
+}
+
+class TestToolchainScheduler implements IDotnetToolchainStepScheduler {
+	private now = 0;
+	private nextId = 0;
+	private readonly scheduled = new Map<number, { readonly due: number; readonly callback: () => void }>();
+
+	schedule(callback: () => void, delayMs: number): { dispose(): void } {
+		const id = ++this.nextId;
+		this.scheduled.set(id, { due: this.now + delayMs, callback });
+		return toDisposable(() => this.scheduled.delete(id));
+	}
+
+	get pendingCount(): number {
+		return this.scheduled.size;
+	}
+
+	advanceBy(milliseconds: number): void {
+		const target = this.now + milliseconds;
+		while (true) {
+			const next = [...this.scheduled.entries()].sort((a, b) => a[1].due - b[1].due)[0];
+			if (!next || next[1].due > target) {
+				break;
+			}
+			this.now = next[1].due;
+			this.scheduled.delete(next[0]);
+			next[1].callback();
+		}
+		this.now = target;
+	}
+}
+
+function createToolchainStepHarness(
+	store: Pick<DisposableStore, 'add'>,
+	handleCommand: (id: string) => Promise<unknown>,
+): { readonly root: HTMLElement; readonly status: HTMLElement; readonly details: HTMLElement; readonly setup: HTMLButtonElement; readonly recheck: HTMLButtonElement; readonly output: HTMLButtonElement; readonly calls: string[]; readonly scheduler: TestToolchainScheduler; readonly step: DotnetToolchainStep } {
+	const root = document.body.appendChild($('div.dotnet-toolchain-step-test'));
+	store.add(toDisposable(() => root.remove()));
+	const status = root.appendChild($('div'));
+	const details = root.appendChild($('div'));
+	const setup = root.appendChild($<HTMLButtonElement>('button'));
+	const recheck = root.appendChild($<HTMLButtonElement>('button'));
+	const output = root.appendChild($<HTMLButtonElement>('button'));
+	const calls: string[] = [];
+	const commandService = new class extends mock<ICommandService>() {
+		override executeCommand<R = unknown>(id: string, ..._args: unknown[]): Promise<R | undefined> {
+			calls.push(id);
+			return handleCommand(id).then(value => value as R);
+		}
+	};
+	const scheduler = new TestToolchainScheduler();
+	const step = store.add(new DotnetToolchainStep(commandService, { status, details, setup, recheck, output }, {
+		scheduler,
+		pollIntervalMs: 1000,
+		stateReadTimeoutMs: 5000,
+	}));
+	return { root, status, details, setup, recheck, output, calls, scheduler, step };
+}
+
+suite('DotnetToolchainStep command client', () => {
+	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
+
+	test('polls visible busy and terminal states without moving focus', async () => {
+		const states = [
+			toolchainSnapshot('installing', 1),
+			toolchainSnapshot('verifying', 2),
+			toolchainSnapshot('failed', 3),
+			toolchainSnapshot('ready', 4),
+		];
+		const harness = createToolchainStepHarness(disposables, id => Promise.resolve(id === DOTNET_TOOLCHAIN_COMMANDS.getState ? states.shift() ?? toolchainSnapshot('ready', 4) : undefined));
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('Installing'));
+		harness.recheck.focus();
+		for (const expected of ['Verifying', 'failed', 'SDK ready']) {
+			harness.scheduler.advanceBy(1000);
+			await flushAsync();
+			assert.ok(harness.status.textContent?.includes(expected), `expected status label to include ${expected}`);
+			assert.strictEqual(document.activeElement, harness.recheck, 'state updates do not steal focus');
+		}
+		assert.ok(harness.details.textContent?.includes('/home/test/.walker/dotnet/dotnet'), 'ready state shows the verified executable');
+		assert.ok(harness.calls.filter(id => id === DOTNET_TOOLCHAIN_COMMANDS.getState).length >= 4, 'terminal states keep polling while visible');
+		harness.step.dispose();
+		assert.strictEqual(harness.scheduler.pendingCount, 0, 'disposing the visible step clears its poll timer');
+	});
+
+	test('times out slow state reads and ignores stale responses after retry', async () => {
+		const staleRead = deferred<unknown>();
+		let stateReads = 0;
+		const harness = createToolchainStepHarness(disposables, id => {
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.getState) {
+				stateReads++;
+				return stateReads === 1 ? staleRead.promise : Promise.resolve(toolchainSnapshot('ready', 2));
+			}
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.recheck) {
+				return Promise.resolve(toolchainSnapshot('ready', 2));
+			}
+			return Promise.reject(new Error('extension activation failed'));
+		});
+		harness.scheduler.advanceBy(5000);
+		assert.ok(harness.status.textContent?.includes('unavailable'), 'a read timeout explains the unavailable state');
+		harness.recheck.click();
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('SDK ready'), 'Retry can recover after extension activation becomes available');
+		staleRead.resolve(toolchainSnapshot('failed', 1));
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('SDK ready'), 'a late older response cannot overwrite the newer state');
+		harness.step.dispose();
+	});
+
+	test('shows unavailable after activation failure and retries a restarted extension revision', async () => {
+		let activated = true;
+		let stateReads = 0;
+		const harness = createToolchainStepHarness(disposables, id => {
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.getState) {
+				stateReads++;
+				if (stateReads === 1) {
+					return Promise.resolve(toolchainSnapshot('ready', 10));
+				}
+				if (!activated) {
+					return Promise.reject(new Error('extension activation failed'));
+				}
+				return Promise.resolve(toolchainSnapshot('missing', 0));
+			}
+			return activated ? Promise.resolve(toolchainSnapshot('missing', 0)) : Promise.reject(new Error('extension activation failed'));
+		});
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('SDK ready'));
+		activated = false;
+		harness.scheduler.advanceBy(1000);
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('unavailable'));
+		assert.strictEqual(harness.recheck.textContent, 'Retry');
+		activated = true;
+		harness.recheck.click();
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('No .NET SDK'), 'Retry accepts the restarted extension’s lower initial revision');
+		assert.ok(harness.calls.includes(DOTNET_TOOLCHAIN_COMMANDS.recheck));
+		harness.step.dispose();
+	});
+
+	test('shows setup progress and terminal refresh while the step is visible', async () => {
+		const setupResult = deferred<unknown>();
+		let current = toolchainSnapshot('missing', 1);
+		const harness = createToolchainStepHarness(disposables, id => {
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.getState) {
+				return Promise.resolve(current);
+			}
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.setup) {
+				current = toolchainSnapshot('installing', 2);
+				return setupResult.promise;
+			}
+			return Promise.resolve(current);
+		});
+		await flushAsync();
+		harness.setup.click();
+		await flushAsync();
+		assert.ok(harness.calls.includes(DOTNET_TOOLCHAIN_COMMANDS.setup), 'the setup action uses the extension command');
+		harness.scheduler.advanceBy(1000);
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('Installing'), 'polling reflects setup started from the visible onboarding step');
+		harness.recheck.focus();
+		current = toolchainSnapshot('verifying', 3);
+		harness.scheduler.advanceBy(1000);
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('Verifying'));
+		assert.strictEqual(document.activeElement, harness.recheck, 'progress updates do not move focus');
+		current = toolchainSnapshot('ready', 4);
+		setupResult.resolve(current);
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('SDK ready'), 'setup completion immediately refreshes terminal state');
+		harness.step.dispose();
+	});
+
+	test('disposes polling while setup remains active and ignores its late callback', async () => {
+		const setupResult = deferred<unknown>();
+		const harness = createToolchainStepHarness(disposables, id => id === DOTNET_TOOLCHAIN_COMMANDS.setup
+			? setupResult.promise
+			: Promise.resolve(toolchainSnapshot('missing', 1)));
+		await flushAsync();
+		harness.setup.click();
+		await flushAsync();
+		assert.ok(harness.calls.includes(DOTNET_TOOLCHAIN_COMMANDS.setup), 'setup has started before disposal');
+		harness.step.dispose();
+		assert.strictEqual(harness.scheduler.pendingCount, 0, 'step exit releases all timers without canceling setup');
+		setupResult.resolve(toolchainSnapshot('ready', 2));
+		await flushAsync();
+		assert.ok(harness.status.textContent?.includes('No .NET SDK'), 'late setup completion cannot update the dismissed step');
+		assert.strictEqual(harness.calls.filter(id => id === DOTNET_TOOLCHAIN_COMMANDS.setup).length, 1);
+	});
+});
+
 suite('OnboardingVariationA — first step', () => {
 
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('renders the account-free toolchain shell instead of sign-in controls', () => {
+	test('renders the account-free toolchain shell instead of sign-in controls', async () => {
 		const harness = createHarness(disposables);
 		harness.service.show();
 		const { container } = harness;
@@ -218,6 +435,31 @@ suite('OnboardingVariationA — first step', () => {
 		assert.strictEqual(container.querySelector('[aria-label="Continue with GitHub"]'), null, 'no GitHub sign-in control');
 		assert.strictEqual(container.querySelector('.onboarding-a-body')?.getAttribute('aria-label'), 'Step 1 of 2: Set up .NET toolchain', 'the first step announces its account-free name');
 		assert.strictEqual(footerButtons(container)[1].textContent, 'Continue Without Setup', 'the account-free fallback is offered');
+		await flushAsync();
+		assert.ok(harness.executedCommands.some(command => command.id === DOTNET_TOOLCHAIN_COMMANDS.getState), 'the visible step reads the extension state');
+		assertNoAccountActivity(harness);
+	});
+
+	test('dispatches visible setup through the injected command service without moving focus', async () => {
+		let snapshot = toolchainSnapshot('missing', 1);
+		const harness = createHarness(disposables, id => {
+			if (id === DOTNET_TOOLCHAIN_COMMANDS.setup) {
+				snapshot = toolchainSnapshot('ready', 2);
+			}
+			return Promise.resolve(snapshot);
+		});
+		harness.service.show();
+		await flushAsync();
+		const setup = harness.container.querySelector<HTMLButtonElement>('.onboarding-a-toolchain-actions button');
+		const actions = harness.container.querySelectorAll<HTMLButtonElement>('.onboarding-a-toolchain-actions button');
+		assert.strictEqual(actions.length, 3, 'setup, recheck, and diagnostics actions are connected');
+		const recheck = actions[1];
+		recheck.focus();
+		setup?.click();
+		await flushAsync();
+		assert.ok(harness.executedCommands.some(command => command.id === DOTNET_TOOLCHAIN_COMMANDS.setup), 'setup invokes the extension command');
+		assert.ok(harness.container.querySelector('.onboarding-a-toolchain-status')?.textContent?.includes('SDK ready'), 'the terminal setup snapshot is shown');
+		assert.strictEqual(document.activeElement, recheck, 'command completion does not steal focus');
 		assertNoAccountActivity(harness);
 	});
 
