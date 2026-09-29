@@ -7,7 +7,6 @@ import assert from 'assert';
 import { $ } from '../../../../../base/browser/dom.js';
 import { Event as VSCodeEvent } from '../../../../../base/common/event.js';
 import { DisposableStore, toDisposable } from '../../../../../base/common/lifecycle.js';
-import { assertDefined } from '../../../../../base/common/types.js';
 import { mock } from '../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { ICommandService } from '../../../../../platform/commands/common/commands.js';
@@ -25,8 +24,6 @@ import { IWorkbenchColorTheme, IWorkbenchThemeService } from '../../../../servic
 import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
 import { OnboardingVariationA } from '../../browser/onboardingVariationA.js';
 
-assertDefined(product.defaultChatAgent, 'the test requires a default chat agent product configuration');
-const enterpriseProviderUriSetting = product.defaultChatAgent.providerUriSetting;
 const chatSetupCommandId = 'workbench.action.chat.triggerSetup';
 
 interface ICommandInvocation {
@@ -52,13 +49,32 @@ class RecordingNotificationService extends TestNotificationService {
 	}
 }
 
+/**
+ * Records every property access on the account service so the first step can
+ * prove it never depends on accounts. Method-like accesses stay callable so a
+ * regression fails on the assertion instead of throwing mid-render.
+ */
+function createAccountServiceProbe(accesses: string[]): IDefaultAccountService {
+	return new Proxy({}, {
+		get: (_target, property) => {
+			if (typeof property === 'symbol') {
+				return undefined;
+			}
+			accesses.push(property);
+			return property === 'resolveGitHubUrl'
+				? (path: string) => `https://github.com/${path}`
+				: () => Promise.resolve(null);
+		},
+	}) as IDefaultAccountService;
+}
+
 interface IOnboardingHarness {
 	readonly container: HTMLElement;
 	readonly service: OnboardingVariationA;
 	readonly configurationService: RecordingConfigurationService;
 	readonly notificationService: RecordingNotificationService;
 	readonly executedCommands: ICommandInvocation[];
-	readonly signInCalls: unknown[];
+	readonly accountServiceAccesses: string[];
 	readonly themesSet: string[];
 }
 
@@ -85,7 +101,7 @@ function createHarness(store: Pick<DisposableStore, 'add'>): IOnboardingHarness 
 	const configurationService = new RecordingConfigurationService();
 	const notificationService = new RecordingNotificationService();
 	const executedCommands: ICommandInvocation[] = [];
-	const signInCalls: unknown[] = [];
+	const accountServiceAccesses: string[] = [];
 	const themesSet: string[] = [];
 	const colorThemes = [createColorTheme('Dark 2026')];
 
@@ -108,13 +124,7 @@ function createHarness(store: Pick<DisposableStore, 'add'>): IOnboardingHarness 
 			return Promise.resolve(null);
 		}
 	});
-	instantiationService.stub(IDefaultAccountService, new class extends mock<IDefaultAccountService>() {
-		override resolveGitHubUrl(path: string): string { return `https://github.com/${path}`; }
-		override signIn(): Promise<null> {
-			signInCalls.push(undefined);
-			return Promise.resolve(null);
-		}
-	});
+	instantiationService.stub(IDefaultAccountService, createAccountServiceProbe(accountServiceAccesses));
 	instantiationService.stub(IFileService, new class extends mock<IFileService>() {
 		override exists(): Promise<boolean> { return Promise.resolve(false); }
 	});
@@ -123,7 +133,7 @@ function createHarness(store: Pick<DisposableStore, 'add'>): IOnboardingHarness 
 	instantiationService.stub(IExtensionManagementService, new class extends mock<IExtensionManagementService>() { });
 
 	const service = store.add(instantiationService.createInstance(OnboardingVariationA));
-	return { container, service, configurationService, notificationService, executedCommands, signInCalls, themesSet };
+	return { container, service, configurationService, notificationService, executedCommands, accountServiceAccesses, themesSet };
 }
 
 function waitFor(event: VSCodeEvent<void>): Promise<void> {
@@ -147,8 +157,10 @@ function overlayOf(container: HTMLElement): HTMLElement {
 	return overlay;
 }
 
-function formerEnterpriseEntryPoint(container: HTMLElement): HTMLButtonElement | undefined {
-	return container.querySelector<HTMLButtonElement>('button[aria-label="Continue with GitHub Enterprise"]') ?? undefined;
+function toolchainShellOf(container: HTMLElement): HTMLElement {
+	const shell = container.querySelector<HTMLElement>('.onboarding-a-toolchain');
+	assert.ok(shell, 'expected the account-free toolchain shell to be rendered');
+	return shell;
 }
 
 /** DOM legacy `keyCode` value for the Escape key (`KeyCode.Escape` is the internal VS Code value). */
@@ -173,30 +185,43 @@ function flushAsync(): Promise<void> {
 	return new Promise<void>(resolve => setTimeout(resolve, 0));
 }
 
-function assertNoEnterpriseWork(harness: IOnboardingHarness): void {
-	assert.deepStrictEqual(harness.configurationService.updates.filter(update => update.key === enterpriseProviderUriSetting), [], 'no enterprise provider URI configuration write');
+function assertNoAccountActivity(harness: IOnboardingHarness): void {
+	assert.deepStrictEqual(harness.configurationService.updates, [], 'no configuration write from the account-free step');
 	assert.deepStrictEqual(harness.executedCommands.filter(command => command.id === chatSetupCommandId), [], 'no chat setup command invocation');
 	assert.deepStrictEqual(harness.notificationService.messages, [], 'no notification was raised');
-	assert.deepStrictEqual(harness.signInCalls, [], 'no sign-in invocation');
+	assert.deepStrictEqual(harness.accountServiceAccesses, [], 'no default account service access');
 }
 
 suite('OnboardingVariationA — first step', () => {
 
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('renders no GitHub Enterprise controls', () => {
+	test('renders the account-free toolchain shell instead of sign-in controls', () => {
 		const harness = createHarness(disposables);
 		harness.service.show();
 		const { container } = harness;
 
-		assert.strictEqual(container.querySelectorAll('.onboarding-a-provider-mark.github-enterprise').length, 0, 'no GHE provider mark');
+		const shell = toolchainShellOf(container);
+		assert.ok(shell.textContent?.includes('Set up .NET toolchain'), 'the first step is named Set up .NET toolchain');
+		assert.ok(container.textContent?.includes(`Welcome to ${product.nameLong}`), 'the Walker welcome branding is preserved');
+		assert.strictEqual(container.querySelector('.onboarding-a-provider-mark'), null, 'no provider marks');
+		assert.strictEqual(container.querySelector('.onboarding-a-provider-mark.github-enterprise'), null, 'no GHE provider mark');
 		assert.strictEqual(container.querySelector('.onboarding-a-signin-ghe-input'), null, 'no GHE instance input');
 		assert.strictEqual(container.querySelector('.onboarding-a-signin-ghe-progress'), null, 'no GHE progress');
-		assert.strictEqual(formerEnterpriseEntryPoint(container), undefined, 'no GHE entry point button');
-		assert.ok(!container.textContent?.includes('GHE'), 'no GHE label');
+		assert.strictEqual(container.querySelector('button[aria-label="Continue with GitHub Enterprise"]'), null, 'no GHE entry point');
+		assert.strictEqual(container.querySelector('.onboarding-a-signin-actions'), null, 'no provider action row');
+		assert.strictEqual(container.querySelector('button.onboarding-a-signin-btn'), null, 'no provider sign-in button');
+		assert.strictEqual(container.querySelector('.onboarding-a-signin-icon-btn'), null, 'no provider icon sign-in button');
+		assert.strictEqual(container.querySelector('.onboarding-a-signin-disclaimer'), null, 'no sign-in disclaimer');
+		assert.strictEqual(container.querySelector('.onboarding-a-signin-footer'), null, 'no sign-in footer');
+		assert.strictEqual(container.querySelector('.onboarding-a-signin-nudge-btn'), null, 'no footer sign-in nudge');
+		assert.strictEqual(container.querySelector('[aria-label="Continue with GitHub"]'), null, 'no GitHub sign-in control');
+		assert.strictEqual(container.querySelector('.onboarding-a-body')?.getAttribute('aria-label'), 'Step 1 of 2: Set up .NET toolchain', 'the first step announces its account-free name');
+		assert.strictEqual(footerButtons(container)[1].textContent, 'Continue Without Setup', 'the account-free fallback is offered');
+		assertNoAccountActivity(harness);
 	});
 
-	test('never writes enterprise configuration or starts chat setup from the first step', async () => {
+	test('never invokes account or chat setup from the first step', async () => {
 		const harness = createHarness(disposables);
 		harness.service.show();
 		const { container } = harness;
@@ -210,7 +235,7 @@ suite('OnboardingVariationA — first step', () => {
 		await Promise.all([completed, dismissed]);
 
 		assert.strictEqual(container.querySelector('.onboarding-a-overlay'), null, 'completion removes the overlay');
-		assertNoEnterpriseWork(harness);
+		assertNoAccountActivity(harness);
 	});
 
 	test('preserves personalization navigation, theme selection, and completion', async () => {
@@ -218,9 +243,9 @@ suite('OnboardingVariationA — first step', () => {
 		harness.service.show();
 		const { container, themesSet } = harness;
 
-		assert.ok(container.querySelector('.onboarding-a-signin'), 'the predecessor first-step shell still renders');
+		toolchainShellOf(container);
 		assert.strictEqual(footerButtons(container)[0].style.display, 'none', 'back is hidden on the first step');
-		assert.strictEqual(footerButtons(container)[1].textContent, 'Continue without Signing In');
+		assert.strictEqual(footerButtons(container)[1].textContent, 'Continue Without Setup');
 
 		footerButtons(container)[1].click();
 		assert.ok(container.querySelector('.onboarding-a-personalize'), 'the personalize step renders');
@@ -232,23 +257,41 @@ suite('OnboardingVariationA — first step', () => {
 		assert.deepStrictEqual(themesSet, ['Dark 2026'], 'selecting a theme applies it');
 
 		footerButtons(container)[0].click();
-		assert.ok(container.querySelector('.onboarding-a-signin'), 'back returns to the first step');
+		toolchainShellOf(container);
+		assert.strictEqual(footerButtons(container)[1].textContent, 'Continue Without Setup', 'back returns to the account-free fallback');
 
 		footerButtons(container)[1].click();
 		const completed = waitFor(harness.service.onDidComplete);
 		footerButtons(container)[1].click();
 		await completed;
 
-		assertNoEnterpriseWork(harness);
+		assertNoAccountActivity(harness);
 	});
 
-	test('escape during the former enterprise path dismisses and reopens cleanly', async () => {
+	test('renders no sign-in nudge on the personalized step', async () => {
 		const harness = createHarness(disposables);
 		harness.service.show();
 		const { container } = harness;
 
-		formerEnterpriseEntryPoint(container)?.click();
-		footerButtons(container)[0].click();
+		footerButtons(container)[1].click();
+		assert.ok(container.querySelector('.onboarding-a-personalize'), 'the personalize step renders');
+		assert.strictEqual(container.querySelector('.onboarding-a-signin'), null, 'no sign-in hero outside the first step');
+		assert.strictEqual(container.querySelector('.onboarding-a-signin-nudge-btn'), null, 'no footer sign-in nudge');
+		assert.strictEqual(footerButtons(container)[0].style.display, '', 'back is available on personalization');
+		assert.strictEqual(footerButtons(container)[1].textContent, 'Get Started');
+
+		const completed = waitFor(harness.service.onDidComplete);
+		footerButtons(container)[1].click();
+		await completed;
+		assertNoAccountActivity(harness);
+	});
+
+	test('escape during the first step dismisses and reopens cleanly', async () => {
+		const harness = createHarness(disposables);
+		harness.service.show();
+		const { container } = harness;
+
+		toolchainShellOf(container);
 		const dismissed = waitFor(harness.service.onDidDismiss);
 		const overlay = pressEscape(container);
 		assert.ok(overlay.classList.contains('exiting'), 'escape starts the dismissal');
@@ -256,25 +299,25 @@ suite('OnboardingVariationA — first step', () => {
 		await dismissed;
 
 		assert.strictEqual(container.querySelector('.onboarding-a-overlay'), null, 'escape removes the overlay');
-		assertNoEnterpriseWork(harness);
+		assertNoAccountActivity(harness);
 
 		harness.service.show();
 		assert.strictEqual(container.querySelectorAll('.onboarding-a-overlay').length, 1, 'reopening renders exactly one overlay');
-		assert.strictEqual(container.querySelectorAll('.onboarding-a-provider-mark.github-enterprise').length, 0, 'no enterprise controls on reopen');
+		assert.strictEqual(container.querySelectorAll('.onboarding-a-provider-mark').length, 0, 'no provider controls on reopen');
 		assert.strictEqual(footerButtons(container)[0].style.display, 'none', 'back is hidden on the first step');
 	});
 
-	test('close during the former enterprise path performs no enterprise work', async () => {
+	test('close during the first step performs no account work', async () => {
 		const harness = createHarness(disposables);
 		harness.service.show();
 		const { container } = harness;
 
-		formerEnterpriseEntryPoint(container)?.click();
+		toolchainShellOf(container);
 		const dismissed = waitFor(harness.service.onDidDismiss);
 		closeButtonOf(container).click();
 		await dismissed;
 
 		assert.strictEqual(container.querySelector('.onboarding-a-overlay'), null, 'close removes the overlay');
-		assertNoEnterpriseWork(harness);
+		assertNoAccountActivity(harness);
 	});
 });

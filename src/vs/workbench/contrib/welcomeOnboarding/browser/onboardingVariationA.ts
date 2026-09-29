@@ -6,22 +6,17 @@
 import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
 import { Emitter, Event } from '../../../../base/common/event.js';
 import { $, append, addDisposableListener, EventType, clearNode, getActiveWindow } from '../../../../base/browser/dom.js';
-import { isCancellationError } from '../../../../base/common/errors.js';
-import { StopWatch } from '../../../../base/common/stopwatch.js';
 import { URI } from '../../../../base/common/uri.js';
 import { isWindows, isMacintosh, isLinux } from '../../../../base/common/platform.js';
-import { assertDefined } from '../../../../base/common/types.js';
 import { FileAccess } from '../../../../base/common/network.js';
 import { ILayoutService } from '../../../../platform/layout/browser/layoutService.js';
 import { KeyCode } from '../../../../base/common/keyCodes.js';
 import { StandardKeyboardEvent } from '../../../../base/browser/keyboardEvent.js';
 import { localize } from '../../../../nls.js';
 import { Codicon } from '../../../../base/common/codicons.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
 import { renderIcon } from '../../../../base/browser/ui/iconLabel/iconLabels.js';
 import { IWorkbenchThemeService } from '../../../services/themes/common/workbenchThemeService.js';
 import { EXTENSION_INSTALL_SKIP_WALKTHROUGH_CONTEXT, IExtensionGalleryService, IExtensionManagementService } from '../../../../platform/extensionManagement/common/extensionManagement.js';
-import { GitHubPaths, IDefaultAccountService } from '../../../../platform/defaultAccount/common/defaultAccount.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { INotificationService, Severity } from '../../../../platform/notification/common/notification.js';
 import { ConfigurationTarget, IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
@@ -29,8 +24,6 @@ import product from '../../../../platform/product/common/product.js';
 import { IFileService } from '../../../../platform/files/common/files.js';
 import { IPathService } from '../../../services/path/common/pathService.js';
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { InstallChatEvent, InstallChatClassification, ChatSetupStrategy } from '../../chat/browser/chatSetup/chatSetup.js';
-import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IAccessibilityService } from '../../../../platform/accessibility/common/accessibility.js';
 import {
 	OnboardingStepId,
@@ -69,9 +62,6 @@ type OnboardingActionEvent = {
 	argument: string | undefined;
 };
 
-assertDefined(product.defaultChatAgent, 'Onboarding requires a default chat agent product configuration.');
-const defaultChat = product.defaultChatAgent;
-
 /**
  * Variation A — Classic Wizard Modal
  *
@@ -80,7 +70,7 @@ const defaultChat = product.defaultChatAgent;
  * tab. When dismissed, the welcome tab is revealed underneath.
  *
  * Steps:
- * 1. Sign In — sessions-style sign-in hero with GitHub Copilot, Google, and Apple options
+ * 1. .NET Toolchain — account-free local setup shell; never requires an account or chat agent
  * 2. Personalize — Theme selection grid + keymap pills
  */
 export class OnboardingVariationA extends Disposable implements IOnboardingService {
@@ -104,8 +94,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	private backButton: HTMLButtonElement | undefined;
 	private nextButton: HTMLButtonElement | undefined;
 	private closeButton: HTMLButtonElement | undefined;
-	private footerLeft: HTMLElement | undefined;
-	private _footerSignInBtn: HTMLButtonElement | undefined;
 
 	private currentStepIndex = 0;
 	private readonly steps = ONBOARDING_STEPS;
@@ -119,13 +107,11 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 	private selectedThemeId = 'dark-2026';
 	private selectedKeymapId = 'vscode';
 	private _detectedEditorIds: Set<string> | undefined;
-	private _userSignedIn = false;
 	private selectedAiMode: AiCollaborationMode = AiCollaborationMode.Balanced;
 
 	constructor(
 		@ILayoutService private readonly layoutService: ILayoutService,
 		@IWorkbenchThemeService private readonly themeService: IWorkbenchThemeService,
-		@IDefaultAccountService private readonly defaultAccountService: IDefaultAccountService,
 		@IExtensionGalleryService private readonly extensionGalleryService: IExtensionGalleryService,
 		@IExtensionManagementService private readonly extensionManagementService: IExtensionManagementService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
@@ -133,7 +119,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		@IFileService private readonly fileService: IFileService,
 		@IPathService private readonly pathService: IPathService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
-		@ICommandService private readonly commandService: ICommandService,
 		@IAccessibilityService private readonly accessibilityService: IAccessibilityService,
 	) {
 		super();
@@ -196,7 +181,8 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		// Footer
 		const footer = append(this.card, $('.onboarding-a-footer'));
 
-		this.footerLeft = append(footer, $('.onboarding-a-footer-left'));
+		// Empty left slot keeps the navigation cluster right-aligned.
+		append(footer, $('.onboarding-a-footer-left'));
 
 		const footerRight = append(footer, $('.onboarding-a-footer-right'));
 
@@ -225,7 +211,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 				this._logAction('complete');
 				this._dismiss('complete');
 			} else if (this.currentStepIndex === 0) {
-				this._logAction('continueWithoutSignIn');
+				this._logAction('continueWithoutSetup');
 				this._nextStep();
 			} else {
 				this._logAction('next');
@@ -365,9 +351,11 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		this.stepFocusableElements.length = 0;
 
 		const stepId = this.steps[this.currentStepIndex];
-		const useSignInHero = stepId === OnboardingStepId.SignIn;
-		this.titleEl.style.display = useSignInHero ? 'none' : '';
-		this.subtitleEl.style.display = useSignInHero ? 'none' : '';
+		// The first step renders the account-free .NET toolchain shell as its own hero
+		// (the step type rename and its localized title/subtitle are a later unit).
+		const useToolchainHero = stepId === OnboardingStepId.SignIn;
+		this.titleEl.style.display = useToolchainHero ? 'none' : '';
+		this.subtitleEl.style.display = useToolchainHero ? 'none' : '';
 		this.titleEl.textContent = getOnboardingStepTitle(stepId);
 		if (stepId === OnboardingStepId.Personalize) {
 			this._renderPersonalizeSubtitle(this.subtitleEl);
@@ -379,7 +367,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 
 		switch (stepId) {
 			case OnboardingStepId.SignIn:
-				this._renderSignInStep(this.contentEl);
+				this._renderToolchainStep(this.contentEl);
 				break;
 			case OnboardingStepId.Personalize:
 				this._renderPersonalizeStep(this.contentEl);
@@ -394,7 +382,7 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 			"Step {0} of {1}: {2}",
 			this.currentStepIndex + 1,
 			this.steps.length,
-			getOnboardingStepTitle(stepId)
+			useToolchainHero ? localize('onboarding.toolchain.title', "Set up .NET toolchain") : getOnboardingStepTitle(stepId)
 		));
 	}
 
@@ -404,14 +392,9 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		}
 		if (this.nextButton) {
 			if (this.currentStepIndex === 0) {
-				if (this._userSignedIn) {
-					this.nextButton.className = 'onboarding-a-btn onboarding-a-btn-primary';
-					this.nextButton.textContent = localize('onboarding.continue', "Continue");
-				} else {
-					// Sign-in step: secondary "Continue without Signing In"
-					this.nextButton.className = 'onboarding-a-btn onboarding-a-btn-secondary';
-					this.nextButton.textContent = localize('onboarding.continueWithoutSignIn', "Continue without Signing In");
-				}
+				// Account-free fallback: the first step never requires setup or sign-in.
+				this.nextButton.className = 'onboarding-a-btn onboarding-a-btn-secondary';
+				this.nextButton.textContent = localize('onboarding.continueWithoutSetup', "Continue Without Setup");
 			} else if (this._isLastStep()) {
 				this.nextButton.className = 'onboarding-a-btn onboarding-a-btn-primary';
 				this.nextButton.textContent = localize('onboarding.getStarted', "Get Started");
@@ -420,36 +403,21 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 				this.nextButton.textContent = localize('onboarding.next', "Continue");
 			}
 		}
-		if (this.footerLeft) {
-			if (this._isLastStep()) {
-				// Show sign-in nudge in footer
-				if (!this._footerSignInBtn && !this._userSignedIn) {
-					this._footerSignInBtn = append(this.footerLeft, $<HTMLButtonElement>('button.onboarding-a-signin-nudge-btn'));
-					this._footerSignInBtn.type = 'button';
-					this._footerSignInBtn.textContent = localize('onboarding.sessions.signInNudge', "Sign in to use GitHub Copilot");
-					this.stepDisposables.add(addDisposableListener(this._footerSignInBtn, EventType.CLICK, async () => {
-						this._logAction('signInNudge');
-						await this._handleSignIn();
-						if (this._userSignedIn && this._footerSignInBtn) {
-							this._footerSignInBtn.style.display = 'none';
-						}
-					}));
-				}
-			} else {
-				if (this._footerSignInBtn) {
-					this._footerSignInBtn.remove();
-					this._footerSignInBtn = undefined;
-				}
-			}
-		}
 	}
 
 	// =====================================================================
-	// Step: Sign In
+	// Step: .NET toolchain
 	// =====================================================================
 
-	private _renderSignInStep(container: HTMLElement): void {
-		const wrapper = append(container, $('.onboarding-a-signin'));
+	/**
+	 * Renders the account-free toolchain shell for the first step. It keeps the
+	 * Walker welcome branding, names the local setup step, and never requires a
+	 * chat agent, account, or sign-in. Live detection state and the
+	 * Setup/Recheck/Show Output actions are added by the command-state
+	 * integration; this shell only offers the continuation fallback.
+	 */
+	private _renderToolchainStep(container: HTMLElement): void {
+		const wrapper = append(container, $('.onboarding-a-signin.onboarding-a-toolchain'));
 		const brand = append(wrapper, $('.onboarding-a-signin-brand'));
 		const brandIcon = append(brand, $('span.onboarding-a-signin-brand-icon'));
 		brandIcon.setAttribute('role', 'img');
@@ -458,127 +426,13 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		const content = append(wrapper, $('.onboarding-a-signin-content'));
 		const contentMain = append(content, $('.onboarding-a-signin-content-main'));
 		const title = append(contentMain, $('h2.onboarding-a-signin-title'));
-		title.textContent = localize('onboarding.signIn.heroTitle', "Welcome to {0}", product.nameLong);
+		title.textContent = localize('onboarding.toolchain.welcome', "Welcome to {0}", product.nameLong);
 
 		const subtitle = append(contentMain, $('p.onboarding-a-signin-subtitle'));
-		subtitle.textContent = localize('onboarding.signIn.heroSubtitle', "Sign in to use GitHub Copilot.");
+		subtitle.textContent = localize('onboarding.toolchain.title', "Set up .NET toolchain");
 
-		const actions = append(contentMain, $('.onboarding-a-signin-actions'));
-
-		if (this._userSignedIn) {
-			const signedIn = append(actions, $('.onboarding-a-signin-confirmation'));
-			const icon = append(signedIn, $('span'));
-			icon.classList.add(...ThemeIcon.asClassNameArray(Codicon.check));
-			icon.setAttribute('aria-hidden', 'true');
-			const text = append(signedIn, $('span'));
-			text.textContent = localize('onboarding.signIn.signedIn', "You're signed in. You can continue to the next step.");
-		} else {
-			this._renderDefaultSignInActions(actions);
-		}
-
-		const footer = append(wrapper, $('.onboarding-a-signin-footer'));
-
-		const disclaimerCol = append(footer, $('.onboarding-a-signin-disclaimer-col'));
-
-		// GitHub Copilot disclaimer
-		const copilotDisclaimer = append(disclaimerCol, $('.onboarding-a-signin-disclaimer'));
-		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.prefix', "By signing in, you agree to {0}'s ", defaultChat.provider.default.name));
-		this._createInlineLink(copilotDisclaimer, localize('onboarding.signIn.disclaimer.terms', "Terms"), defaultChat.termsStatementUrl);
-		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.middle', " and "));
-		this._createInlineLink(copilotDisclaimer, localize('onboarding.signIn.disclaimer.privacy', "Privacy Statement"), defaultChat.privacyStatementUrl);
-		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.copilotPrefix', ". {0} Copilot may show ", defaultChat.provider.default.name));
-		this._createInlineLink(copilotDisclaimer, localize('onboarding.signIn.disclaimer.publicCode', "public code"), defaultChat.publicCodeMatchesUrl);
-		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.improveSuffix', " suggestions and use your data to improve the product."));
-		copilotDisclaimer.append(' ');
-		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.settingsPrefix', "You can change these "));
-		this._createInlineLink(copilotDisclaimer, localize('onboarding.signIn.disclaimer.settings', "settings"), this.defaultAccountService.resolveGitHubUrl(GitHubPaths.copilotSettings));
-		copilotDisclaimer.append(localize('onboarding.signIn.disclaimer.suffix', " anytime."));
-	}
-
-	private _renderDefaultSignInActions(actions: HTMLElement): void {
-		const githubBtn = this._registerStepFocusable(this._createSignInButton(actions, 'github', localize('onboarding.signIn.github', "Continue with GitHub"), {
-			emphasized: true,
-			label: localize('onboarding.signIn.github.aria', "Continue with GitHub")
-		}));
-		this.stepDisposables.add(addDisposableListener(githubBtn, EventType.CLICK, () => {
-			this._logAction('signIn', undefined, 'github');
-			this._handleSignIn();
-		}));
-
-		const googleBtn = this._registerStepFocusable(this._createSignInButton(actions, 'google', localize('onboarding.signIn.google', "Continue with Google"), {
-			iconOnly: true,
-			label: localize('onboarding.signIn.google', "Continue with Google")
-		}));
-		this.stepDisposables.add(addDisposableListener(googleBtn, EventType.CLICK, () => {
-			this._logAction('signIn', undefined, 'google');
-			this._handleSignIn('google');
-		}));
-
-		const appleBtn = this._registerStepFocusable(this._createSignInButton(actions, 'apple', localize('onboarding.signIn.apple', "Continue with Apple"), {
-			iconOnly: true,
-			label: localize('onboarding.signIn.apple', "Continue with Apple")
-		}));
-		this.stepDisposables.add(addDisposableListener(appleBtn, EventType.CLICK, () => {
-			this._logAction('signIn', undefined, 'apple');
-			this._handleSignIn('apple');
-		}));
-	}
-
-	private _createSignInButton(parent: HTMLElement, providerClass: 'github' | 'google' | 'apple', label: string, options?: { emphasized?: boolean; iconOnly?: boolean; label?: string }): HTMLButtonElement {
-		const isCompact = options?.iconOnly;
-		const btn = append(parent, $<HTMLButtonElement>(isCompact ? 'button.onboarding-a-signin-icon-btn' : 'button.onboarding-a-signin-btn'));
-		btn.type = 'button';
-		btn.title = options?.label ?? label;
-		btn.setAttribute('aria-label', options?.label ?? label);
-		if (options?.emphasized) {
-			btn.classList.add('primary');
-		}
-
-		const mark = append(btn, $('span.onboarding-a-provider-mark'));
-		mark.classList.add(providerClass);
-		mark.setAttribute('aria-hidden', 'true');
-		if (providerClass === 'github') {
-			mark.appendChild(renderIcon(Codicon.github));
-		}
-
-		if (!options?.iconOnly) {
-			const labelEl = append(btn, $('span.onboarding-a-signin-btn-label'));
-			labelEl.textContent = label;
-		}
-
-		return btn;
-	}
-
-	private async _handleSignIn(socialProvider?: string): Promise<void> {
-		const provider = socialProvider ?? 'github';
-		const watch = StopWatch.create();
-		try {
-			const account = await this.defaultAccountService.signIn({
-				extraAuthorizeParameters: { get_started_with: 'copilot-vscode' },
-				provider: socialProvider,
-			});
-			if (account) {
-				this._userSignedIn = true;
-				this.telemetryService.publicLog2<InstallChatEvent, InstallChatClassification>('commandCenter.chatInstall', { installResult: 'installed', installDuration: watch.elapsed(), signUpErrorCode: undefined, provider });
-				// Run chat setup in the background (sign-up, extension install, entitlement resolution)
-				this.commandService.executeCommand('workbench.action.chat.triggerSetup', undefined, {
-					disableChatViewReveal: true,
-					setupStrategy: ChatSetupStrategy.DefaultSetup,
-				});
-				this._nextStep();
-			}
-		} catch (error) {
-			if (isCancellationError(error)) {
-				this.telemetryService.publicLog2<InstallChatEvent, InstallChatClassification>('commandCenter.chatInstall', { installResult: 'cancelled', installDuration: watch.elapsed(), signUpErrorCode: undefined, provider });
-				return;
-			}
-
-			this.telemetryService.publicLog2<InstallChatEvent, InstallChatClassification>('commandCenter.chatInstall', { installResult: 'failedNotSignedIn', installDuration: watch.elapsed(), signUpErrorCode: undefined, provider });
-			this.notificationService.notify({
-				severity: Severity.Error,
-				message: localize('onboarding.signIn.error', "Sign-in failed. You can try again later from the Accounts menu."),
-			});
-		}
+		const description = append(contentMain, $('p.onboarding-a-toolchain-description'));
+		description.textContent = localize('onboarding.toolchain.description', "Set up the .NET SDK on this machine to build and run .NET projects, or continue without setup.");
 	}
 
 	// =====================================================================
@@ -893,15 +747,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		return kbd;
 	}
 
-	private _createInlineLink(parent: HTMLElement, label: string, href: string): HTMLAnchorElement {
-		const link = this._registerStepFocusable(append(parent, $<HTMLAnchorElement>('a.onboarding-a-inline-link')));
-		link.textContent = label;
-		link.href = href;
-		link.target = '_blank';
-		link.rel = 'noopener';
-		return link;
-	}
-
 	// =====================================================================
 	// Radio-group keyboard navigation (roving tabindex)
 	// =====================================================================
@@ -1036,8 +881,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		this.backButton = undefined;
 		this.nextButton = undefined;
 		this.closeButton = undefined;
-		this.footerLeft = undefined;
-		this._footerSignInBtn = undefined;
 		this.footerFocusableElements.length = 0;
 		this.stepFocusableElements.length = 0;
 		this._isShowing = false;
