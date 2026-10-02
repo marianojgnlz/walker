@@ -93,9 +93,13 @@ proxy setting is persisted.
 - The pinned official script owns SDK-feed retrieval. Its default feeds are HTTPS
   (`builds.dotnet.microsoft.com`, `ci.dot.net`), its reviewed revision does not disable TLS
   validation, and Walker passes no caller-supplied feed URL, credential, runtime-only switch, or
-  extra script flag. Payload transfers are delegated to the system `curl`/`wget` and the script's
-  own redirect/status checks; Walker neither pins nor overrides those clients' redirect protocol
-  defaults.
+  extra script flag. For the Unix shell installer, Walker creates private operation-scoped `curl`
+  and/or `wget` wrappers and prepends their directory only to the installer child `PATH`. The
+  wrappers disable user downloader configuration and enforce `--proto '=https'
+  --proto-redir '=https'` or `--https-only`; the parent PATH is unchanged, and missing tools or
+  wrapper creation errors fail closed. This does not constrain the PowerShell script's direct
+  `System.Net.Http.HttpClientHandler` payload requests; HTTPS-to-HTTP redirect rejection for that
+  path is not established and remains an explicit Windows security/verification gap.
 - Channel dry-run output is parsed as version data only. Payload URLs in that output are never
   evaluated or fetched, and a missing, malformed, prerelease, or conflicting version leaves the
   channel unresolved so setup fails safely instead of accepting an unrelated SDK.
@@ -219,8 +223,8 @@ Read-only checks before and after the D1 runs were identical:
 - `dotnet --list-sdks` → `10.0.401 [/home/marialez/.local/share/dotnet/sdk]`.
 - `ls /usr/share/dotnet` → `dotnet`, `host`, `shared`.
 - `sha256sum ~/.bashrc` → `e089de15726d7dd70ce2518f8cb857f0c82c3fec4aa0cca576d251bd89aa5b36`.
-- PATH was byte-for-byte identical before/after. No managed install was performed, and the real user SDK, system SDK/runtime directory, shell profile, and PATH were not written.
+- During D1, PATH was byte-for-byte identical before/after; no managed install was performed, and the real user SDK, system SDK/runtime directory, shell profile, and PATH were not written. Later remediation smokes used only isolated `/tmp` homes.
 
-Still unverified: positive LTS selection and confirmation, a real official managed install and direct managed-SDK verification/restart, a packaged offline-failure-and-retry run, visual unavailable-fallback rendering, native macOS/Windows installation/cancel/rename/locality, and a live supported-proxy install. The extension fixtures cover offline failures, proxy mapping/rejection, Windows/macOS roots, and platform installer arguments, but are not native installer smokes. The Linux UI smoke could not safely accept the explicit confirmation: `xdotool` is absent; available `wtype` did not move focus from the existing Ghostty window to the isolated Walker window, and `grim` timed out. I did not bypass the chooser/confirmation or trigger installation by another path. No proxy support claim is made. All 38 session-created `/tmp` scratch
+R3 remediation evidence (2026-09-30): after explicit user confirmation, packaged LTS setup installed SDK `10.0.401` at the isolated `.walker/dotnet/dotnet`; direct SDK/MSBuild execution and a fresh-profile Ready check passed. The packaged offline attempt truthfully failed at `download/offline` and preserved the managed SDK. The retry confirmation was re-presented after restoring online mode, but no user click arrived within 10 minutes, so retry remains unverified. The extension fixtures cover offline failures, proxy mapping/rejection, Windows/macOS roots, and platform installer arguments, but are not native installer smokes. The successful install followed the user's confirmation; no synthetic confirmation input was sent. The strict localhost CONNECT proxy enforced a four-host official allowlist; traffic was allowed to `raw.githubusercontent.com`, `builds.dotnet.microsoft.com`, and `ci.dot.net`, while `aka.ms` and `redirector.gvt1.com` were blocked before upstream connection. This does not establish general proxy interoperability. Visual unavailable-fallback rendering and native macOS/Windows install/cancel/rename/locality remain unverified. All 38 session-created `/tmp` scratch
 roots and every spawned application/proxy process group were removed after evidence capture; exact paths are
 listed in `openspec/changes/dotnet-toolchain/apply-progress.md`.

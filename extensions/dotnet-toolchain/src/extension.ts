@@ -66,6 +66,8 @@ export interface IDotnetExtensionHost extends IDotnetStatusHost {
 	readonly uiKind: 'desktop' | 'web';
 	/** Remote authority of the window, if any; never a rejection condition (D1). */
 	readonly remoteName: string | undefined;
+	/** Current local workspace roots; non-file remote roots are not local filesystem candidates. */
+	getWorkspaceRoots(): readonly string[];
 	registerCommand(id: string, handler: (...args: unknown[]) => unknown): IDotnetDisposable;
 	showInputBox(options: IDotnetInputBoxOptions): Promise<string | undefined>;
 	showWarningMessage(message: string, options: IDotnetWarningOptions, ...items: string[]): Promise<string | undefined>;
@@ -280,6 +282,7 @@ export function createVscodeExtensionHost(vscodeApi: typeof import('vscode')): I
 		t: (message: string, ...args: Array<string | number | boolean>) => vscodeApi.l10n.t(message, ...args),
 		uiKind: vscodeApi.env.uiKind === vscodeApi.UIKind.Desktop ? 'desktop' : 'web',
 		remoteName: vscodeApi.env.remoteName,
+		getWorkspaceRoots: () => (vscodeApi.workspace.workspaceFolders ?? []).flatMap(folder => folder.uri.scheme === 'file' ? [folder.uri.fsPath] : []),
 		getHttpProxySetting: () => {
 			const inspected = vscodeApi.workspace.getConfiguration('http').inspect<string>('proxy');
 			const value = inspected?.globalValue;
@@ -394,6 +397,7 @@ function createLocalInstallerController(host: IDotnetExtensionHost, ui: IToolcha
 		ui,
 		environment,
 		fileSystem,
+		workspaceRoots: () => host.getWorkspaceRoots(),
 		selection: createDotnetSelectionPrompter({ ui: createDotnetSelectionUi(host), environment, fileSystem }),
 		process: createProcessRunner(),
 		installerProcess: createInstallerProcessRunner(),

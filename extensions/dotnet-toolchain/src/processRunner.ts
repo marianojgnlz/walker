@@ -29,8 +29,11 @@ export const MAX_PROCESS_STDOUT_BYTES = 1024 * 1024;
 /** Maximum stderr bytes retained per invocation for diagnostics. */
 export const MAX_PROCESS_STDERR_BYTES = 64 * 1024;
 
-/** Inherited environment variable prefixes removed from every child invocation (D2). */
-const STRIPPED_ENVIRONMENT_PREFIX = /^(DOTNET_|MSBUILD)/i;
+/** Inherited environment variables that can redirect .NET execution or source shell startup hooks. */
+const STRIPPED_INHERITED_ENVIRONMENT_KEY = /^(?:DOTNET_|MSBUILD|BASH_ENV$|ENV$|SHELLOPTS$|BASHOPTS$|CDPATH$|GLOBIGNORE$|PS4$|PROMPT_COMMAND$|BASH_FUNC_)/i;
+
+/** Shell startup hooks are forbidden even when supplied as per-invocation child overrides. */
+const STRIPPED_SHELL_STARTUP_ENVIRONMENT_KEY = /^(?:BASH_ENV|ENV|SHELLOPTS|BASHOPTS|CDPATH|GLOBIGNORE|PS4|PROMPT_COMMAND|BASH_FUNC_.*)$/i;
 
 /** Timer boundary injected so timeout behavior never depends on real time in tests. */
 export interface IProcessRunnerClock {
@@ -107,15 +110,20 @@ function createBoundedOutput(stream: 'stdout' | 'stderr', maxBytes: number): IBo
 	};
 }
 
-/** Copies the base environment without DOTNET_/MSBUILD overrides, then applies child-only values. */
+/** Strips inherited .NET and shell startup overrides, then applies safe child-only values. */
 function createChildEnvironment(baseEnv: Readonly<Record<string, string | undefined>>, childEnv: Readonly<Record<string, string>>): Record<string, string> {
 	const environment: Record<string, string> = {};
 	for (const [key, value] of Object.entries(baseEnv)) {
-		if (value !== undefined && !STRIPPED_ENVIRONMENT_PREFIX.test(key)) {
+		if (value !== undefined && !STRIPPED_INHERITED_ENVIRONMENT_KEY.test(key)) {
 			environment[key] = value;
 		}
 	}
-	return { ...environment, ...childEnv };
+	for (const [key, value] of Object.entries(childEnv)) {
+		if (!STRIPPED_SHELL_STARTUP_ENVIRONMENT_KEY.test(key)) {
+			environment[key] = value;
+		}
+	}
+	return environment;
 }
 
 /** Builds the single fixed spawn-options shape every invocation uses. */

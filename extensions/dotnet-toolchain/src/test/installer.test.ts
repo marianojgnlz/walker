@@ -27,6 +27,12 @@ import {
 	type IDotnetSetupCancellation,
 } from '../installer';
 import { acquireDotnetInstallLock, inspectDotnetInstallLock } from '../installLock';
+import {
+	DOTNET_DOWNLOADER_SHIM_DIRECTORY_NAME,
+	DOTNET_REAL_CURL_ENVIRONMENT_VARIABLE,
+	DOTNET_REAL_WGET_ENVIRONMENT_VARIABLE,
+	type DotnetDownloaderShimResult,
+} from '../downloaderShim';
 import { type IDotnetPrerequisiteFailure } from '../platformArguments';
 import type { IDotnetInstallerExecution, IDotnetInstallerProcessResult, IDotnetInstallerProcessRunner } from '../processRunner';
 import { DOTNET_INSTALL_SCRIPT_PINS, type IDotnetInstallScriptPin } from '../scriptSource';
@@ -111,6 +117,21 @@ interface IProbeHarness extends IProcessAdapter {
 
 function processOk(stdout: string): IProcessExecutionResult {
 	return { exitCode: 0, stdout, stderr: '' };
+}
+
+async function createDownloaderShimFixture(operationDirectory: string, environment: IEnvironmentAdapter): Promise<DotnetDownloaderShimResult> {
+	const directory = path.join(operationDirectory, DOTNET_DOWNLOADER_SHIM_DIRECTORY_NAME);
+	return {
+		kind: 'prepared',
+		shim: {
+			directory,
+			environment: {
+				PATH: `${directory}${path.delimiter}${environment.path}`,
+				[DOTNET_REAL_CURL_ENVIRONMENT_VARIABLE]: '/usr/bin/curl',
+				[DOTNET_REAL_WGET_ENVIRONMENT_VARIABLE]: '/usr/bin/wget',
+			},
+		},
+	};
 }
 
 /** Probe boundary that replays scripted responses and treats unscripted hosts as absent. */
@@ -347,11 +368,13 @@ async function withInstallerHarness(body: (harness: IInstallerHarness) => Promis
 			environment,
 			fileSystem,
 			selection: defaultSelection,
+			workspaceRoots: () => [],
 			process: probe,
 			installerProcess: installer,
 			temporaryDirectory,
 			transport: transport.transport,
 			scriptFileWriter: createNodeScriptFileWriter(),
+			createDownloaderShim: options => createDownloaderShimFixture(options.operationDirectory, options.environment),
 			scriptPin: SCRIPT_PIN,
 			createOperationNonce: () => 'fixture',
 			...overrides,
@@ -424,6 +447,36 @@ suite('dotnet installer snapshots and detection', () => {
 			const second = controller.recheck();
 			assert.strictEqual(first, second);
 			assert.strictEqual(await first, await second);
+		});
+	});
+
+	test('excludes current workspace PATH candidates and symlink aliases before any probe', async () => {
+		const workspaceRoots = ['/workspace'];
+		await withInstallerHarness(async ({ fileSystem, probe, controller }) => {
+			const snapshot = await controller.recheck();
+			assert.strictEqual(snapshot.state, 'missing');
+			assert.strictEqual(probe.executions.some(execution => execution.executable === '/workspace/tools/dotnet' || execution.executable === '/opt/workspace-alias/dotnet'), false);
+			assert.deepStrictEqual(
+				[fileSystem.realpaths.includes('/workspace/tools/dotnet'), fileSystem.realpaths.includes('/opt/workspace-alias/dotnet')],
+				[false, true],
+			);
+
+			const newlyOpenWorkspaceCandidate = '/later-workspace/tools/dotnet';
+			const laterCandidateProbeCount = (): number => probe.executions.filter(execution => execution.executable === newlyOpenWorkspaceCandidate).length;
+			assert.ok(laterCandidateProbeCount() > 0, 'the path is initially outside the open workspace roots');
+			workspaceRoots.push('/later-workspace');
+			const priorProbeCount = laterCandidateProbeCount();
+			await controller.recheck();
+			assert.strictEqual(laterCandidateProbeCount(), priorProbeCount, 'a fresh recheck must use the current workspace roots');
+		}, ({ environment, fileSystem }) => {
+			fileSystem.addFile('/workspace/tools/dotnet');
+			fileSystem.addFile('/workspace/private/dotnet');
+			fileSystem.addLink('/opt/workspace-alias/dotnet', '/workspace/private/dotnet');
+			fileSystem.addFile('/later-workspace/tools/dotnet');
+			return {
+				environment: { ...environment, path: '/workspace/tools:/opt/workspace-alias:/later-workspace/tools' },
+				workspaceRoots: () => workspaceRoots,
+			};
 		});
 	});
 
@@ -576,7 +629,13 @@ suite('dotnet installer setup authorization and failure transitions', () => {
 			const fixed = ['--install-dir', stageDirectory(home), '--architecture', 'x64', '--no-path'];
 			assert.deepStrictEqual(installer.executions[0].args, [scriptPath, '--channel', 'LTS', ...fixed, '--dry-run']);
 			assert.deepStrictEqual(installer.executions[1].args, [scriptPath, '--channel', 'LTS', ...fixed]);
-			assert.deepStrictEqual(installer.executions[1].env, {});
+			const expectedInstallerEnvironment = {
+				PATH: `${path.join(operationRoot(home), DOTNET_DOWNLOADER_SHIM_DIRECTORY_NAME)}${path.delimiter}/usr/bin`,
+				[DOTNET_REAL_CURL_ENVIRONMENT_VARIABLE]: '/usr/bin/curl',
+				[DOTNET_REAL_WGET_ENVIRONMENT_VARIABLE]: '/usr/bin/wget',
+			};
+			assert.deepStrictEqual(installer.executions[0].env, expectedInstallerEnvironment, 'the channel dry-run must receive the child-only HTTPS shim PATH');
+			assert.deepStrictEqual(installer.executions[1].env, expectedInstallerEnvironment, 'the real install must receive the same child-only HTTPS shim PATH');
 			assert.deepStrictEqual(installer.executions[1].cwd, stageDirectory(home));
 
 			assert.deepStrictEqual(await inspectDotnetInstallLock({ home, platform: 'linux' }), { kind: 'free' });
@@ -757,16 +816,31 @@ suite('dotnet installer verification and process transitions', () => {
 	test('cancels during verification without publishing the staged SDK', async () => {
 		await withInstallerHarness(async ({ home, probe, installer, controller }) => {
 			let resolveStageProbe!: (result: IProcessExecutionResult) => void;
+			let signalStageProbeStarted!: () => void;
+			const stageProbeStarted = new Promise<void>(resolve => { signalStageProbeStarted = resolve; });
 			probe.rule({
 				once: true,
 				match: execution => execution.executable === stageExecutable(home) && execution.args.join(' ') === '--list-sdks',
-				respond: () => new Promise<IProcessExecutionResult>(resolve => { resolveStageProbe = resolve; }),
+				respond: () => new Promise<IProcessExecutionResult>(resolve => {
+					resolveStageProbe = resolve;
+					signalStageProbeStarted();
+				}),
 			});
 			const cancellation = createCancellationHarness();
 			installer.queue({});
 
 			const setup = controller.setup({ cancellation });
-			await waitFor(() => resolveStageProbe !== undefined);
+			let probeStartTimeout: ReturnType<typeof setTimeout> | undefined;
+			try {
+				await Promise.race([
+					stageProbeStarted,
+					new Promise<never>((_resolve, reject) => { probeStartTimeout = setTimeout(() => reject(new Error('stage verification probe did not start')), 5_000); }),
+				]);
+			} finally {
+				if (probeStartTimeout !== undefined) {
+					clearTimeout(probeStartTimeout);
+				}
+			}
 			cancellation.cancel();
 			resolveStageProbe(processOk(`${EXPECTED_VERSION} [${path.join(stageDirectory(home), 'sdk')}]\n`));
 			const snapshot = await setup;

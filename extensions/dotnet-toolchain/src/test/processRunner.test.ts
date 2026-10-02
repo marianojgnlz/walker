@@ -138,6 +138,15 @@ suite('bounded probe process runner', () => {
 		const baseEnv = Object.freeze({
 			PATH: '/usr/bin',
 			HOME: '/home/test',
+			BASH_ENV: '/workspace/.bash_env',
+			ENV: '/workspace/.env',
+			SHELLOPTS: 'xtrace',
+			BASHOPTS: 'extdebug',
+			CDPATH: '/workspace',
+			GLOBIGNORE: '*',
+			PS4: 'source-hook',
+			PROMPT_COMMAND: 'source-hook',
+			'BASH_FUNC_injected%%': '() { :; }',
 			DOTNET_ROOT: '/hostile',
 			DOTNET_STARTUP_HOOKS: '/hostile/hook.dll',
 			DOTNET_CLI_TELEMETRY_OPTOUT: '0',
@@ -145,11 +154,24 @@ suite('bounded probe process runner', () => {
 		});
 		const ambient = { ...process.env };
 		const spawn = new RecordingSpawn();
-		const childEnv = { DOTNET_ROOT: '/home/test/.walker/dotnet', DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_MULTILEVEL_LOOKUP: '0' };
+		const childEnv = {
+			DOTNET_ROOT: '/home/test/.walker/dotnet',
+			DOTNET_CLI_TELEMETRY_OPTOUT: '1',
+			DOTNET_MULTILEVEL_LOOKUP: '0',
+			PROBE_VALUE: 'literal value; with spaces',
+			BASH_ENV: '/explicit/hook',
+		};
 		const running = start(spawn, new FakeClock(), baseEnv).run(probeExecution({ env: childEnv }));
 		spawn.children[0].close(0);
 		await running;
-		assert.deepStrictEqual(spawn.invocations[0].options.env, { PATH: '/usr/bin', HOME: '/home/test', ...childEnv });
+		assert.deepStrictEqual(spawn.invocations[0].options.env, {
+			PATH: '/usr/bin',
+			HOME: '/home/test',
+			DOTNET_ROOT: '/home/test/.walker/dotnet',
+			DOTNET_CLI_TELEMETRY_OPTOUT: '1',
+			DOTNET_MULTILEVEL_LOOKUP: '0',
+			PROBE_VALUE: 'literal value; with spaces',
+		});
 		assert.deepStrictEqual([baseEnv.DOTNET_STARTUP_HOOKS, baseEnv.DOTNET_CLI_TELEMETRY_OPTOUT, { ...process.env }], ['/hostile/hook.dll', '0', ambient]);
 	});
 
@@ -299,6 +321,37 @@ suite('installer process execution', () => {
 		assert.deepStrictEqual(spawn.invocations[0].options.env, { PATH: '/usr/bin', DOTNET_CLI_TELEMETRY_OPTOUT: '1' });
 		assert.deepStrictEqual([result.outcome, result.exitCode, result.stdout, result.recoveryRequired, result.pid, result.terminationReason], ['exited', 0, 'installing\n', false, child.pid, undefined]);
 		assert.deepStrictEqual([clock.pendingDelays().length, child.listenerCount('close'), child.stdout.listenerCount('data')], [0, 0, 0]);
+	});
+
+	test('removes shell startup hooks from installer children and preserves explicit probe values', async () => {
+		const spawn = new RecordingSpawn();
+		const baseEnv = Object.freeze({
+			PATH: '/usr/bin',
+			HOME: '/home/test',
+			BASH_ENV: '/workspace/.bash_env',
+			ENV: '/workspace/.env',
+			SHELLOPTS: 'xtrace',
+			BASHOPTS: 'extdebug',
+			CDPATH: '/workspace',
+			GLOBIGNORE: '*',
+			PS4: 'source-hook',
+			PROMPT_COMMAND: 'source-hook',
+			'BASH_FUNC_injected%%': '() { :; }',
+			DOTNET_ROOT: '/hostile',
+			MSBuildSDKsPath: '/hostile/sdks',
+		});
+		const runner = createInstallerProcessRunner({ spawn: spawn.spawn, clock: new FakeClock(), baseEnv, platform: 'linux', processTree: new FakeProcessTree() });
+		const running = runner.run(installerExecution({ env: { DOTNET_ROOT: '/managed/.walker/dotnet', DOTNET_CLI_TELEMETRY_OPTOUT: '1', PROBE_VALUE: 'literal value; with spaces', BASH_ENV: '/explicit/hook' } }));
+		spawn.children[0].close(0);
+		await running;
+
+		assert.deepStrictEqual(spawn.invocations[0].options.env, {
+			PATH: '/usr/bin',
+			HOME: '/home/test',
+			DOTNET_ROOT: '/managed/.walker/dotnet',
+			DOTNET_CLI_TELEMETRY_OPTOUT: '1',
+			PROBE_VALUE: 'literal value; with spaces',
+		});
 	});
 
 	test('spawns Windows installers without a Unix process group', async () => {

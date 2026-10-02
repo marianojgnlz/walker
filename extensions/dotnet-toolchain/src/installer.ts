@@ -30,6 +30,11 @@ import {
 	type IDotnetScriptTransport,
 } from './download';
 import {
+	prepareDotnetDownloaderShim,
+	type DotnetDownloaderShimResult,
+	type IPrepareDotnetDownloaderShimOptions,
+} from './downloaderShim';
+import {
 	acquireDotnetInstallLock,
 	DOTNET_INSTALL_OPERATION_PREFIX,
 	inspectDotnetInstallLock,
@@ -95,6 +100,8 @@ export interface IDotnetInstallerControllerOptions {
 	/** Local machine facts; the home is the local user home, never a workspace path. */
 	readonly environment: IEnvironmentAdapter;
 	readonly fileSystem: IFileSystemAdapter;
+	/** Current local workspace roots, read for every detection pass so workspace candidates are excluded. */
+	readonly workspaceRoots: () => readonly string[];
 	/** Explicit LTS / STS / exact-version prompter; own the single-flight chooser (B1). */
 	readonly selection: IDotnetSelectionPrompter;
 	/** Probe boundary for detection and install verification; `node:child_process` stays in B2/B3. */
@@ -106,6 +113,8 @@ export interface IDotnetInstallerControllerOptions {
 	/** Bounded, digest-validated script retrieval (B2). */
 	readonly transport: IDotnetScriptTransport;
 	readonly scriptFileWriter: IDotnetScriptFileWriter;
+	/** Process-scoped HTTPS-only curl/wget shim factory; defaults to the owned operation-directory implementation. */
+	readonly createDownloaderShim?: (options: IPrepareDotnetDownloaderShimOptions) => Promise<DotnetDownloaderShimResult>;
 	/** Resolved user/machine proxy policy; defaults to a direct connection. */
 	readonly proxy?: DotnetProxyResolution;
 	/** Test-only pin seam; defaults to the reviewed pin for the local platform. */
@@ -228,7 +237,7 @@ export function createDotnetInstallerController(options: IDotnetInstallerControl
 				if (lockStatus.kind !== 'free') {
 					return lockStatusSnapshot(lockStatus, guard);
 				}
-				const discovery = await discoverDotnetCandidates({ environment, fileSystem });
+				const discovery = await discoverDotnetCandidates({ environment, fileSystem, workspaceRoots: options.workspaceRoots() });
 				const probed = await probeDotnetCandidates(discovery, { process: probeProcess, environment, cwd: temporaryDirectory });
 				if (disposed || guard !== generation) {
 					return snapshot;
@@ -442,6 +451,15 @@ export function createDotnetInstallerController(options: IDotnetInstallerControl
 				return await failBeforePublication('download', 'unexpected-script-path', 'the verified script was not written to the reserved owned path');
 			}
 
+			const downloaderShim = await (options.createDownloaderShim ?? prepareDotnetDownloaderShim)({ operationDirectory: paths.operationDirectory, environment });
+			if (downloaderShim.kind === 'failed') {
+				return await failBeforePublication('process', downloaderShim.failure.code, downloaderShim.failure.diagnostic);
+			}
+			const installerEnvironment = {
+				...dotnetProxyEnvironment(proxy),
+				...(downloaderShim.kind === 'prepared' ? downloaderShim.shim.environment : {}),
+			};
+
 			const proxyArguments = dotnetProxyPowerShellArguments(proxy);
 			const buildInvocation = (dryRun: boolean) => buildDotnetInstallInvocation({
 				environment,
@@ -466,7 +484,7 @@ export function createDotnetInstallerController(options: IDotnetInstallerControl
 				if (dryRun.kind === 'failed') {
 					return await failBeforePublication('process', dryRun.failure.code, dryRun.failure.diagnostic);
 				}
-				const dryRunResult = await installerProcess.run({ ...dryRun.invocation, env: dotnetProxyEnvironment(proxy), timeoutMs: DOTNET_DRY_RUN_TIMEOUT_MS });
+				const dryRunResult = await installerProcess.run({ ...dryRun.invocation, env: installerEnvironment, timeoutMs: DOTNET_DRY_RUN_TIMEOUT_MS });
 				const dryRunFailure = await classifyExecution(dryRunResult, 'download', 'channel-resolution-failed');
 				if (dryRunFailure !== undefined) {
 					return dryRunFailure;
@@ -485,7 +503,7 @@ export function createDotnetInstallerController(options: IDotnetInstallerControl
 			if (installing !== undefined) {
 				return installing;
 			}
-			const installed = await installerProcess.run({ ...invocation.invocation, env: dotnetProxyEnvironment(proxy) });
+			const installed = await installerProcess.run({ ...invocation.invocation, env: installerEnvironment });
 			const installFailure = await classifyExecution(installed, 'process', 'installer-exit');
 			if (installFailure !== undefined) {
 				return installFailure;

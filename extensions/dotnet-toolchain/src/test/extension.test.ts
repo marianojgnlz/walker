@@ -108,6 +108,7 @@ async function withControllerFixture(host: IDotnetHostHarness, body: (fixture: I
 			environment,
 			fileSystem,
 			selection: createDotnetSelectionPrompter({ ui: createDotnetSelectionUi(host), environment, fileSystem }),
+			workspaceRoots: () => host.getWorkspaceRoots(),
 			process: probe,
 			installerProcess: installer,
 			temporaryDirectory,
@@ -555,6 +556,19 @@ suite('vscode host adapter', () => {
 	test('maps a web UI kind to the web host kind', () => {
 		const fake = createFakeVscodeApi({ uiKind: 'web' });
 		assert.strictEqual(createVscodeExtensionHost(fake.api).uiKind, 'web');
+	});
+
+	test('reads current local workspace roots from file-scheme workspace folders only', () => {
+		const workspaceFolders = [
+			{ uri: { scheme: 'file', fsPath: '/home/user/project' } },
+			{ uri: { scheme: 'vscode-remote', fsPath: '/remote/project' } },
+		];
+		const fake = createFakeVscodeApi({ remoteName: 'ssh-remote', workspaceFolders });
+		const host = createVscodeExtensionHost(fake.api);
+
+		assert.deepStrictEqual(host.getWorkspaceRoots(), ['/home/user/project']);
+		workspaceFolders.push({ uri: { scheme: 'file', fsPath: '/home/user/second-project' } });
+		assert.deepStrictEqual(host.getWorkspaceRoots(), ['/home/user/project', '/home/user/second-project']);
 	});
 
 	test('reads only the user/machine proxy value', () => {

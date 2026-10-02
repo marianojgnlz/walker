@@ -205,6 +205,7 @@ export interface IDotnetHostHarnessOptions {
 	readonly uiKind?: 'desktop' | 'web';
 	readonly remoteName?: string;
 	readonly proxySetting?: string;
+	readonly workspaceRoots?: readonly string[];
 }
 
 /** Recording extension host facade covering every `vscode` surface the extension layer uses. */
@@ -249,6 +250,7 @@ export function createDotnetHostHarness(options: IDotnetHostHarnessOptions = {})
 		t: localizer.t,
 		uiKind: options.uiKind ?? 'desktop',
 		remoteName: options.remoteName,
+		getWorkspaceRoots: () => options.workspaceRoots ?? [],
 		statusItem,
 		output,
 		intervals,
@@ -383,6 +385,7 @@ export interface IFakeVscodeApiOptions {
 	readonly remoteName?: string;
 	readonly proxyGlobalValue?: string;
 	readonly proxyWorkspaceValue?: string;
+	readonly workspaceFolders?: readonly { readonly uri: { readonly scheme: string; readonly fsPath: string } }[];
 }
 
 /** Recording fake `vscode` module surface. */
@@ -536,6 +539,7 @@ export function createFakeVscodeApi(options: IFakeVscodeApiOptions = {}): IFakeV
 			},
 		},
 		workspace: {
+			get workspaceFolders() { return options.workspaceFolders; },
 			getConfiguration: () => ({
 				inspect: () => ({
 					globalValue: options.proxyGlobalValue,

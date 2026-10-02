@@ -53,8 +53,8 @@ export interface IDotnetCandidateDiscovery {
 export interface ICandidateDiscoveryOptions {
 	readonly environment: ICandidateEnvironment;
 	readonly fileSystem: IFileSystemAdapter;
-	/** Open local workspace roots; candidates inside them are untrusted and excluded (D2). */
-	readonly workspaceRoots?: readonly string[];
+	/** Current open local workspace roots; required so workspace candidates cannot be probed (D2). */
+	readonly workspaceRoots: readonly string[];
 }
 
 type PlannedCandidate = { readonly executable: string; readonly origin: DotnetCandidateOrigin } | { readonly path: string; readonly reason: 'empty-path-entry' | 'relative-path-entry' };
@@ -152,10 +152,9 @@ function plannedCandidates(environment: ICandidateEnvironment): readonly Planned
  * probe layer to classify as normal absence.
  */
 export async function discoverDotnetCandidates(options: ICandidateDiscoveryOptions): Promise<IDotnetCandidateDiscovery> {
-	const { environment, fileSystem } = options;
+	const { environment, fileSystem, workspaceRoots } = options;
 	const platform = environment.platform;
 	const pathApi = platformPath(platform);
-	const workspaceRoots = options.workspaceRoots ?? [];
 	const candidates: IDotnetCandidate[] = [];
 	const exclusions: IDotnetCandidateExclusion[] = [];
 	const seen = new Set<string>();

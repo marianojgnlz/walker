@@ -17,7 +17,7 @@ function createEnvironment(overrides: Partial<ICandidateEnvironment> = {}): ICan
 suite('dotnet candidate discovery', () => {
 	test('orders managed, PATH, user, and system candidates on Linux', async () => {
 		const environment = createEnvironment({ home: '/home/tëst user', path: '/usr/local/bin:/home/tëst user/.local/bin' });
-		const discovery = await discoverDotnetCandidates({ environment, fileSystem: createInMemoryFileSystem() });
+		const discovery = await discoverDotnetCandidates({ environment, fileSystem: createInMemoryFileSystem(), workspaceRoots: [] });
 		assert.deepStrictEqual(discovery.candidates.map(candidate => candidate.executable), [
 			'/home/tëst user/.walker/dotnet/dotnet',
 			'/usr/local/bin/dotnet',
@@ -36,7 +36,7 @@ suite('dotnet candidate discovery', () => {
 		const fileSystem = createInMemoryFileSystem();
 		fileSystem.addFile('/usr/bin/dotnet');
 		fileSystem.addFile('/home/üser/.local/share/dotnet/dotnet');
-		const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ home: '/home/üser', path: '/usr/bin' }), fileSystem });
+		const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ home: '/home/üser', path: '/usr/bin' }), fileSystem, workspaceRoots: [] });
 		const paths = discovery.candidates.map(candidate => candidate.executable);
 		assert.deepStrictEqual([paths.indexOf('/usr/bin/dotnet'), paths.indexOf('/home/üser/.local/share/dotnet/dotnet')], [1, 3]);
 	});
@@ -49,7 +49,7 @@ suite('dotnet candidate discovery', () => {
 			programFiles: 'C:\\Program Files',
 			programFilesX86: 'C:\\Program Files (x86)',
 		});
-		const discovery = await discoverDotnetCandidates({ environment, fileSystem: createInMemoryFileSystem() });
+		const discovery = await discoverDotnetCandidates({ environment, fileSystem: createInMemoryFileSystem(), workspaceRoots: [] });
 		assert.deepStrictEqual(discovery.candidates.map(candidate => candidate.executable), [
 			'C:\\Users\\tëst\\.walker\\dotnet\\dotnet.exe',
 			'C:\\tools\\dotnet.exe',
@@ -63,7 +63,7 @@ suite('dotnet candidate discovery', () => {
 
 	test('covers macOS roots including the x64 subroot', async () => {
 		const environment = createEnvironment({ home: '/Users/tëst', platform: 'darwin', path: '/opt/homebrew/bin' });
-		const discovery = await discoverDotnetCandidates({ environment, fileSystem: createInMemoryFileSystem() });
+		const discovery = await discoverDotnetCandidates({ environment, fileSystem: createInMemoryFileSystem(), workspaceRoots: [] });
 		assert.deepStrictEqual(discovery.candidates.map(candidate => candidate.executable), [
 			'/Users/tëst/.walker/dotnet/dotnet',
 			'/opt/homebrew/bin/dotnet',
@@ -76,7 +76,7 @@ suite('dotnet candidate discovery', () => {
 
 	test('derives Windows ProgramFiles roots when the variables are absent', async () => {
 		const environment = createEnvironment({ home: 'C:\\Users\\tëst', platform: 'win32', path: '' });
-		const discovery = await discoverDotnetCandidates({ environment, fileSystem: createInMemoryFileSystem() });
+		const discovery = await discoverDotnetCandidates({ environment, fileSystem: createInMemoryFileSystem(), workspaceRoots: [] });
 		assert.deepStrictEqual(
 			discovery.candidates.filter(candidate => candidate.origin === 'system').map(candidate => candidate.executable),
 			['C:\\Program Files\\dotnet\\dotnet.exe', 'C:\\Program Files (x86)\\dotnet\\dotnet.exe'],
@@ -87,7 +87,7 @@ suite('dotnet candidate discovery', () => {
 		const fileSystem = createInMemoryFileSystem();
 		fileSystem.addFile('/opt/real/dotnet');
 		fileSystem.addLink('/opt/first/dotnet', '/opt/real/dotnet');
-		const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ path: '/opt/first:/opt/real' }), fileSystem });
+		const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ path: '/opt/first:/opt/real' }), fileSystem, workspaceRoots: [] });
 		assert.deepStrictEqual(
 			[discovery.candidates[1].executable, discovery.candidates[1].resolvedExecutable],
 			['/opt/first/dotnet', '/opt/real/dotnet'],
@@ -122,7 +122,7 @@ suite('dotnet candidate discovery', () => {
 
 	test('caps unique candidates at the deterministic limit and reports the limit', async () => {
 		const path = Array.from({ length: 70 }, (_, index) => `/opt/sdk-${index}/bin`).join(':');
-		const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ path }), fileSystem: createInMemoryFileSystem() });
+		const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ path }), fileSystem: createInMemoryFileSystem(), workspaceRoots: [] });
 		assert.deepStrictEqual(
 			[discovery.candidates.length, discovery.limitReached, discovery.candidates[63].executable, discovery.exclusions.at(-1)],
 			[MAX_DISCOVERY_CANDIDATES, true, '/opt/sdk-62/bin/dotnet', { path: '/opt/sdk-63/bin/dotnet', reason: 'candidate-limit' }],
@@ -133,7 +133,7 @@ suite('dotnet candidate discovery', () => {
 	test('keeps missing and inaccessible executables for the probe layer to classify', async () => {
 		const fileSystem = createInMemoryFileSystem();
 		fileSystem.addFile('/usr/bin/dotnet');
-		const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ home: '/home/üser', path: '/usr/bin' }), fileSystem });
+		const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ home: '/home/üser', path: '/usr/bin' }), fileSystem, workspaceRoots: [] });
 		assert.deepStrictEqual(
 			[
 				discovery.candidates[0].executable,
@@ -156,7 +156,7 @@ suite('dotnet candidate discovery', () => {
 			'/usr/local/share/dotnet/dotnet',
 		];
 		for (const arch of ['x64', 'arm64', 'ppc64']) {
-			const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ arch, path: '/usr/bin' }), fileSystem: createInMemoryFileSystem() });
+			const discovery = await discoverDotnetCandidates({ environment: createEnvironment({ arch, path: '/usr/bin' }), fileSystem: createInMemoryFileSystem(), workspaceRoots: [] });
 			assert.deepStrictEqual(discovery.candidates.map(candidate => candidate.executable), expected);
 		}
 	});
