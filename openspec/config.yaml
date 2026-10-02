@@ -1,0 +1,16 @@
+# OpenSpec project configuration for walker (created by SDD parent setup)
+name: walker
+description: Open-source .NET IDE (alternative to JetBrains Rider), built on a Code - OSS fork.
+stack:
+  language: TypeScript (ESM)
+  runtime: Node 24.18.0; Electron desktop app (Chromium)
+  build: npm run build-fast (build/next + esbuild); npm run gulp <task> for packaging
+  typecheck: npm run typecheck-client
+  notes: >
+    VS Code fork (Code - OSS 1.140.0) rebranded Walker. Layers: base -> platform -> editor ->
+    workbench (+ sessions). Built-in extensions live in extensions/ (see extensions/copilot
+    pattern). Product identity in product.json.
+testing:
+  runner: mocha
+  command: ./scripts/test.sh --run <file>
+  strict_tdd: false

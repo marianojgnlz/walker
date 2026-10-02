@@ -1,0 +1,19 @@
+change: dotnet-toolchain
+phase: proposal
+artifact_store: openspec
+preflight:
+  execution: auto
+  artifact_store: openspec
+  delivery_strategy: ask-on-risk
+  review_budget_lines: 400
+  chain_strategy: deferred
+  size_exception: not accepted
+artifacts:
+  proposal: true
+  specs: false
+  design: false
+  tasks: false
+tasks_progress:
+  completed: []
+  pending: []
+last_updated: 2026-09-22
