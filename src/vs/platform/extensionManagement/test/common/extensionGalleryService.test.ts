@@ -48,11 +48,13 @@ class RecordingRequestService implements IRequestService {
 	readonly _serviceBrand: undefined;
 	readonly onDidCompleteRequest = Event.None;
 	readonly requests: { readonly type: string | undefined; readonly url: string | undefined }[] = [];
+	readonly authorizationHeaders: (string | string[] | undefined)[] = [];
 
 	constructor(private readonly response: (options: IRequestOptions) => IRequestContext) { }
 
 	async request(options: IRequestOptions, _token: CancellationToken): Promise<IRequestContext> {
 		this.requests.push({ type: options.type, url: options.url });
+		this.authorizationHeaders.push(options.headers?.['Authorization']);
 		return this.response(options);
 	}
 
@@ -178,6 +180,18 @@ suite('Extension Gallery Service', () => {
 		}, {
 			requests: [{ type: 'POST', url: queryServiceUri }],
 			extensions: []
+		});
+	});
+
+	test('gets anonymous gallery metadata without an account authorization header', async () => {
+		const requestService = new RecordingRequestService(options => options.type === 'POST' ? requestContext(200, galleryQueryResponse([])) : requestContext(404, {}));
+		const galleryService = createExtensionGalleryService(requestService);
+
+		await galleryService.getExtensions([{ id: 'publisher.extension' }], CancellationToken.None);
+
+		assert.deepStrictEqual({ requests: requestService.requests.length, authorizationHeaders: requestService.authorizationHeaders }, {
+			requests: 1,
+			authorizationHeaders: [undefined]
 		});
 	});
 

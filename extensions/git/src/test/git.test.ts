@@ -213,6 +213,19 @@ suite('git', () => {
 			]);
 		});
 
+		test('keeps hosted and self-hosted remotes as ordinary Git remotes', () => {
+			const sample = `[remote "github"]
+	url = git@github.com:walker/project.git
+[remote "self-hosted"]
+	url = git@git.example.test:team/project.git
+`;
+
+			assert.deepStrictEqual(parseGitRemotes(sample).map(remote => remote.fetchUrl), [
+				'git@github.com:walker/project.git',
+				'git@git.example.test:team/project.git',
+			]);
+		});
+
 		test('single remote (multiple urls)', () => {
 			const sample = `[remote "origin"]
 	url = https://github.com/microsoft/vscode.git

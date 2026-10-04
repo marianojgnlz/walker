@@ -170,6 +170,17 @@ suite('askpassManager', () => {
 		assert.ok(mtime2 > mtime1, 'Mtime should be updated on subsequent calls');
 	});
 
+	test('keeps both Git and SSH askpass helpers available', async () => {
+		const paths = await ensureAskpassScripts(sourceDir, path.join(tempDir, 'storage'), new MockLogOutputChannel());
+
+		assert.deepStrictEqual([
+			path.basename(paths.askpass),
+			path.basename(paths.sshAskpass),
+			await fs.promises.readFile(paths.askpass, 'utf8'),
+			await fs.promises.readFile(paths.sshAskpass, 'utf8'),
+		], ['askpass.sh', 'ssh-askpass.sh', '#!/bin/sh\n# askpass.sh\n', '#!/bin/sh\n# ssh-askpass.sh\n']);
+	});
+
 	test('garbage collection handles empty askpass directory', async function () {
 		const storageDir = path.join(tempDir, 'storage');
 		const logger = new MockLogOutputChannel();

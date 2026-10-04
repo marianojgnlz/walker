@@ -243,6 +243,21 @@ suite('UserDataProfileService (Common)', () => {
 		assert.deepStrictEqual(profile.workspaces?.[0].toString(), workspace.toString());
 	});
 
+	test('retains local profile resources and workspace association', async () => {
+		const workspace = URI.file('/fixture/local-workspace');
+		const profile = await testObject.createProfile('fixture-local-profile', 'Local fixture', {}, { id: workspace.path, uri: workspace });
+
+		assert.deepStrictEqual({
+			profileId: profile.id,
+			settingsScheme: profile.settingsResource.scheme,
+			workspaces: profile.workspaces?.map(uri => uri.toString()),
+		}, {
+			profileId: 'fixture-local-profile',
+			settingsScheme: Schemas.vscodeUserData,
+			workspaces: [workspace.toString()],
+		});
+	});
+
 	test('associate workspace to a profile should update workspaces', async () => {
 		const profile = await testObject.createProfile('id', 'name', {});
 		const workspace = URI.file('/workspace1');

@@ -95,6 +95,24 @@ suite('NotificationsToasts', () => {
 		});
 	});
 
+	test('keeps ordinary error diagnostics visible as notifications', async () => {
+		const { model, toasts } = await createToasts();
+		const toastVisible = Event.toPromise(toasts.onDidChangeVisibility);
+		model.addNotification({ severity: Severity.Error, message: 'Fixture diagnostic failure' });
+
+		await toastVisible;
+
+		assert.deepStrictEqual({
+			severity: model.notifications[0].severity,
+			message: model.notifications[0].message.raw,
+			visible: toasts.isVisible,
+		}, {
+			severity: Severity.Error,
+			message: 'Fixture diagnostic failure',
+			visible: true,
+		});
+	});
+
 	test('limits rapidly added distinct notification toasts', async () => {
 		const { container, model, toasts } = await createToasts();
 		const toastVisible = Event.toPromise(toasts.onDidChangeVisibility);

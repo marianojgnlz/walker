@@ -41,7 +41,7 @@ suite('SnippetsResource', () => {
 		profile = { snippetsHome } as IUserDataProfile;
 	});
 
-	test('apply writes in-bounds snippet keys', async () => {
+	test('restores in-bounds snippets into the selected local profile', async () => {
 		const testObject = instantiationService.createInstance(SnippetsResource);
 
 		await testObject.apply(JSON.stringify({ snippets: { 'javascript.json': '{}' } }), profile);

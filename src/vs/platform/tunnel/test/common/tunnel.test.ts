@@ -45,4 +45,9 @@ suite('Tunnel', () => {
 		portMappingTestQuery('http://foo.bar/path?url=http%3A%2F%2Flocalhost%3A8081&url2=http%3A%2F%2Flocalhost%3A8082', 'localhost', 8081);
 		portMappingTestQuery('http://foo.bar/path?url=http%3A%2F%2Fmicrosoft.com%2Fbad&url2=http%3A%2F%2Flocalhost%3A8081', 'localhost', 8081);
 	});
+
+	test('retains generic localhost port-forward targets', () => {
+		portMappingTest('http://localhost:4317/status', 'localhost', 4317);
+		portMappingTestQuery('https://service.example.test/status?url=https%3A%2F%2F127.0.0.1%3A4318', '127.0.0.1', 4318);
+	});
 });

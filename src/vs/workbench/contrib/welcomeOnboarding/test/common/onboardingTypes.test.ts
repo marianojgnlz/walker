@@ -10,7 +10,7 @@ import { getOnboardingStepSubtitle, getOnboardingStepTitle, ONBOARDING_STEPS, ON
 suite('onboardingTypes', () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('orders the .NET toolchain step before personalization', () => {
+	test('keeps local setup and personalization in the account-free onboarding flow', () => {
 		assert.deepStrictEqual(ONBOARDING_STEPS, [OnboardingStepId.DotnetToolchain, OnboardingStepId.Personalize]);
 	});
 
