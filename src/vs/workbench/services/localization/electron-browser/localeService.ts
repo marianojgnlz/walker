@@ -111,10 +111,7 @@ class NativeLocaleService implements ILocaleService {
 						location: ProgressLocation.Notification,
 						title: localize('installing', "Installing {0} language support...", languagePackItem.label),
 					},
-					progress => this.extensionManagementService.installFromGallery(languagePackItem.galleryExtension!, {
-						// Setting this to false is how you get the extension to be synced with Settings Sync (if enabled).
-						isMachineScoped: false,
-					})
+					progress => this.extensionManagementService.installFromGallery(languagePackItem.galleryExtension!)
 				);
 			}
 

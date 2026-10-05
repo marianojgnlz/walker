@@ -6,6 +6,7 @@
 import assert from 'assert';
 import { FileService } from '../../../files/common/fileService.js';
 import { NullLogService } from '../../../log/common/log.js';
+import { VSBuffer } from '../../../../base/common/buffer.js';
 import { Schemas } from '../../../../base/common/network.js';
 import { URI } from '../../../../base/common/uri.js';
 import { joinPath } from '../../../../base/common/resources.js';
@@ -38,10 +39,11 @@ suite('UserDataProfileService (Common)', () => {
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
 	let testObject: UserDataProfilesService;
 	let environmentService: TestEnvironmentService;
+	let fileService: FileService;
 
 	setup(async () => {
 		const logService = new NullLogService();
-		const fileService = disposables.add(new FileService(logService));
+		fileService = disposables.add(new FileService(logService));
 		const fileSystemProvider = disposables.add(new InMemoryFileSystemProvider());
 		disposables.add(fileService.registerProvider(ROOT.scheme, fileSystemProvider));
 		disposables.add(fileService.registerProvider(Schemas.vscodeUserData, fileSystemProvider));
@@ -241,6 +243,50 @@ suite('UserDataProfileService (Common)', () => {
 		const profile = await testObject.createProfile('id', 'name', {}, { id: workspace.path, uri: workspace });
 		assert.deepStrictEqual(profile.workspaces?.length, 1);
 		assert.deepStrictEqual(profile.workspaces?.[0].toString(), workspace.toString());
+	});
+
+	test('reopens copied legacy state without deleting local profile or workspace data', async () => {
+		const profile = await testObject.createProfile('copied-legacy-profile', 'Copied legacy profile');
+		const contents: Array<[URI, string]> = [
+			[profile.settingsResource, '{"editor.fontSize":13}'],
+			[joinPath(profile.snippetsHome, 'local.code-snippets'), 'local-snippet-sentinel'],
+			[joinPath(profile.globalStorageHome, 'extensionStorage', 'local-state.json'), 'local-extension-state-sentinel'],
+			[joinPath(environmentService.userRoamingDataHome, 'sync', 'legacy-state.json'), '{"enabled":true,"fixture":"synthetic"}'],
+			[joinPath(profile.globalStorageHome, 'editSessions', 'legacy-state.json'), '{"editSessionId":"synthetic-legacy-id"}'],
+			[joinPath(ROOT, 'repositories', 'local-workspace', 'README.md'), 'local-workspace-sentinel'],
+		];
+
+		const directories = [
+			ROOT,
+			environmentService.userRoamingDataHome,
+			testObject.profilesHome,
+			profile.location,
+			profile.snippetsHome,
+			profile.globalStorageHome,
+			joinPath(profile.globalStorageHome, 'extensionStorage'),
+			joinPath(profile.globalStorageHome, 'editSessions'),
+			joinPath(environmentService.userRoamingDataHome, 'sync'),
+			joinPath(ROOT, 'repositories'),
+			joinPath(ROOT, 'repositories', 'local-workspace'),
+		];
+		for (const directory of directories) {
+			if (!(await fileService.exists(directory))) {
+				await fileService.createFolder(directory);
+			}
+		}
+		for (const [resource, content] of contents) {
+			await fileService.writeFile(resource, VSBuffer.fromString(content));
+		}
+
+		testObject.init();
+		const reopenedProfile = testObject.profiles.find(candidate => candidate.id === profile.id);
+		assert.ok(reopenedProfile);
+		assert.strictEqual(reopenedProfile.settingsResource.toString(), profile.settingsResource.toString());
+		await testObject.cleanUp();
+
+		for (const [resource, content] of contents) {
+			assert.strictEqual((await fileService.readFile(resource)).value.toString(), content, resource.toString());
+		}
 	});
 
 	test('retains local profile resources and workspace association', async () => {

@@ -21,12 +21,10 @@ import { TestConfigurationService } from '../../../../../platform/configuration/
 import { IContextViewService } from '../../../../../platform/contextview/browser/contextView.js';
 import { IExtensionGalleryService, IExtensionManagementService } from '../../../../../platform/extensionManagement/common/extensionManagement.js';
 import { IEditorProgressService, IProgressRunner } from '../../../../../platform/progress/common/progress.js';
-import { IUserDataSyncEnablementService } from '../../../../../platform/userDataSync/common/userDataSync.js';
 import { ExperimentalSettingsService, IExperimentalSettingsService } from '../../../../services/configuration/common/experimentalSettings.js';
 import { IEditorGroupsService } from '../../../../services/editor/common/editorGroupsService.js';
 import { IPreferencesService, ISetting, ISettingsGroup, SettingMatchType } from '../../../../services/preferences/common/preferences.js';
 import { Settings2EditorModel } from '../../../../services/preferences/common/preferencesModels.js';
-import { IUserDataSyncWorkbenchService } from '../../../../services/userDataSync/common/userDataSync.js';
 import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
 import { SuggestEnabledInputWithHistory } from '../../../codeEditor/browser/suggestEnabledInput/suggestEnabledInput.js';
 import { ADVANCED_SETTING_TAG, IPreferencesSearchService, POLICY_SETTING_TAG } from '../../common/preferences.js';
@@ -53,8 +51,6 @@ suite('SettingsEditor2', () => {
 			const instantiationService = workbenchInstantiationService({ configurationService: () => configuration }, store);
 			instantiationService.stub(IPreferencesService, {});
 			instantiationService.stub(IPreferencesSearchService, {});
-			instantiationService.stub(IUserDataSyncWorkbenchService, {});
-			instantiationService.stub(IUserDataSyncEnablementService, {});
 			instantiationService.stub(IExtensionManagementService, { onDidInstallExtensions: Event.None, onDidUninstallExtension: Event.None });
 			instantiationService.stub(IExtensionGalleryService, { isEnabled: () => false });
 			instantiationService.stub(IEditorProgressService, { show: () => new class extends mock<IProgressRunner>() { override done(): void { } }() });

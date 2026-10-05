@@ -308,3 +308,269 @@ This continuation supersedes prior checkpoint statements that A3 remained open a
 - Parent/U06 deletes the physically present Sessions/account-menu contribution and remaining dormant session-only sources; do not delete mixed Chat Pet helpers or achievement services outside that ordered deletion.
 - Verify the final absence boundary independently against account command/menu/titlebar/settings registrations and the first-run welcome; inspect the dormant policy-blocked source under its parent-owned scope if it will ship before U06.
 - U12 still owns live Open VSX/package verification. No real user credentials, stored secrets, repositories, or remotes were accessed.
+
+## U02/A5 continuation — remote Sync extension initializer
+
+### Structured status consumed
+
+- Re-read the parent authorization after approval of the four exact U02 surfaces. Parent status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; action context `mode=apply`, workspace `/home/marialez/Work/walker`, branch `product-debloat`. Delivery remains `feature-branch-chain`, 400 changed lines per leaf, no size exception. The four added U02 paths are now in the authoritative grant; action-context warnings: none.
+- `openspec/config.yaml` declares `strict_tdd: false`; U02 leaf protocol still requires RED → GREEN → TRIANGULATE → REFACTOR. This leaf remains below the review ceiling and preserves the generic remote-extension install contribution.
+
+### U02.b.004.001 — remove only remote Sync-backed extension initialization
+
+- **RED:** added a boundary assertion for `remoteExtensionsInit.ts` and its electron-browser registration; the baseline failed because the source read the authenticated Sync extension resource (1 failing, 11 passing).
+- **GREEN:** removed `RemoteExtensionsInitializerContribution` and its Sync store/auth/session dependencies; removed only its import/registration from `extensions.contribution.ts`. `InstallRemoteExtensionsContribution` remains registered and its presence is asserted by the test.
+- **TRIANGULATE:** after changes, `./scripts/test.sh --run src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts` passed 12/12; the same selector provided the observed RED. `npm run compile-client` with Node 24.18.0 passed with zero compilation errors.
+- **Files:** `src/vs/workbench/contrib/extensions/electron-browser/remoteExtensionsInit.ts`, `src/vs/workbench/contrib/extensions/electron-browser/extensions.contribution.ts`, and the boundary test. The inventory now records the exact owned paths and retained remote-install behavior.
+- **Measured leaf:** 142 source/test additions + deletions before allocated progress/inventory lines; including this progress appendix and the inventory row update, the leaf remains within 400 changed lines. No physical deletion, staging, commit, or user-data operation was performed.
+- **Review focus / remaining:** verify the surviving local-to-remote extension install behavior and confirm no Sync/auth state reader remains in the removed initializer. Other extension UI, preferences, relaunch, updater, onboarding, prompt, workspace-identity, and environment consumers remain for separate leaves.
+
+## U02.b.004.002 — remove Sync-specific extension policy UI
+
+### Structured status and scope
+
+- Consumed the parent-authored OpenSpec status for `product-debloat`: `applyState=ready`, `nextRecommended=sdd-apply`, action context `mode=apply`, workspace `/home/marialez/Work/walker`, branch `product-debloat`; review path is `feature-branch-chain`, 400 changed lines per leaf, no size exception. The A5 surface list in `parent-authorization.md` includes every path modified below; edits remove Sync-only behavior only.
+- Strict TDD is false in `openspec/config.yaml`; the leaf followed RED → GREEN → TRIANGULATE → REFACTOR. No task checkbox is complete yet because the persisted A5 task is a larger cross-tree work unit.
+
+### RED → GREEN → TRIANGULATE
+
+- **RED:** extended `userDataProfileSyncBoundary.test.ts` to assert no Settings Sync ignored-extension actions, widgets, contribution actions, machine-scope install alternatives, or Sync DI in the extension-actions test setup. Before production edits, the new assertion failed because `extensionsWorkbenchService.ts` still injected `IUserDataAutoSyncService` (`13 passing, 1 failing`).
+- **GREEN:** removed the extension Sync-ignore action/API, its workbench-service dependencies and methods, the ignored-state list widget, the install “Do not Sync” menu actions and `donotSync` command option, Sync-conditioned install prompt checkbox, recommendation menu alternative and obsolete test stubs. Preserved ordinary install actions, recommendation installs, remote install contribution, extension auto-update/enablement, and local-profile extension behavior.
+- **TRIANGULATE:** with Node 24.18.0, `npm run compile-client` passed with zero compile errors. The boundary selector passed **14/14**; `extensionsActions.test.ts` passed **245/245**; `extensionsWorkbenchService.test.ts` passed **211/211**. A focused source scan found no remaining `ToggleSyncExtensionAction`, `TOGGLE_IGNORE_EXTENSION_ACTION_ID`, `SyncIgnoredWidget`, `donotSync`, or `IUserDataSyncEnablementService` references under `src/vs/workbench/contrib/extensions` outside unrelated sync-tree modules.
+- **REFACTOR / preservation:** gallery-installed extension metadata reconciliation named `syncInstalledExtensionsWithGallery` is unrelated to Settings Sync and remains unchanged. The extracted ignored-extension management helper and its parity tests remain in the extension-management layer per the existing design decision; only its Sync UI consumers were removed.
+
+### Files, workload, and review focus
+
+- **Files changed in this leaf:** `src/vs/workbench/contrib/extensions/browser/{extensionRecommendationNotificationService.ts,extensions.contribution.ts,extensionsActions.ts,extensionsList.ts,extensionsWidgets.ts,extensionsWorkbenchService.ts}`, `src/vs/workbench/contrib/extensions/common/extensions.ts`, `src/vs/workbench/contrib/extensions/test/electron-browser/extensionsActions.test.ts`, `src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts`, `openspec/changes/product-debloat/removal-inventory.md`, and this file.
+- The measured tracked source/test diff for extension paths is **220 additions+deletions**; the boundary fixture adds 24 lines for this leaf. Its current implementation/test subtotal is **244**, before this progress/inventory allocation; final leaf total remains within 400 lines. No size exception.
+- No physical deletion, file unlink, staging, commit, package mutation, or user-data modification occurred. The review focus is that normal gallery installs keep their prior scope and recommendation behavior, and all Sync-only menu/widget/API references are absent.
+- Remaining Sync consumers still include prompt-file gating, relaunch/updater hooks, Getting Started content/progress, workspace identity's `IWorkspaceStateFolder` import, and environment Sync-home state. These will be handled as separate bounded leaves before creating the parent-owned cloud-tree deletion manifest.
+
+## U02.b.004.003 — remove Settings Sync preference controls
+
+### Structured status, RED, and authorization
+
+- Re-read the parent authorization for `product-debloat`; status remains OpenSpec `applyState=ready`, `nextRecommended=sdd-apply`, `actionContext.mode=apply`, workspace `/home/marialez/Work/walker`, branch `product-debloat`, feature-branch-chain and 400 lines per leaf, no size exception. The parent explicitly approved `settingsEditorSettingIndicators.test.ts` to remove only its obsolete Sync test argument, and authorized deleting the two now-unused imports in the approved `settingsEditor2.ts`.
+- **RED:** the boundary test added a preferences source scan and failed on `IUserDataSync` in `settingsEditor2.ts` (14 passing, 1 failing) before the preference changes.
+
+### GREEN → TRIANGULATE → REFACTOR
+
+- Removed the Settings Sync controls and last-sync ARIA suffix from `settingsEditor2.ts`; removed Sync-ignored setting indicators, cached ARIA state, ignored-setting context-menu actions, and Settings Sync category from the preference layout/tree. Removed only Sync stubs from `settingsEditor2.test.ts` and the stale constructor argument from `settingsEditorSettingIndicators.test.ts`; preserved local settings/profile-target controls and all non-Sync indicators.
+- The first post-edit `npm run compile-client` exposed the stale sixth constructor argument plus unused `Emitter`/`Disposable` imports; after the approved exact test fix and import cleanup, `npm run compile-client` passed with zero errors.
+- `./scripts/test.sh --run src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts`: **15 passing**. `./scripts/test.sh --run src/vs/workbench/contrib/preferences/test/browser/settingsEditorSettingIndicators.test.ts`: **2 passing**. `./scripts/test.sh --run src/vs/workbench/contrib/preferences/test/browser/settingsEditor2.test.ts`: **16 passing**.
+- **Files:** `settingsEditor2.ts`, `settingsEditorSettingIndicators.ts`, `settingsLayout.ts`, `settingsTree.ts`, their two authorized tests, the profile Sync-boundary test, this file, and `removal-inventory.md`.
+- The leaf measured **229 tracked source/test changes** plus **11 new boundary-test lines**, for **240 source/test changed lines** before allocated artifact lines; final leaf remains under 400. No size exception. The focused review should confirm local profile targeting and non-Sync setting indicators remain intact.
+
+## U02 continuation — prompt/onboarding, relaunch/update, workspace identity
+
+### Structured status consumed
+
+- Parent authorization is the source of truth: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `syncState=blocked`, `nextRecommended=sdd-apply`; workspace `/home/marialez/Work/walker`, branch `product-debloat`, mode `apply`.
+- The assigned stage is U02/A5. The parent-resolved delivery is `feature-branch-chain`, the review budget is 400 additions + deletions per leaf, and `size:exception` is declined.
+- `openspec/config.yaml` declares `strict_tdd: false`; RED → GREEN → TRIANGULATE → REFACTOR remains the leaf protocol. No `tasks.md` checkboxes changed because the broad A5 rows also require platform-tree removal and legacy-state triangulation.
+- The parent-approved surfaces cover all production edits below; no new path was edited. Existing untracked `.pi/`, OpenSpec artifacts, and `userDataProfileSyncBoundary.test.ts` were preserved.
+
+### U02.b.005.001.a — remove prompt-file Sync suggestion and Sync onboarding
+
+- **RED:** the boundary fixture asserts absence of Sync references in prompt creation and Getting Started. The baseline sources contained `IUserDataSyncEnablementService`, `CONFIGURE_SYNC_COMMAND_ID`, `sync-enabled`, and the Settings Sync walkthrough action. The earlier failing output for this exact subsection was not retained, so this record does not claim a specific pre-edit failure count.
+- **GREEN:** removed the post-create prompt notification, command-service/log/notification/Sync dependencies, and storage-based suggestion gating. Prompt creation, folder selection, file creation, snippet initialization, and open behavior remain.
+- **GREEN:** removed the Sync-enabled walkthrough completion listener and Sync walkthrough entry. The settings walkthrough now offers local customization only; its stable walkthrough ID remains `settingsAndSync` so legacy progress is not migrated or erased.
+- **TRIANGULATE:** the final profile Sync-boundary suite checks prompt creation and Getting Started source references, while the full compile checks the changed contribution graph.
+- `npm run compile-client` passed with Node 24.18.0 and zero compilation errors after these production edits.
+- `./scripts/test.sh --run src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts` passed **18/18**, including prompt/Getting Started and local profile switching assertions.
+- Current focused source/test delta is 84 production changes plus 9 boundary assertions. The boundary test file is untracked and shared with earlier leaves; only the owned assertion block is attributed here, not its full 218-line file.
+- Local prompt creation and onboarding source behavior were compile- and source-boundary-checked; no prompt-creation UI integration suite was run in this pass.
+- No local prompt/profile file, saved walkthrough progress, settings file, or profile data was read, migrated, or cleared.
+- The existing test assertion prevents Sync-only content from reappearing without coupling prompt writing to any cloud service.
+- Review focus: ensure prompt actions still create local files and preserve the selected target folder; keep walkthrough copy local and its stable profile-progress key unchanged.
+
+### U02.b.005.001.b — remove Sync relaunch and updater coordination
+
+- **RED/GREEN:** removed the `SettingsChangeRelauncher` Sync service/enablement dependencies, Sync-turn-on event listener, and in-progress status suppression; normal configuration-driven restart checks remain.
+- **GREEN:** removed updater quality-switch service selection, Sync status wait, store-type synchronization, and cancellation rollback state. The normal confirmation dialog still invokes `productQualityChangeHandler` after confirmation.
+- The relauncher test now uses the smaller constructor and no Sync mocks; existing settings-triggered restart behavior remains under test.
+- Added positive boundary assertions that default-configuration changes retain the no-relaunch rule, normal relaunch configuration checks remain, and updater confirmation/quality-change handling remain present.
+- `npm run compile-client` passed after the changes with Node 24.18.0 and zero compilation errors.
+- `./scripts/test.sh --run src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts` passed **18/18** after the retained-behavior assertions.
+- `./scripts/test.sh --run src/vs/workbench/contrib/relauncher/test/browser/relauncher.test.ts` passed **7/7**.
+- Current tracked source/test delta is 87 changes; the shared boundary fixture adds 7 focused relaunch/update assertion lines for this leaf.
+- No update channel, update settings, product quality configuration, user profile, or local storage value was altered by this leaf.
+- No command waits for Sync before a regular relaunch or quality change; old Sync store-selection state is no longer interpreted by this flow.
+- Review focus: preserve settings-driven restarts, canceled-confirmation behavior, and product-quality confirmation independent of Sync.
+- Together, the prompt/onboarding and relaunch/update sub-seams form one `U02.b.005.001` leaf: **231 additions+deletions** (171 tracked source/test lines, 20 boundary-test lines, 38 allocated apply-progress lines, two allocated inventory changes). This is below 400; no size exception.
+
+### U02.c.001.001 — replace the Sync-owned workspace identity type
+
+- Added local `IWorkspaceIdentityFolder` with the same two data fields previously consumed from `IWorkspaceStateFolder`; updated only the workspace identity service signatures and local variables.
+- The matching and identity algorithm is unchanged; this removes one type-only import from `platform/userDataSync` without changing Edit Sessions cloud behavior.
+- The boundary test's workspace-identity assertion passes in the **18/18** suite, and `npm run compile-client` passes with zero errors.
+- This narrow subleaf is 16 production changes plus the 3-line source-boundary assertion; it is intentionally below the usual 120-line review target and was not padded with unrelated edits.
+- It does **not** complete the broader U02.c.001 dependency seam: `workspaceStateSync.ts` and cloud Edit Sessions store/service consumers still import platform Sync.
+- Historical pre-edit boundary output for the workspace identity assertion was truncated, so a separate RED failure count cannot be asserted from the retained evidence.
+- Review focus: confirm the local shape remains structurally equivalent and that all workspace identity algorithm behavior is untouched.
+
+## Verification — U02
+
+- `npm run compile-client` with Node 24.18.0: **PASS**, zero TypeScript compilation errors, after the prompt/onboarding, relaunch/update, and local workspace-identity changes.
+- `./scripts/test.sh --run src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts`: **18 passing**; includes startup/service absence, local profile switch, prompt/onboarding, relaunch/updater, and local workspace identity source assertions.
+- `./scripts/test.sh --run src/vs/workbench/contrib/relauncher/test/browser/relauncher.test.ts`: **7 passing**.
+- `./scripts/test.sh --run src/vs/platform/userDataProfile/test/common/userDataProfileService.test.ts`: **32 passing**, including profile/workspace association and local resource preservation.
+- `./scripts/test.sh --run src/vs/workbench/services/userDataProfile/test/browser/settingsResource.test.ts`: **2 passing**.
+- `./scripts/test.sh --run src/vs/workbench/services/userDataProfile/test/browser/snippetsResource.test.ts`: **5 passing**, including in-bounds local snippet restoration and traversal protection.
+- Earlier U02 leaves' extension action/workbench and preferences selectors remain recorded above; they were not all rerun in this continuation.
+- `git diff --check` reports an existing trailing blank line at `src/vs/workbench/contrib/extensions/electron-browser/remoteExtensionsInit.ts:107`; no unrelated formatting cleanup was applied in this pass.
+- U02's required copied-legacy-state reopen/sentinel comparison and no-upload/download/refresh/provider-sign-out observation are **not yet verified**. Compile and source-boundary assertions do not substitute for those checks.
+
+### U02 remaining dependency and scope blockers
+
+- The parent-authorized edit-session paths still directly import Sync types/services for cloud Edit Sessions: `src/vs/workbench/contrib/editSessions/common/workspaceStateSync.ts` uses the synchronizer and Sync configuration/store/resource APIs; `common/editSessions.ts` uses `IResourceRefHandle`; `common/editSessionsStorageClient.ts` extends `UserDataSyncStoreClient`; `browser/editSessionsStorageService.ts` uses `createSyncHeaders`, resource/authentication types, and `UserDataSyncMachinesService`; and `browser/editSessions.contribution.ts` uses Sync store error types and invokes the workspace synchronizer.
+- These remaining consumers are active A6 cloud Edit Sessions behavior. Deleting platform Sync beneath them fails the intended compile boundary; keeping that behavior while removing its storage client requires a new backend, which is not authorized and would be a shadow cloud system.
+- `IEnvironmentService.userDataSyncHome` and `.sync` have active consumers in Sync implementation roots; the workbench browser `userDataSyncHome` value is likewise used by Sync sources. The `--sync` option is registered in `src/vs/platform/environment/node/argv.ts`, outside the current edit grant.
+- `--do-not-sync` also supplies machine-scoped extension-install options in `src/vs/code/node/cliProcessMain.ts`, `src/vs/server/node/remoteExtensionsScanner.ts`, and `src/vs/server/node/remoteExtensionHostAgentCli.ts`; these paths are outside the current U02 grant and need semantic review before any CLI flag removal. The standalone Monaco service has an out-of-grant inert `userDataSyncHome` stub.
+- No exact U02 platform Sync deletion manifest or new deletion-review batch is emitted: the required no-inbound-reference condition is not met, and physical deletion remains parent-owned.
+- Parent approval is required to either stage A6 cloud Edit Sessions disconnection now (with its exact path set) or revise the U02/U04 order so platform Sync deletion remains pending until A6. Separate approval is needed for the newly identified argv/CLI paths if those tails are to be removed.
+
+### Persisted task status, workload, and review focus
+
+- Re-read `tasks.md`: A5.RED, A5.GREEN, and A5.TRIANGULATE → REFACTOR remain visibly `[ ]` because A5 cloud-tree deletion and copied-state triangulation are incomplete. No task completion is claimed from the leaf entries in this progress record.
+- `Review Workload Forecast` still resolves to `feature-branch-chain`, with no size exception. U02.b.005.001 stays within the per-leaf 400-line ceiling including its owned assertion/artifact allocations; `.c.001.001` is a small isolated type-only seam and is recorded as such.
+- Remaining exact implementation checkbox lines:
+  - [ ] A5.RED: Add old Sync/profile enrollment no-start and local profile/settings/create/switch/import/export preservation tests in appropriate existing profile/Sync harnesses. Classify inbound references to `platform/userDataSync` helpers (including ignored-extension policy) before extraction. <!-- sdd-owner: implementation -->
+  - [ ] A5.GREEN: Disconnect desktop/web/shared/main Sync initialization/registrations; delete `workbench/contrib/userDataSync/`, `workbench/services/userDataSync/` and cloud `platform/userDataSync/` source/transports/tests/resources in dependency-order leaves. Extract only independently local helpers into existing profile/extension-management layers with parity tests; remove Sync logs/account/service/CLI/config tails. <!-- sdd-owner: implementation -->
+  - [ ] A5.TRIANGULATE → REFACTOR: Reopen copied legacy Sync state, switch local profiles and compare unrelated files/secrets; ensure no upload/download/refresh or provider sign-out. Remove telemetry/payload/dependency residue credited to T10, not local profile functionality. <!-- sdd-owner: implementation -->
+- Next review focus: resolve the A6 dependency sequencing and exact CLI/environment surfaces, then complete no-start/legacy-state triangulation, rerun the relevant boundary/profile tests, and only then prepare the exact parent-owned source/test/resource deletion manifest and review batches.
+
+## U02/A6 continuation — identity API and launch transport disconnection
+
+### Structured status consumed
+
+- Parent-authored status in `parent-authorization.md`: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; action context `mode=apply`, workspace `/home/marialez/Work/walker`, branch `product-debloat`. The parent-approved feature-branch-chain remains resolved at 400 additions+deletions per leaf, with `size:exception` declined. Strict TDD is false; the required bounded-leaf RED → GREEN → TRIANGULATE → REFACTOR process remains active.
+- All edits in this continuation used the A6 grant and parent-authorized A5 environment/CLI paths. The parent subsequently approved removing exactly the `vscode.experimental.editSession.continue` mapping from `src/vs/workbench/api/common/extHostApiCommands.ts`; no other member in that file changed. `.pi/` and unrelated OpenSpec state were preserved.
+
+### U02.A6.a.001 — remove cloud identity-provider API activation
+
+- **RED/GREEN:** the workspace boundary assertions caught remaining identity-provider activation/API/Git wiring; those runtime edges were removed. The ordinary Git filesystem/timeline providers, command registration, terminal execution manager and `git.continueInLocalClone` command remain protected by positive assertions. `extensionsApiProposals.ts` is generated from proposed declaration files: a direct edit was regenerated by `compile-client`, so it is deliberately left unchanged. Its identity-provider entry persists only because the parent-reserved `vscode.proposed.editSessionIdentityProvider.d.ts` still exists; parent deletion followed by compile regenerates the map without that entry.
+- **Staged API typing:** removed runtime `EditSessionIdentityMatch` export and identity-provider members while the parent-reserved proposed declaration file remains. Because the declaration still adds a top-level enum to `typeof vscode`, `extHost.api.impl.ts` uses a documented `unknown` bridge at the API-factory boundary until the parent deletes that declaration; `workspaceImplementation` itself now satisfies an `Omit` for the removed workspace functions. No provider callbacks or Edit Session participant registration are exposed.
+- **Compile/test evidence:** removing the enum exposed TS2352 at the `typeof vscode` API-factory cast while the reserved declaration remained. The documented narrow `unknown` bridge made `npm run compile-client` pass. Before exact mapping approval, the focused workspace selector reported **8 passing / 1 failing** on the legacy command mapping; after its authorized removal it reports **9 passing / 0 failing**. Current compile-client passes with zero errors.
+- **Review boundary:** the single exact command mapping was removed under parent approval. No other direct `vscode.experimental.editSession.continue` mapping remains; cloud commands are confined to the unregistered Edit Sessions tree pending parent-owned deletion. No files were physically deleted.
+
+### U02.A6.a.002 — remove cloud launch transport and auto-resume
+
+- Removed `editSessionId` / `continueOn` CLI argument and environment-service fields, browser workbench option/getter, protocol-URL extraction/forwarding, and Electron window configuration forwarding from the explicitly authorized environment/Electron paths. Preserved ordinary protocol URL handling and unrelated workspace/window/session routing.
+- Removed only `autoResumeEditSession()` and its invocation/storage prompt state from the already unregistered Edit Sessions contribution; this prevents stale launch fields from being consumed for cloud restore. It does not change `BrowserWorkspaceEditingService` local workspace entry/restore behavior, which remains covered by a passing positive test.
+- The focused launch-transport test passed after these edits. `npm run compile-client` passed with zero errors. The root `product.json` contains no `editSessions.store` value; `src/vs/base/common/product.ts` retains the type key temporarily because the still-present, unregistered cloud storage sources compile against it. The Git extension tsconfig still excludes its parent-reserved identity-provider source pending parent deletion.
+- Applied the exact authorized trailing-blank-line correction at `remoteExtensionsInit.ts:107`; `git diff --check` now passes.
+
+### Workload, remaining tasks, and deletion boundary
+
+- The inventory's a.001/a.002 entries remain separate review leaves. Current full source/test diffs on the a.001 path set total 308 additions+deletions (a conservative count that also includes shared A5 startup hunks); its allocated progress/inventory updates keep the leaf below 400. The a.002 transport paths plus their boundary assertions and allocated evidence likewise remain below 400. No test, comment, or unrelated code was compressed to meet the budget.
+- No `tasks.md` checkbox changed: broad A5/A6 tasks include source-tree deletion and full triangulation, so remain incomplete until parent deletion and post-deletion evidence. The API-command test is now green. Exact A6 parent deletion batches and a conditional U02 platform-Sync manifest are recorded below; platform Sync removal must follow A6 deletion because A6 source files still contain direct Sync imports.
+- Parent-owned manifest-only files remain: `src/vs/platform/workspace/common/editSessions.ts`, `src/vs/workbench/services/workspaces/common/editSessionIdentityService.ts`, `src/vs/workbench/api/browser/mainThreadEditSessionIdentityParticipant.ts`, `src/vscode-dts/vscode.proposed.editSessionIdentityProvider.d.ts`, and `extensions/git/src/editSessionIdentityProvider.ts`. The unregistered `src/vs/workbench/services/workspaces/common/workspaceIdentityService.ts` still consumes the cloud identity service and is a deletion-candidate dependency; the edit-session tree remains physically present. No `git rm`, staging, or commit occurred.
+- Exact remaining implementation checkbox lines from `tasks.md`:
+  - [ ] A5.RED: Add old Sync/profile enrollment no-start and local profile/settings/create/switch/import/export preservation tests in appropriate existing profile/Sync harnesses. Classify inbound references to `platform/userDataSync` helpers (including ignored-extension policy) before extraction. <!-- sdd-owner: implementation -->
+  - [ ] A5.GREEN: Disconnect desktop/web/shared/main Sync initialization/registrations; delete `workbench/contrib/userDataSync/`, `workbench/services/userDataSync/` and cloud `platform/userDataSync/` source/transports/tests/resources in dependency-order leaves. Extract only independently local helpers into existing profile/extension-management layers with parity tests; remove Sync logs/account/service/CLI/config tails. <!-- sdd-owner: implementation -->
+  - [ ] A5.TRIANGULATE → REFACTOR: Reopen copied legacy Sync state, switch local profiles and compare unrelated files/secrets; ensure no upload/download/refresh or provider sign-out. Remove telemetry/payload/dependency residue credited to T10, not local profile functionality. <!-- sdd-owner: implementation -->
+  - [ ] A6.RED → GREEN: Assert no cloud Continue Working On/edit-session upload/restoration commands or destination providers; disconnect/delete `workbench/contrib/editSessions/` and its cloud services/backend/extension-point/build/test tails, retaining local workspace restoration. Remove direct command links and extension proposals whose consumers disappear. <!-- sdd-owner: implementation -->
+  - [ ] A6.TRIANGULATE → REFACTOR: Test normal reopen/restore/files plus inert copied edit-session state, no cloud/network/account calls and no deletion of local/remote data; remove sole-purpose dependencies and ledger residue. <!-- sdd-owner: implementation -->
+- **Next review focus:** parent executes the ordered A6 deletion batches, then runs a fresh `npm run compile-client` to confirm the generated proposal map and staged API typing clean up. Only after the A6 imports are gone should the parent execute the conditional U02 platform-Sync batches; the `userDataSyncHome` environment members require a follow-up source cleanup after those roots disappear. Synthetic copied-state and local-profile sentinels now pass, but no live remote account/provider or network was exercised; retain the outstanding no-cloud-call confirmation as a post-deletion verification item. Preserve `git.continueInLocalClone`, ordinary local workspace restoration, and all local data.
+
+## U02 continuation — A6 command closure, copied-state triangulation, and deletion manifests
+
+### Structured status and authorization consumed
+
+- Consumed parent-authored OpenSpec status from `parent-authorization.md`: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`, `actionContext.mode=apply`, workspace `/home/marialez/Work/walker`, branch `product-debloat`, review path `feature-branch-chain`, 400-line leaf budget, no size exception.
+- Exact approval covers the single mapping in `src/vs/workbench/api/common/extHostApiCommands.ts`; it was removed without changing other mappings or content. This continuation also edited the approved `src/vs/sessions/sessions.web.main.ts` Sync bootstrap and the profile/workspace boundary tests, and persisted the completed A5.RED checkbox in `tasks.md`. No todo/goal, commit, stage, or physical deletion was performed.
+- The OpenSpec Review Workload Forecast remains resolved to chained feature-branch units; this continuation does not redefine the PR boundary or claim family completion.
+
+### RED → GREEN → TRIANGULATE → REFACTOR evidence
+
+| Leaf / phase | RED evidence | GREEN / triangulation evidence |
+| --- | --- | --- |
+| A6 command mapping | The earlier focused workspace selector had **8 passing / 1 failing** on `vscode.experimental.editSession.continue` in `extHostApiCommands.ts`. | Removed only that authorized mapping; `workspaceEditingService.test` now has **9 passing / 0 failing**. Positive local workspace entry and ordinary Git assertions remain green. |
+| A5 CLI Sync tails | Added `CLI no longer exposes Sync override flags`; RED was **18 passing / 1 failing** on the still-typed `do-not-sync` option. | Removed the `--sync`/`--do-not-sync` parser/type/CLI wiring and the Sync-only environment override; the boundary selector now has **19 passing / 0 failing**. The global `InstallOptions.isMachineScoped` type/metadata and unrelated explicit machine-scope callers remain intact. |
+| A5 Sessions web bootstrap | Expanded the Sessions startup audit and test to include `sessions.web.main.ts`; RED was **18 passing / 1 failing**, identifying the web Sync enablement side effect, eight platform Sync imports, and singleton registrations. | Removed only those Sync imports/registrations. The boundary selector now passes **19/19**, and `npm run compile-client` passes with zero errors. Common/desktop/web Sessions entrypoints are all covered; other Sessions behavior is retained. The isolated code/test change is 17 lines, below the usual 120-line target; it was not padded with unrelated edits. |
+| Copied-state/local preservation | Existing no-start and local profile assertions were extended with synthetic in-memory legacy Sync/Edit Session state and unrelated local settings/snippet/extension/repository sentinels. | `userDataProfileService.test` **33/33**, `userDataProfileSyncBoundary.test` **19/19**, `snippetsResource.test` **5/5**, `settingsResource.test` **2/2**, and workspace boundary **9/9** pass. The fixture reopens the in-memory profile metadata and runs local cleanup without altering any sentinel. It uses no real profile, account, remote data, network, or provider sign-out.
+| Compile / source hygiene | The first compile after dropping the environment `.sync` member found a stale Sync test stub and the browser subclass's separate environment-service dependency. | Removed only the obsolete `sync: 'on'` test stub, retained environment injection needed by the web trust subclass, and removed only the Sync override logic. Latest `mise exec -- npm run compile-client` passes with zero errors; `git diff --check` passes. |
+
+- `isMachineScoped` audit: all tracked `src/vs` references were reviewed. The CLI `--do-not-sync` mapping feeds only persisted `isMachineScoped` metadata; the metadata is consulted by the Sync ignored-extension policy, with no install-location branch found. Removed that Sync-specific CLI mapping but retained the shared type/metadata and other explicit callers to avoid changing extension installation/profile behavior.
+- `vscode-dts/README.md` documents that proposed declaration files update `extensionsApiProposals.ts`; a direct registry edit was regenerated on compile. The registry entry is therefore pending parent deletion of the reserved `src/vscode-dts/vscode.proposed.editSessionIdentityProvider.d.ts` plus a fresh compile; no hand-edit to generated output remains. The workspace boundary test intentionally does not demand generated-map absence before that deletion.
+
+### A6 pending parent physical-deletion review batches
+
+The executor may not unlink these files. Exact paths, review batches, counts, and preconditions are recorded in `removal-inventory.md` under **U02 continuation — A6 parent batches and conditional A5 manifest**:
+
+- **A6-D1**: the complete cloud Edit Sessions implementation and obsolete test tree — 9 tracked files, 2,721 current lines.
+- **A6-D2**: workspace identity service, identity provider service, platform identity protocol, and API participant — 4 tracked files, 325 lines.
+- **A6-D3**: proposed identity API declaration and Git provider implementation — 2 tracked files, 207 lines.
+- Total A6 pending manifest: 15 files, 3,253 current lines. These batches are parent-only and are not deletion evidence until the parent reports the `git rm` result.
+
+### U02 platform Sync manifest — exact but conditional
+
+- Prepared an exact tracked-file manifest and parent review grouping in `removal-inventory.md`: `workbench/contrib/userDataSync/` (8 files / 2,558 current lines), `workbench/services/userDataSync/` (8 / 1,474), and `platform/userDataSync/` (52 / 23,732); total 68 files / 27,764 current lines. Earlier census values in the inventory table are the pre-edit baseline, not this current pending-manifest count.
+- The platform-Sync manifest is **conditional, not executable yet**: five cross-family Sync importers remain in A6-D1 (`editSessions.contribution.ts`, `editSessionsStorageService.ts`, `common/editSessions.ts`, `common/editSessionsStorageClient.ts`, and `common/workspaceStateSync.ts`). Other Sync imports are internal to the A5 deletion roots. Parent must complete A6-D1–D3 first, then rerun source-reference scan and compile before executing the A5 batches. Environment `userDataSyncHome` members still need their separate post-tree source cleanup; they are not in the physical file manifest.
+- `--sync`, `.sync` enablement override, and `--do-not-sync` CLI wiring are now removed. The remaining `userDataSyncHome` interface/getters are preserved only until still-present A5/A6 sources disappear and can be cleaned without breaking the current compile boundary.
+
+### Remaining tasks, PR boundary, and verifier focus
+
+- Completed `A5.RED` and persisted its checkbox as `- [x]` in `tasks.md`; that row's no-start/local-preservation fixtures and inbound-reference classification are now evidenced. The following implementation rows remain exactly unchecked:
+  - [ ] A5.GREEN: Disconnect desktop/web/shared/main Sync initialization/registrations; delete `workbench/contrib/userDataSync/`, `workbench/services/userDataSync/` and cloud `platform/userDataSync/` source/transports/tests/resources in dependency-order leaves. Extract only independently local helpers into existing profile/extension-management layers with parity tests; remove Sync logs/account/service/CLI/config tails. <!-- sdd-owner: implementation -->
+  - [ ] A5.TRIANGULATE → REFACTOR: Reopen copied legacy Sync state, switch local profiles and compare unrelated files/secrets; ensure no upload/download/refresh or provider sign-out. Remove telemetry/payload/dependency residue credited to T10, not local profile functionality. <!-- sdd-owner: implementation -->
+  - [ ] A6.RED → GREEN: Assert no cloud Continue Working On/edit-session upload/restoration commands or destination providers; disconnect/delete `workbench/contrib/editSessions/` and its cloud services/backend/extension-point/build/test tails, retaining local workspace restoration. Remove direct command links and extension proposals whose consumers disappear. <!-- sdd-owner: implementation -->
+  - [ ] A6.TRIANGULATE → REFACTOR: Test normal reopen/restore/files plus inert copied edit-session state, no cloud/network/account calls and no deletion of local/remote data; remove sole-purpose dependencies and ledger residue. <!-- sdd-owner: implementation -->
+  These broad source-deletion/triangulation tasks remain incomplete until parent deletion and fresh verification; no family is declared complete.
+- Parent-only physical deletion is pending; no tracked or untracked file was removed. A6 still has API-transition residue: the generated proposal map, `extHost.api.impl.ts` type bridge/Omit, `extHost.protocol.ts` / `extHostWorkspace.ts` no-op RPC pair, and `product.ts` edit-session store type key. These become cleanup targets after the reserved source files and Edit Sessions tree are deleted.
+- Review focus: confirm the A6 batches contain no protected local workspace or Git behavior; parent deletes A6 first and recompiles; then re-scan for external Sync imports and execute the conditional U02 manifest. Final independent verification must still check copied legacy state is inert, local resources remain, and no remote/account calls or data deletion occur.
+
+## U02/A5 + inserted A6-PREP finalization — post-parent physical deletion
+
+### Structured status, scope, and workload
+
+- Consumed the parent-produced compaction-proof status for `product-debloat`: OpenSpec store; `applyState: ready`; apply dependency ready; `verifyState: ready`; `nextRecommended: sdd-apply`; workspace `/home/marialez/Work/walker`; branch `product-debloat`; snapshot accounting 101 total / 76 remaining. The authorization snapshot records `actionContext.mode: apply`; the resumed implementation brief authorizes this bounded implementation (not remediation). After the four newly completed implementation checkboxes, persisted tasks count 39 checked / 62 unchecked (101 total). This is 10 fewer unchecked rows than the snapshot would project; parent was notified to derive fresh status from the artifact before routing.
+- The parent-resolved workload is `feature-branch-chain`, 400 additions+deletions per authored leaf, size exception declined. This is only U02/A5 plus the inserted U02.A6-PREP closure; no unrelated next-stage work is claimed. `openspec/config.yaml` has `strict_tdd: false`; task-mandated RED → GREEN → TRIANGULATE → REFACTOR was followed.
+- Ownership markers on the four newly completed task rows are terminal `implementation` markers. This executor made no TODO/goal changes, staging, or commits. Parent-run physical deletions were already staged in the worktree and were left untouched.
+
+### Parent physical-deletion evidence (parent-run, cited; not executor deletion)
+
+- Parent executed A6-D1–D3: **15/15 manifest paths deleted**, including all five manifest-only paths. Parent `npm run compile-client`: **PASS**; it rebuilt the generated proposal registry after the declaration deletion.
+- Parent executed the A5 batches: **68/68 manifest files deleted**; `src/vs/platform/userDataSync/`, `src/vs/workbench/contrib/userDataSync/`, and `src/vs/workbench/services/userDataSync/` are gone. Parent `npm run compile-client`: **PASS** after deletion.
+- Parent `./scripts/test.sh --run vs/workbench/services/workspaces/test/browser/workspaceEditingService.test`: **9/9 PASS**. Parent's first `userDataProfileSyncBoundary.test` run failed with `ENOENT` on deleted `workspaces/common/workspaceIdentityService.ts`; the failure was a stale test `readFileSync`, fixed below. These results are parent-run evidence, not represented as commands run by this executor.
+
+### Final bounded RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED (parent test fix):** parent reported the boundary selector failed with `ENOENT` because `assertNoSyncStartup` attempted to read deleted `workspaceIdentityService.ts`. Replaced that check with an explicit physical-absence assertion (`existsSync` false passes; reappearance fails).
+- **RED (machine-scope disposition):** added a source-boundary test for the parent's `approve-all` P01–P11 grant. Its first run failed because production `isMachineScoped` references remained; the captured prior-turn summary has no reliable assertion count, so no count is claimed here.
+- **GREEN:** removed `userDataSyncHome` from the platform interface/native getter/browser getter, removed browser `.sync`, and removed standalone `userDataSyncHome`, `sync`, `continueOn`, and `editSessionId`. Renamed the now-unused browser environment constructor input to `_workspaceId` to preserve existing out-of-scope test call arity without retaining state or Sync behavior.
+- **GREEN (machine scope):** parent-approved audit established `isMachineScoped` had no install-location branch; its sole behavioral reader was the Settings Sync ignored-extension service. Removed that service/key/registrations, its obsolete behavior fixture, and the machine-scope metadata/options/property propagation across P01–P11 plus the seven already-granted paths. Preserved application scope, explicit profile resources, and all ordinary extension installation/update behavior. The test now verifies the application-scope and profile-location boundaries remain.
+- **TRIANGULATE:** copied synthetic legacy Sync and Edit Session files with local settings/snippets/extension-storage/repository sentinels were reopened in the existing in-memory profile test; all bytes survived `cleanUp`. The local profile switch and ordinary workspace-open tests also passed. No real profile, secret, repository, remote service, credential, provider, or network endpoint was touched.
+- **REFACTOR:** removed the `IgnoredExtensionsManagementService` implementation and both workbench/Sessions registrations because all of its behavior read/wrote `settingsSync.ignoredExtensions`; it was not an independent local helper. The prior-turn compile output is not relied upon because its exit status was not captured; the fresh final compile below is authoritative. No copied Sync helper or `isMachineScoped` runtime reference remains; the sole remaining text match is the negative regression assertion.
+- **Persisted task state:** A5.GREEN, A5.TRIANGULATE → REFACTOR, A6.RED → GREEN, and A6.TRIANGULATE → REFACTOR were updated to `[x]` after parent deletion evidence and final passing checks. A5.RED remained `[x]`. Re-read tasks before return confirms all five assigned A5/A6 implementation rows are checked. The profile test proves copied state is retained locally, not consumed; no live network observation or remote sign-out is claimed.
+
+## Verification — U02
+
+| Exact command / evidence source | Observed result |
+| --- | --- |
+| Parent-run A6-D1–D3 `npm run compile-client` | **PASS**; generated proposal registry rebuilt after all 15 manifest deletions, including the five manifest-only paths. |
+| Parent-run A5 post-deletion `npm run compile-client` | **PASS** after deletion of all 68/68 manifest files and all three Sync trees. |
+| Parent-run `./scripts/test.sh --run vs/workbench/services/workspaces/test/browser/workspaceEditingService.test` | **9/9 PASS**, preserving local workspace behavior. |
+| Parent-run `./scripts/test.sh --run vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test` before repair | **FAIL** on `ENOENT .../workspaces/common/workspaceIdentityService.ts`; fixed by asserting deleted-file absence. Failure output did not include a test count. |
+| Node 24.18.0 `./scripts/test.sh --run vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test` final | **19/19 PASS**, including deleted-file absence, removed environment/standalone tails, no Sync startup, and local profile switching. |
+| Node 24.18.0 `./scripts/test.sh --run vs/workbench/services/extensionManagement/test/common/ignoredExtensionsManagementService.test` final | **2/2 PASS**, including harness registry assertion and Sync-only machine-scope absence/preservation assertions. |
+| Node 24.18.0 `./scripts/test.sh --run vs/platform/userDataProfile/test/common/userDataProfileService.test` final | **33/33 PASS**, including copied legacy-state reopening and local profile/workspace sentinel preservation. |
+| Node 24.18.0 `./scripts/test.sh --run vs/workbench/services/workspaces/test/browser/workspaceEditingService.test` final | **9/9 PASS**, local workspace entry/restore and edit-session disconnection assertions. |
+| Node 24.18.0 `./scripts/test.sh --run vs/workbench/contrib/extensions/test/electron-browser/extensionsActions.test` final | **245/245 PASS**, preserving ordinary extension enablement/install actions. |
+| Node 24.18.0 `npm run compile-client` final fresh run | **PASS**; compile completed with 0 errors across client source, generated proposal names, and extension tasks. The build emitted npm config deprecation warnings only. |
+| `rg -n 'isMachineScoped' src/vs extensions/copilot -g '*.ts'` final audit | Only the test's negative source assertion matches; no runtime field, option, or metadata consumer remains. |
+| `for path in src/vs/platform/userDataSync src/vs/workbench/contrib/userDataSync src/vs/workbench/services/userDataSync src/vs/workbench/contrib/editSessions src/vs/workbench/services/workspaces/common/workspaceIdentityService.ts; do if test -e "$path"; then printf 'PRESENT %s\n' "$path"; exit 1; else printf 'ABSENT %s\n' "$path"; fi; done` | All five targeted paths absent. This is a read-only spot check; exact parent deletion counts remain parent-run evidence. |
+| `git diff --check` | **PASS**; no whitespace errors. |
+
+### Changed files, design disposition, and boundary
+
+- Sync-only machine-scope paths changed: `src/vs/platform/extensionManagement/common/extensionManagement.ts`, `src/vs/platform/extensionManagement/node/extensionManagementService.ts`, `src/vs/platform/extensionManagement/common/unsupportedExtensionsMigration.ts`, `src/vs/workbench/services/extensionManagement/common/{extensionManagementService.ts,webExtensionManagementService.ts}`, `src/vs/workbench/services/extensionManagement/test/common/ignoredExtensionsManagementService.test.ts`, `src/vs/workbench/workbench.common.main.ts`, `src/vs/sessions/sessions.common.main.ts`, `src/vs/workbench/api/browser/mainThreadCLICommands.ts`, `src/vs/workbench/services/localization/electron-browser/localeService.ts`, `src/vs/workbench/contrib/themes/browser/themes.contribution.ts`, `src/vs/workbench/contrib/remote/browser/remoteIndicator.ts`, `src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts`, `extensions/copilot/test/scenarios/test-tools/workspace/chatSetup.ts`, `extensions/copilot/src/platform/parser/test/node/fixtures/chatSetup.ts`, `src/vs/workbench/services/userDataProfile/browser/extensionsResource.ts`, `src/vs/workbench/contrib/extensions/browser/{extensionsActions.ts,extensionRecommendationNotificationService.ts}`, `src/vs/server/node/remoteExtensionsScanner.ts`, and `src/vs/workbench/test/browser/workbenchTestServices.ts`.
+- Environment/test tails changed: `src/vs/platform/environment/common/{environment.ts,environmentService.ts}`, `src/vs/workbench/services/environment/browser/environmentService.ts`, `src/vs/editor/standalone/browser/standaloneServices.ts`, and `src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts`. Artifact paths: `tasks.md`, `removal-inventory.md`, and this file.
+- The prior inventory classification of ignored-extension defaults as an independently local helper is superseded: source audit found that its only behavior read/wrote Settings Sync configuration. Removal follows the binding machine-scope disposition; independent profile/install behavior is preserved and tested. `extHostDocumentData.test.perf-data.ts` was not read or changed.
+- The cohesive finalization leaf is estimated at approximately **330 additions+deletions**, including test and allocated artifact changes; it remains below 400. Parent-owned mechanical A5/A6 deletions are not authored-line budget or executor file changes. No size exception and no PR strategy change.
+- **Remaining assigned U02 tasks:** none. Next family is outside this slice; the first exact unchecked rows remain:
+  - [ ] A7.RED: Map `platform/remoteTunnel`, `contrib/remoteTunnel`, `extensions/tunnel-forwarding`, Rust `cli/src/{auth.rs,commands/tunnels.rs,tunnels/*}`, product tunnel fields, nativeHost/CLI/packaging/installer wiring by reachable owner. Add cloud login/enrollment/forward-internal absence fixtures and **positive** generic `platform/tunnel`, remote server/Ports/key-transport tests before deletions. <!-- sdd-owner: implementation -->
+  - [ ] A7.GREEN: Disconnect/delete account Remote Tunnels, cloud tunnel-forwarding bundled provider and account CLI/device/token/service flows; remove tunnel application/mutex/product and bundled-extension discovery tails when exclusively cloud-owned. Keep independent local forwarding/server/version/download/stdio/security-token primitives; do not blanket-delete `platform/tunnel`, `workbench/services/remote`, `cli/src/tunnels/`, or dev-tunnels packages with retained generic consumers. <!-- sdd-owner: implementation -->
+  - [ ] A7.TRIANGULATE → REFACTOR: Run generic tunnel/server/CLI argument tests and Cargo checks/tests for changed Rust; verify no `getSession` fallback or token refresh from persisted tunnel state. Exercise SSH-key remote files/terminal/extension host and non-account forwarding where available; document environment gaps and remove dead cloud packages only with inbound-use evidence. <!-- sdd-owner: implementation -->
+- Review focus for independent verify: re-read the persisted A5/A6 checkboxes; confirm absence of machine-scope runtime metadata, no environment/Monaco Sync or Continue-On fields, the 15+68 parent deletion evidence, and protected local-profile/workspace tests. No live network, provider sign-out, remote-data deletion, or secret cleanup was performed. This executor did not stage or commit; parent-staged physical deletions were left intact.

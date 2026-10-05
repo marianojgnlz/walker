@@ -55,7 +55,7 @@ export async function migrateUnsupportedExtensions(profile: IUserDataProfile | u
 
 				let preReleaseExtension = installed.find(i => areSameExtensions(i.identifier, { id: preReleaseExtensionId }));
 				if (!preReleaseExtension || (preReleaseExtension.isPreReleaseVersion !== !!preRelease && isUnsupportedExtensionEnabled)) {
-					preReleaseExtension = await extensionManagementService.installFromGallery(gallery, { installPreReleaseVersion: preRelease, isMachineScoped: unsupportedExtension.isMachineScoped, operation: InstallOperation.Migrate, profileLocation: profile?.extensionsResource, context: { [EXTENSION_INSTALL_SKIP_PUBLISHER_TRUST_CONTEXT]: true } });
+					preReleaseExtension = await extensionManagementService.installFromGallery(gallery, { installPreReleaseVersion: preRelease, operation: InstallOperation.Migrate, profileLocation: profile?.extensionsResource, context: { [EXTENSION_INSTALL_SKIP_PUBLISHER_TRUST_CONTEXT]: true } });
 					logService.info(`Installed the pre-release extension '${preReleaseExtension.identifier.id}'`);
 					if (!autoMigrate.donotDisable && !isUnsupportedExtensionEnabled) {
 						await extensionEnablementService.disableExtension(preReleaseExtension.identifier);
@@ -86,7 +86,7 @@ export async function migrateUnsupportedExtensions(profile: IUserDataProfile | u
 						continue;
 					}
 
-					await extensionManagementService.installFromGallery(gallery, { installPreReleaseVersion: extensionToAutoUpdate.preRelease, isMachineScoped: extensionToAutoUpdate.isMachineScoped, operation: InstallOperation.Update, profileLocation: profile?.extensionsResource, context: { [EXTENSION_INSTALL_SKIP_PUBLISHER_TRUST_CONTEXT]: true } });
+					await extensionManagementService.installFromGallery(gallery, { installPreReleaseVersion: extensionToAutoUpdate.preRelease, operation: InstallOperation.Update, profileLocation: profile?.extensionsResource, context: { [EXTENSION_INSTALL_SKIP_PUBLISHER_TRUST_CONTEXT]: true } });
 					logService.info(`Autoupdated '${extensionToAutoUpdate.identifier.id}' extension to '${gallery.version}' extension.`);
 				} catch (error) {
 					logService.error(error);

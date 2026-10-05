@@ -9,8 +9,9 @@ import { FileOperationError, FileOperationResult, IFileService } from '../../../
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IProfileResource, IProfileResourceChildTreeItem, IProfileResourceInitializer, IProfileResourceTreeItem, IUserDataProfileService } from '../common/userDataProfile.js';
-import { updateIgnoredSettings } from '../../../../platform/userDataSync/common/settingsMerge.js';
-import { IUserDataSyncUtilService } from '../../../../platform/userDataSync/common/userDataSync.js';
+import { ITextModelService } from '../../../../editor/common/services/resolverService.js';
+import { ITextResourceConfigurationService, ITextResourcePropertiesService } from '../../../../editor/common/services/textResourceConfiguration.js';
+import { resolveSettingsFormattingOptions, updateProfileSettings } from './userDataProfileSettingsService.js';
 import { ITreeItemCheckboxState, TreeItemCollapsibleState } from '../../../common/views.js';
 import { IUserDataProfile, ProfileResourceType } from '../../../../platform/userDataProfile/common/userDataProfile.js';
 import { API_OPEN_EDITOR_COMMAND_ID } from '../../../browser/parts/editor/editorCommands.js';
@@ -45,7 +46,9 @@ export class SettingsResource implements IProfileResource {
 
 	constructor(
 		@IFileService private readonly fileService: IFileService,
-		@IUserDataSyncUtilService private readonly userDataSyncUtilService: IUserDataSyncUtilService,
+		@ITextModelService private readonly textModelService: ITextModelService,
+		@ITextResourcePropertiesService private readonly textResourcePropertiesService: ITextResourcePropertiesService,
+		@ITextResourceConfigurationService private readonly textResourceConfigurationService: ITextResourceConfigurationService,
 		@ILogService private readonly logService: ILogService,
 	) {
 	}
@@ -61,8 +64,8 @@ export class SettingsResource implements IProfileResource {
 			return { settings: null };
 		} else {
 			const ignoredSettings = this.getIgnoredSettings();
-			const formattingOptions = await this.userDataSyncUtilService.resolveFormattingOptions(profile.settingsResource);
-			const settings = updateIgnoredSettings(localContent || '{}', '{}', ignoredSettings, formattingOptions);
+			const formattingOptions = await resolveSettingsFormattingOptions(profile.settingsResource, this.textModelService, this.textResourcePropertiesService, this.textResourceConfigurationService);
+			const settings = updateProfileSettings(localContent || '{}', '{}', ignoredSettings, formattingOptions);
 			return { settings };
 		}
 	}
@@ -74,8 +77,8 @@ export class SettingsResource implements IProfileResource {
 			return;
 		}
 		const localSettingsContent = await this.getLocalFileContent(profile);
-		const formattingOptions = await this.userDataSyncUtilService.resolveFormattingOptions(profile.settingsResource);
-		const contentToUpdate = updateIgnoredSettings(settingsContent.settings, localSettingsContent || '{}', this.getIgnoredSettings(), formattingOptions);
+		const formattingOptions = await resolveSettingsFormattingOptions(profile.settingsResource, this.textModelService, this.textResourcePropertiesService, this.textResourceConfigurationService);
+		const contentToUpdate = updateProfileSettings(settingsContent.settings, localSettingsContent || '{}', this.getIgnoredSettings(), formattingOptions);
 		await this.fileService.writeFile(profile.settingsResource, VSBuffer.fromString(contentToUpdate));
 	}
 

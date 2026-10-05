@@ -638,7 +638,6 @@ export class RemoteStatusIndicator extends Disposable implements IWorkbenchContr
 	private async installExtension(extensionId: string, remoteLabel: string): Promise<void> {
 		try {
 			await this.extensionsWorkbenchService.install(extensionId, {
-				isMachineScoped: false,
 				donotIncludePackAndDependencies: false,
 				context: { [EXTENSION_INSTALL_SKIP_WALKTHROUGH_CONTEXT]: true }
 			});

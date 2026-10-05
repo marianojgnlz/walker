@@ -23,7 +23,6 @@ import { ServicesAccessor } from '../../../platform/instantiation/common/instant
 import { ILogService, ILoggerService, LogLevel } from '../../../platform/log/common/log.js';
 import { getRemoteName } from '../../../platform/remote/common/remoteHosts.js';
 import { TelemetryTrustedValue } from '../../../platform/telemetry/common/telemetryUtils.js';
-import { EditSessionIdentityMatch } from '../../../platform/workspace/common/editSessions.js';
 import { DebugConfigurationProviderTriggerKind } from '../../contrib/debug/common/debug.js';
 import { PromptsType } from '../../contrib/chat/common/promptSyntax/promptTypes.js';
 import { ExtensionDescriptionRegistry } from '../../services/extensions/common/extensionDescriptionRegistry.js';
@@ -1154,7 +1153,7 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 
 		// namespace: workspace
 
-		const workspace: typeof vscode.workspace = {
+		const workspaceImplementation = {
 			get rootPath() {
 				extHostApiDeprecation.report('workspace.rootPath', extension,
 					`Please use 'workspace.workspaceFolders' instead. More details: https://aka.ms/vscode-eliminating-rootpath`);
@@ -1508,14 +1507,6 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 			onDidGrantWorkspaceTrust: (listener, thisArgs?, disposables?) => {
 				return _asExtensionEvent(extHostWorkspace.onDidGrantWorkspaceTrust)(listener, thisArgs, disposables);
 			},
-			registerEditSessionIdentityProvider: (scheme: string, provider: vscode.EditSessionIdentityProvider) => {
-				checkProposedApiEnabled(extension, 'editSessionIdentityProvider');
-				return extHostWorkspace.registerEditSessionIdentityProvider(scheme, provider);
-			},
-			onWillCreateEditSessionIdentity: (listener, thisArgs?, disposables?) => {
-				checkProposedApiEnabled(extension, 'editSessionIdentityProvider');
-				return _asExtensionEvent(extHostWorkspace.getOnWillCreateEditSessionIdentityEvent(extension))(listener, thisArgs, disposables);
-			},
 			registerCanonicalUriProvider: (scheme: string, provider: vscode.CanonicalUriProvider) => {
 				checkProposedApiEnabled(extension, 'canonicalUriProvider');
 				return extHostWorkspace.registerCanonicalUriProvider(scheme, provider);
@@ -1530,7 +1521,8 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 			encode(content: string, options?: { uri?: vscode.Uri; encoding?: string }) {
 				return extHostWorkspace.encode(content, options);
 			},
-		};
+		} satisfies Omit<typeof vscode.workspace, 'registerEditSessionIdentityProvider' | 'onWillCreateEditSessionIdentity'>;
+		const workspace: typeof vscode.workspace = workspaceImplementation as unknown as typeof vscode.workspace;
 
 		// namespace: scm
 		const scm: typeof vscode.scm = {
@@ -1995,8 +1987,9 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 			}
 		};
 
+		// The proposed declaration is retained for parent-owned deletion, but this retired API is no longer exposed at runtime.
 		// eslint-disable-next-line local/code-no-dangerous-type-assertions
-		return <typeof vscode>{
+		return <typeof vscode><unknown>{
 			version: initData.version,
 			// namespaces
 			ai,
@@ -2231,7 +2224,6 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 			TabInputTextMultiDiff: extHostTypes.TextMultiDiffTabInput,
 			TelemetryTrustedValue: TelemetryTrustedValue,
 			LogLevel: LogLevel,
-			EditSessionIdentityMatch: EditSessionIdentityMatch,
 			InteractiveSessionVoteDirection: extHostTypes.InteractiveSessionVoteDirection,
 			ChatCopyKind: extHostTypes.ChatCopyKind,
 			ChatSessionChangedFile: extHostTypes.ChatSessionChangedFile,

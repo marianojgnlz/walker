@@ -257,10 +257,7 @@ class MarketplaceThemesPicker implements IDisposable {
 				location: ProgressLocation.Notification,
 				title: localize('installing extensions', "Installing Extension {0}...", galleryExtension.displayName)
 			}, async () => {
-				await this.extensionManagementService.installFromGallery(galleryExtension, {
-					// Setting this to false is how you get the extension to be synced with Settings Sync (if enabled).
-					isMachineScoped: false,
-				});
+				await this.extensionManagementService.installFromGallery(galleryExtension);
 			});
 			return true;
 		} catch (e) {

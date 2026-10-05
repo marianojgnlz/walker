@@ -264,7 +264,6 @@ export interface IGalleryMetadata {
 
 export type Metadata = Partial<IGalleryMetadata & {
 	isApplicationScoped: boolean;
-	isMachineScoped: boolean;
 	isBuiltin: boolean;
 	isSystem: boolean;
 	updated: boolean;
@@ -278,7 +277,6 @@ export type Metadata = Partial<IGalleryMetadata & {
 
 export interface ILocalExtension extends IExtension {
 	isWorkspaceScoped: boolean;
-	isMachineScoped: boolean;
 	isApplicationScoped: boolean;
 	publisherId: string | null;
 	installedTimestamp?: number;
@@ -570,7 +568,6 @@ export interface InstallExtensionSummary {
 export type InstallOptions = {
 	isBuiltin?: boolean;
 	isWorkspaceScoped?: boolean;
-	isMachineScoped?: boolean;
 	isApplicationScoped?: boolean;
 	pinned?: boolean;
 	donotIncludePackAndDependencies?: boolean;

@@ -168,6 +168,112 @@ Tests outside this list need exact-path requests (parent approves quickly). Any 
 - Append carefully to `apply-progress.md` — write full merged content, never truncate.
 - Preservation bindings (every leaf): `extensions/git` + `git-base`, OS Git credentials/SSH keys/askpass, plain remotes incl. github.com over OS credentials, local profiles/settings/repos/secrets, ordinary diagnostics, generic SSH/server/port forwarding, public workbench link presentation, unrelated consumer behavior (assignmentService, extensionEnablementService, update.ts, gettingStarted, developerActions, enterprise policy).
 - Leaf protocol: 120–400 total changed lines incl. tests; RED→GREEN→TRIANGULATE→REFACTOR; pause un-splittable leaves with a concrete split obstacle.
+- **Authorized validation output surfaces (verify round 1 resolution, retroactive):** in addition to `out/**`, the authorized validation commands' expected generated outputs include `.vscode/extensions/**/out/**` (selfhost extension compile output), `.build/**` (Electron runner crash artifacts e.g. `settings.dat`), `build/lib/policies/policyDto.ts` (build pretypecheck DTO copy — tracked content unchanged), `extensions/**/out/**`, `extensions/**/dist/**`, `**/*.tsbuildinfo`, `.vscode-test/**`, `~/.walker-dev/extensions/**`, and runner-managed temp/profile/log dirs under the system temp directory. Verify round 1 observed all of these as generated-only; `git status` shows no tracked changes outside the granted surfaces.
+
+## Stage U02 — additional authorized surfaces (additive to the list above)
+
+src/vs/platform/userDataSync/**
+src/vs/workbench/contrib/userDataSync/**
+src/vs/workbench/services/userDataSync/**
+src/vs/platform/userDataProfile/**
+src/vs/workbench/services/userDataProfile/**
+src/vs/code/electron-main/app.ts
+src/vs/server/node/serverServices.ts
+src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts
+src/vs/workbench/browser/web.api.ts
+src/vs/server/node/webClientServer.ts
+src/vs/server/node/serverEnvironmentService.ts
+src/vs/code/browser/workbench/workbench.ts
+src/vs/workbench/contrib/chat/browser/promptSyntax/newPromptFileActions.ts
+src/vs/workbench/contrib/editSessions/browser/editSessions.contribution.ts
+src/vs/workbench/contrib/editSessions/browser/editSessionsStorageService.ts
+src/vs/workbench/contrib/editSessions/common/editSessions.ts
+src/vs/workbench/contrib/editSessions/common/editSessionsStorageClient.ts
+src/vs/workbench/contrib/editSessions/common/workspaceStateSync.ts
+src/vs/workbench/contrib/extensions/browser/extensionRecommendationNotificationService.ts
+src/vs/workbench/contrib/extensions/browser/extensionsActions.ts
+src/vs/workbench/contrib/preferences/browser/settingsEditor2.ts
+src/vs/workbench/contrib/preferences/browser/settingsEditorSettingIndicators.ts
+src/vs/workbench/contrib/preferences/browser/settingsLayout.ts
+src/vs/workbench/contrib/preferences/browser/settingsTree.ts
+src/vs/workbench/contrib/preferences/test/browser/settingsEditor2.test.ts
+src/vs/workbench/contrib/preferences/test/browser/settingsEditorSettingIndicators.test.ts
+src/vs/workbench/contrib/relauncher/browser/relauncher.contribution.ts
+src/vs/workbench/contrib/relauncher/test/browser/relauncher.test.ts
+src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedService.ts
+src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
+src/vs/workbench/contrib/extensions/electron-browser/remoteExtensionsInit.ts
+src/vs/workbench/services/extensionManagement/common/extensionManagementService.ts
+src/vs/workbench/services/extensionManagement/electron-browser/extensionManagementService.ts
+src/vs/workbench/services/environment/browser/environmentService.ts
+src/vs/platform/environment/common/environment.ts
+src/vs/platform/environment/common/environmentService.ts
+src/vs/workbench/services/workspaces/common/workspaceIdentityService.ts
+src/vs/sessions/sessions.web.main.ts
+src/vs/workbench/contrib/extensions/browser/extensionsList.ts
+src/vs/workbench/contrib/extensions/electron-browser/extensions.contribution.ts
+src/vs/workbench/contrib/extensions/common/extensions.ts
+src/vs/platform/environment/common/argv.ts
+src/vs/platform/environment/node/argv.ts
+src/vs/code/node/cliProcessMain.ts
+src/vs/server/node/remoteExtensionsScanner.ts
+src/vs/server/node/remoteExtensionHostAgentCli.ts
+src/vs/workbench/contrib/editSessions/test/**
+src/vs/workbench/api/browser/extensionHost.contribution.ts
+src/vs/workbench/api/browser/mainThreadWorkspace.ts
+src/vs/workbench/api/common/extHostWorkspace.ts
+src/vs/workbench/api/common/extHostApiCommands.ts
+src/vs/platform/extensions/common/extensionsApiProposals.ts
+extensions/git/package.json
+extensions/git/tsconfig.json
+extensions/git/src/main.ts
+src/vs/platform/windows/electron-main/windowsMainService.ts
+src/vs/platform/windows/electron-main/windowImpl.ts
+src/vs/workbench/services/workspaces/test/browser/workspaceEditingService.test.ts
+src/vs/editor/standalone/browser/standaloneServices.ts
+src/vs/platform/extensionManagement/common/extensionManagement.ts
+src/vs/platform/extensionManagement/node/extensionManagementService.ts
+src/vs/platform/extensionManagement/common/unsupportedExtensionsMigration.ts
+src/vs/workbench/services/extensionManagement/common/webExtensionManagementService.ts
+src/vs/workbench/api/browser/mainThreadCLICommands.ts
+src/vs/workbench/services/localization/electron-browser/localeService.ts
+src/vs/workbench/contrib/themes/browser/themes.contribution.ts
+src/vs/workbench/contrib/remote/browser/remoteIndicator.ts
+src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts
+extensions/copilot/test/scenarios/test-tools/workspace/chatSetup.ts
+extensions/copilot/src/platform/parser/test/node/fixtures/chatSetup.ts
+
+`isMachineScoped` removal (2026-10-05, `approve-all` P01–P11): executor audit confirmed `InstallOptions.isMachineScoped` is Sync-exclusion-only (sole live reader = `IgnoredExtensionsManagementService.getIgnoredExtensions()`; no install-location branch) — the parent's binding machine-scope disposition therefore mandates removal. Scope: remove only the `isMachineScoped` option/metadata wiring in these paths; preserve all unrelated extension install/profile behavior. The 7 already-granted paths get the same narrow cleanup.
+
+A6-scan additions (2026-10-05, option 1 approved): paths above are A6-only disconnection/removal (Git edits limited to proposal entries; preserve ordinary Git/workspace behavior). **Manifest-only (parent physical deletion, do not edit beyond disconnection refs):** `src/vs/platform/workspace/common/editSessions.ts`, `src/vs/workbench/services/workspaces/common/editSessionIdentityService.ts`, `src/vs/workbench/api/browser/mainThreadEditSessionIdentityParticipant.ts`, `src/vscode-dts/vscode.proposed.editSessionIdentityProvider.d.ts`, `extensions/git/src/editSessionIdentityProvider.ts`.
+
+## Inserted stage — U02.A6-PREP (parent decision 2026-10-05)
+
+Route chosen: `authorize-a6-prep`. U02 revealed that cloud Edit Sessions imports Sync storage/client/machine/synchronizer APIs, so the platform-Sync deletion manifest cannot be produced until its A6 consumers are gone. Execute the A6 family tasks from tasks.md (A6.RED → GREEN, A6.TRIANGULATE → REFACTOR: cloud command/extension-point/destination activation + direct links removed; cloud service/storage/backend source + obsolete-test blocks deleted; exclusive proposals/manifests/package tails removed) as a bounded inserted stage INSIDE the current apply slice. Retain local workspace restoration (protected boundary). The physical-deletion protocol applies (you disconnect + record the manifest; parent runs `git rm`). U02's completed leaves stand; its platform-Sync deletion manifest waits until A6 is done. Additional A6 callers found by scan → exact-path requests as usual.
+
+Env/CLI tail authorization (Sync tails only): the five paths above — `--do-not-sync` flag + argv wiring, `userDataSyncHome`/`sync` environment members — may be removed. MACHINE-SCOPE DISPOSITION (binding): `--do-not-sync` maps to `InstallOptions.isMachineScoped`; remove the Sync-named flag, but FIRST verify `isMachineScoped` semantics — if it is sync-exclusion-only, remove it too; if it controls install location/behavior independent of Sync, KEEP that behavior (optionally rename), do not change machine-scoped install behavior without evidence. Also fix the trailing blank line at `remoteExtensionsInit.ts:107`.
+
+(P01–P25 approved 2026-10-05 under AFK delegation, `approve-all`, with the binding scope limit: **Sync-specific edits only** in those files — remove live Sync service/config/UI/bootstrap consumers and the Sync-owned `IWorkspaceStateFolder` type usage; unrelated behavior stays.)
+
+## Stage U02 scope notes (A5 — sync/local-profile seams)
+
+- Delete the Sync cloud trees (`platform/userDataSync`, `contrib/userDataSync`, `services/userDataSync`) in dependency-order leaves WITH obsolete-test removal per leaf; extract ONLY independently local helpers (profile storage/settings/import/export, ignored-extension policy) into the existing profile/extension-management layers with parity tests.
+- Remove Sync initialization/registrations from desktop/web/shared/main startup (app.ts, serverServices.ts, workbench entrypoints). Remove Sync logs/account/service/CLI/config tails.
+- Protection: local profiles/settings/create/switch/import/export must keep working; reopening copied legacy Sync state must be inert (no upload/download/refresh/provider sign-out); no deletion of local data or secrets. Verification — U02: `./scripts/test.sh --run <owning-profile-or-sync-boundary-file>`, `npm run typecheck-client` for moved helpers/DI, extension-management profile tests, plus compare protected sentinels on reopened Sync state.
+- Physical deletion protocol unchanged (executor records manifest; parent runs `git rm`). Deletion-review batches must be documented like `deletion-review.md` for any new physical removal.
+
+## SDD Structured Status (U02 stage — parent-derived)
+
+```yaml
+activeChange: product-debloat
+artifactStore: openspec
+artifacts: {proposal: done, specs: done, design: done, tasks: done, apply-progress: done, verify-report: done (round 1, U00+U01 PASS), sync-report: missing}
+taskAccounting: {total: 101, remaining: 67, checked: 34, parent: 0, errors: 0}
+gates: {coreArtifactsReady: true, taskArtifactBlocked: false, applyState: ready, verifyState: ready, syncState: blocked, archiveReady: false}
+nextRecommended: sdd-apply
+actionContext: {mode: apply — assigned slice U02 (A5), workspace: /home/marialez/Work/walker, branch: product-debloat}
+reviewWorkloadGate: RESOLVED — feature-branch-chain split, 400 lines/leaf, size:exception declined.
+```
 
 ## Parent product/tech decisions log (AFK delegation, 2026-10-03/05)
 

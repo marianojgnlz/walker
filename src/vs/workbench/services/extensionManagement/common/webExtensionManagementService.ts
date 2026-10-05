@@ -179,9 +179,6 @@ export class WebExtensionManagementService extends AbstractExtensionManagementSe
 
 	async updateMetadata(local: ILocalExtension, metadata: Partial<Metadata>, profileLocation: URI): Promise<ILocalExtension> {
 		// unset if false
-		if (metadata.isMachineScoped === false) {
-			metadata.isMachineScoped = undefined;
-		}
 		if (metadata.isBuiltin === false) {
 			metadata.isBuiltin = undefined;
 		}
@@ -246,11 +243,10 @@ export class WebExtensionManagementService extends AbstractExtensionManagementSe
 }
 
 function toLocalExtension(extension: IExtension): ILocalExtension {
-	const metadata = getMetadata(undefined, extension);
+	const metadata = getMetadata(extension);
 	return {
 		...extension,
 		identifier: { id: extension.identifier.id, uuid: metadata.id ?? extension.identifier.uuid },
-		isMachineScoped: !!metadata.isMachineScoped,
 		isApplicationScoped: !!metadata.isApplicationScoped,
 		publisherId: metadata.publisherId || null,
 		publisherDisplayName: metadata.publisherDisplayName,
@@ -269,10 +265,8 @@ function toLocalExtension(extension: IExtension): ILocalExtension {
 	};
 }
 
-function getMetadata(options?: InstallOptions, existingExtension?: IExtension): Metadata {
-	const metadata: Metadata = { ...((<IScannedExtension>existingExtension)?.metadata || {}) };
-	metadata.isMachineScoped = options?.isMachineScoped || metadata.isMachineScoped;
-	return metadata;
+function getMetadata(existingExtension?: IExtension): Metadata {
+	return { ...((<IScannedExtension>existingExtension)?.metadata || {}) };
 }
 
 class InstallExtensionTask extends AbstractExtensionTask<ILocalExtension> implements IInstallExtensionTask {
@@ -306,7 +300,7 @@ class InstallExtensionTask extends AbstractExtensionTask<ILocalExtension> implem
 			this._operation = InstallOperation.Update;
 		}
 
-		const metadata = getMetadata(this.options, existingExtension);
+		const metadata = getMetadata(existingExtension);
 		if (!URI.isUri(this.extension)) {
 			metadata.id = this.extension.identifier.uuid;
 			metadata.publisherDisplayName = this.extension.publisherDisplayName;

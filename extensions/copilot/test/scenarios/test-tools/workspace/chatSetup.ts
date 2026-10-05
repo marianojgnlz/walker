@@ -1280,7 +1280,6 @@ class ChatSetupController extends Disposable {
 			await this.extensionsWorkbenchService.install(defaultChat.extensionId, {
 				enable: true,
 				isApplicationScoped: true, 	// install into all profiles
-				isMachineScoped: false,		// do not ask to sync
 				installEverywhere: true,	// install in local and remote
 				installPreReleaseVersion: this.productService.quality !== 'stable'
 			}, ChatViewId);

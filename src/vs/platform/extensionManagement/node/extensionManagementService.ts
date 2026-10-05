@@ -202,9 +202,6 @@ export class ExtensionManagementService extends AbstractExtensionManagementServi
 			metadata.hasPreReleaseVersion = true;
 		}
 		// unset if false
-		if (metadata.isMachineScoped === false) {
-			metadata.isMachineScoped = undefined;
-		}
 		if (metadata.isBuiltin === false) {
 			metadata.isBuiltin = undefined;
 		}
@@ -911,7 +908,6 @@ export class ExtensionsScanner extends Disposable {
 			publisherDisplayName: extension.metadata?.publisherDisplayName,
 			publisherId: extension.metadata?.publisherId || null,
 			isApplicationScoped: !!extension.metadata?.isApplicationScoped,
-			isMachineScoped: !!extension.metadata?.isMachineScoped,
 			isPreReleaseVersion: !!extension.metadata?.isPreReleaseVersion,
 			hasPreReleaseVersion: !!extension.metadata?.hasPreReleaseVersion,
 			preRelease: extension.preRelease,
@@ -1083,7 +1079,6 @@ class InstallExtensionInProfileTask extends AbstractExtensionTask<ILocalExtensio
 
 		const metadata: Metadata = {
 			isApplicationScoped: this.options.isApplicationScoped || existingExtension?.isApplicationScoped,
-			isMachineScoped: this.options.isMachineScoped || existingExtension?.isMachineScoped,
 			isBuiltin: this.options.isBuiltin || existingExtension?.isBuiltin,
 			isSystem: existingExtension?.type === ExtensionType.System ? true : undefined,
 			installedTimestamp: Date.now(),

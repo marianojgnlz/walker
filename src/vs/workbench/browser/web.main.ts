@@ -43,8 +43,6 @@ import { IndexedDBFileSystemProvider } from '../../platform/files/browser/indexe
 import { BrowserRequestService } from '../services/request/browser/requestService.js';
 import { IRequestService } from '../../platform/request/common/request.js';
 import { IUserDataInitializationService, IUserDataInitializer, UserDataInitializationService } from '../services/userData/browser/userDataInit.js';
-import { UserDataSyncStoreManagementService } from '../../platform/userDataSync/common/userDataSyncStoreService.js';
-import { IUserDataSyncStoreManagementService } from '../../platform/userDataSync/common/userDataSync.js';
 import { ILifecycleService, WillShutdownEvent } from '../services/lifecycle/common/lifecycle.js';
 import { Event } from '../../base/common/event.js';
 import { Action2, MenuId, registerAction2 } from '../../platform/actions/common/actions.js';
@@ -84,7 +82,6 @@ import { BrowserSocketFactory } from '../../platform/remote/browser/browserSocke
 import { VSBuffer } from '../../base/common/buffer.js';
 import { IStoredWorkspace } from '../../platform/workspaces/common/workspaces.js';
 import { UserDataProfileInitializer } from '../services/userDataProfile/browser/userDataProfileInit.js';
-import { UserDataSyncInitializer } from '../services/userDataSync/browser/userDataSyncInit.js';
 import { BrowserRemoteResourceLoader } from '../services/remote/browser/browserRemoteResourceHandler.js';
 import { BufferLogger } from '../../platform/log/common/bufferLog.js';
 import { FileLoggerService } from '../../platform/log/common/fileLog.js';
@@ -376,7 +373,7 @@ export class BrowserMain extends Disposable {
 		serviceCollection.set(IPolicyService, policyService);
 		serviceCollection.set(IManagedSettingsService, policyService);
 
-		const configurationService = await this.createWorkspaceAndDependentServices(serviceCollection, workspace, environmentService, userDataProfileService, userDataProfilesService, fileService, remoteAgentService, uriIdentityService, policyService, logService, loggerService, remoteAuthorityResolverService, productService);
+		const configurationService = await this.createWorkspaceAndDependentServices(serviceCollection, workspace, environmentService, userDataProfileService, userDataProfilesService, fileService, remoteAgentService, uriIdentityService, policyService, logService, loggerService, remoteAuthorityResolverService);
 
 		return { serviceCollection, configurationService, logService };
 	}
@@ -394,7 +391,6 @@ export class BrowserMain extends Disposable {
 		logService: ILogService,
 		loggerService: ILoggerService,
 		remoteAuthorityResolverService: IRemoteAuthorityResolverService,
-		productService: IProductService,
 	): Promise<IWorkbenchConfigurationService> {
 		const { configurationService, storageService } = await this.createWorkspaceConfigAndStorageServices(serviceCollection, workspace, environmentService, userDataProfileService, userDataProfilesService, fileService, remoteAgentService, uriIdentityService, policyService, logService, remoteAuthorityResolverService);
 
@@ -410,11 +406,6 @@ export class BrowserMain extends Disposable {
 		// Request Service
 		const requestService = new BrowserRequestService(remoteAgentService, configurationService, loggerService);
 		serviceCollection.set(IRequestService, requestService);
-
-		// Userdata Sync Store Management Service
-		const userDataSyncStoreManagementService = new UserDataSyncStoreManagementService(productService, configurationService, storageService);
-		serviceCollection.set(IUserDataSyncStoreManagementService, userDataSyncStoreManagementService);
-
 
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		//
@@ -432,7 +423,6 @@ export class BrowserMain extends Disposable {
 
 		// Userdata Initialize Service
 		const userDataInitializers: IUserDataInitializer[] = [];
-		userDataInitializers.push(new UserDataSyncInitializer(environmentService, secretStorageService, userDataSyncStoreManagementService, fileService, userDataProfilesService, storageService, productService, requestService, logService, uriIdentityService));
 		if (environmentService.options?.profile) {
 			userDataInitializers.push(new UserDataProfileInitializer(environmentService, fileService, userDataProfileService, storageService, logService, uriIdentityService, requestService));
 		}

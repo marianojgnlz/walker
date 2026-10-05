@@ -78,7 +78,6 @@ export class ExtensionsResourceInitializer implements IProfileResourceInitialize
 				if (await this.extensionManagementService.canInstall(extension) === true) {
 					this.logService.trace(`Initializing Profile: Installing extension...`, extension.identifier.id, extension.version);
 					await this.extensionManagementService.installFromGallery(extension, {
-						isMachineScoped: false,/* set isMachineScoped value to prevent install and sync dialog in web */
 						donotIncludePackAndDependencies: true,
 						installGivenVersion: !!e.version,
 						installPreReleaseVersion: e.preRelease,
@@ -158,7 +157,6 @@ export class ExtensionsResource implements IProfileResource {
 						installExtensionInfos.push({
 							extension,
 							options: {
-								isMachineScoped: false,/* set isMachineScoped value to prevent install and sync dialog in web */
 								donotIncludePackAndDependencies: true,
 								installGivenVersion: !!e.version,
 								installPreReleaseVersion: e.preRelease,

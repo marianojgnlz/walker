@@ -451,3 +451,262 @@ The approved Vite and Rspack HTML templates no longer contain `trustedExtensionA
 The account-menu entrypoint is disconnected; the parent accepted the intentional loss of its Chat Pet badge-selection UI, and parent-owned U06 will physically remove `src/vs/sessions/contrib/accountMenu/browser/account.contribution.ts`. Keep that file physically present until the parent deletes the Sessions tree; do not separately delete `chatPetAchievementBadges.ts` or achievement services. Other disconnected account-panel candidates are `src/vs/sessions/browser/accountTitleBarState.ts` and its widget stylesheets (`accountTitleBarWidget.css`, `accountWidget.css`). The mixed contribution also registers the mobile chat-dashboard service, so physical deletion remains with the parent/U06.
 
 The authorized A3 auth follow-up removed the workspace-picker sign-in action, stopped consulting the signed-out opt-in in the type picker, removed account-auth startup/watch/dialog flow from `sessionsSetUpService.ts`, made first-run welcome independent of authentication, and cleared the `vscode.github-authentication`/`github.auth` cross-app sharing allowlist entry without touching stored secret data. Residual sign-in source is dormant: `AGENTIC_SIGN_IN_COMMAND_ID` remains only in the unregistered `account.contribution.ts`; `sessionsSignInDialog.ts` is imported by a workbench component fixture, not a runtime caller; and `sessionsPolicyBlocked.ts` still contains account-gate/sign-in branches, while its registered contribution currently invokes only `AgentDisabled`. That last source path is outside this grant and remains parent/U06-owned. `mobileChatShell.css` retains inert account-sheet/avatar selectors after the mobile DOM removal. No live sign-in entrypoint or account gate was observed in the authorized runtime paths; no edit scope was widened.
+
+## U02 leaf instantiation — Sync/local-profile seam ownership
+
+The parent has assigned U02/A5 with the `feature-branch-chain` decision resolved and the 400-line ceiling in force. These leaves are exact symbol/path boundaries; rows sharing a large entrypoint are sequential, non-overlapping symbol seams. Planned sizes include tests and allocated OpenSpec progress/task/inventory changes. Add any newly discovered dependent path as a separate parent-approved surface before editing it.
+
+| Leaf | Exact paths / seam | Prerequisite and owned behavior | Planned changed lines | Focused selector / evidence |
+| --- | --- | --- | ---: | --- |
+| U02.a.001 | `src/vs/workbench/services/userDataProfile/browser/{settingsResource.ts,userDataProfileSettingsService.ts}`; `src/vs/workbench/services/userDataProfile/test/browser/settingsResource.test.ts`; local profile service registration in `workbench.common.main.ts` | RED parity for profile settings export/import formatting and machine-scoped setting preservation; move only the local formatting/setting-preservation helpers out of userDataSync. | 180–360 | `./scripts/test.sh --run vs/workbench/services/userDataProfile/test/browser/settingsResource.test` |
+| U02.a.002 | `src/vs/workbench/services/extensionManagement/common/extensionManagementService.ts`; `src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts`; `src/vs/workbench/services/extensionManagement/test/common/ignoredExtensionsManagementService.test.ts`; its independent registration symbol in `workbench.common.main.ts` | RED parity for lower-case IDs, machine-scoped defaults, explicit ignore/always-sync overrides and configuration updates; move only the independent local ignored-extension policy into the retained extension-management layer. | 180–360 | `./scripts/test.sh --run vs/workbench/services/extensionManagement/test/common/ignoredExtensionsManagementService.test` |
+| U02.a.003 | `src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts`; `src/vs/platform/userDataProfile/test/common/userDataProfileService.test.ts`; `src/vs/workbench/services/userDataProfile/test/browser/snippetsResource.test.ts` | RED no-start source assertions for legacy Sync state plus positive local profile creation/workspace/settings/snippets sentinels; classify all Sync imports and profile helpers before disconnection. | 160–340 | `./scripts/test.sh --run vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test`; existing profile/snippets selectors |
+| U02.b.001 | Sync-only symbols in `src/vs/workbench/workbench.common.main.ts`, `workbench.desktop.main.ts`, `src/vs/sessions/sessions.common.main.ts`, `sessions.desktop.main.ts` | Remove common/desktop/Sessions Sync contribution imports, logging/config registrations and service bootstrap only after the startup RED fixture passes. | 180–360 | `npm run typecheck-client`; profile Sync-boundary test |
+| U02.b.002 | Sync-only symbols in `src/vs/workbench/workbench.web.main.ts`, `src/vs/workbench/browser/web.main.ts`, `src/vs/workbench/browser/web.api.ts` | Remove web Sync DI, user-data initializer/store startup, and obsolete web Sync option surface while preserving profile import initialization. | 180–360 | `npm run typecheck-client`; profile Sync-boundary test |
+| U02.b.003 | Sync-only symbols in `src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts` | Remove Sync configuration, DI and IPC channels; preserve shared-process extension storage, enablement and unrelated channels. | 180–360 | `npm run typecheck-client`; profile Sync-boundary test |
+| U02.b.004.001 | `src/vs/workbench/contrib/extensions/electron-browser/{remoteExtensionsInit.ts,extensions.contribution.ts}` | Remove only the Sync-backed `RemoteExtensionsInitializerContribution`; preserve `InstallRemoteExtensionsContribution` and ordinary remote extension relay/install behavior. | 120–400 | `userDataProfileSyncBoundary.test`; `npm run compile-client` |
+| U02.b.004.002 | `src/vs/workbench/contrib/extensions/{browser/{extensionsActions.ts,extensionsList.ts,extensionsWidgets.ts,extensionsWorkbenchService.ts,extensions.contribution.ts,extensionRecommendationNotificationService.ts},common/extensions.ts,test/electron-browser/extensionsActions.test.ts}` | Remove Sync-only extension ignored-policy actions/widgets, machine-scope install alternatives and Sync-dependent install prompt choices; retain ordinary extension installs, local profile scope and extension enablement behavior. | 120–400 | `userDataProfileSyncBoundary.test`; extension actions/workbench service tests; `npm run compile-client` |
+| U02.b.004.003 | `src/vs/workbench/contrib/preferences/{browser/{settingsEditor2.ts,settingsEditorSettingIndicators.ts,settingsLayout.ts,settingsTree.ts},test/browser/{settingsEditor2.test.ts,settingsEditorSettingIndicators.test.ts}}` | Remove Sync controls, ignored-setting actions/indicators and Settings Sync settings-layout category while preserving local settings editing, profile targets, and other setting indicators. | 120–400 | Sync-boundary, settings-editor, and indicator tests; `npm run compile-client` |
+| U02.b.005.001 | `src/vs/workbench/contrib/chat/browser/promptSyntax/newPromptFileActions.ts`; `src/vs/workbench/contrib/welcomeGettingStarted/{browser/gettingStartedService.ts,common/gettingStartedContent.ts}`; `src/vs/workbench/contrib/relauncher/{browser/relauncher.contribution.ts,test/browser/relauncher.test.ts}`; `src/vs/workbench/contrib/update/browser/update.ts`; assertions in `src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts` | Remove Sync-only prompt/onboarding suggestions and relaunch/updater waits/store selection; preserve local prompt creation/settings customization, ordinary configuration relaunch, and quality-change confirmation. | 231 total (171 tracked source/test + 20 boundary-test lines + 38 apply-progress lines + 2 inventory changes) | `userDataProfileSyncBoundary.test`; relauncher suite; `npm run compile-client` |
+| U02.c.001.001 | `src/vs/workbench/services/workspaces/common/workspaceIdentityService.ts`; local-shape assertion in `src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts` | Replace only the Sync-owned `IWorkspaceStateFolder` import/signatures with the equivalent local `IWorkspaceIdentityFolder` shape; preserve the edit-session identity algorithm. | 19 source/test lines (small type-only seam; no unrelated changes to reach 120) | `userDataProfileSyncBoundary.test`; `npm run compile-client` |
+| U02.c.001.002 (pending parent decision) | `src/vs/workbench/contrib/editSessions/{browser/editSessions.contribution.ts,browser/editSessionsStorageService.ts,common/editSessions.ts,common/editSessionsStorageClient.ts,common/workspaceStateSync.ts}` | Remaining consumers use Sync store/client/error/resource/machine/synchronizer APIs for cloud edit-session behavior. Removing those edges while keeping cloud edit sessions would need an alternative backend; disabling/removing the behavior is A6 ownership, not a Sync-only A5 edit. | Not authorized to alter A6 behavior; keep this edge inventory-only until parent resolves stage order/scope | Current `npm run compile-client` passes with platform Sync source retained; no deletion-readiness evidence |
+| U02.c.002 (blocked) | `src/vs/platform/userDataSync/**`, `src/vs/workbench/contrib/userDataSync/**`, `src/vs/workbench/services/userDataSync/**` tracked source/test/resource batches | No physical-deletion manifest is ready: edit-session cloud consumers still import platform Sync, and environment/CLI tails are not fully resolved. Executor does not unlink files. | Parent physical deletion only, after every inbound edge is disconnected; no exact manifest/batches emitted in this pass | Fresh source/import scan after authorized consumer disconnection, then parent removal evidence |
+| U02.d.001 (blocked) | `src/vs/platform/environment/common/{environment.ts,environmentService.ts}`, `src/vs/workbench/services/environment/browser/environmentService.ts`; `src/vs/platform/environment/common/argv.ts` and `node/argv.ts` discovered as additional CLI owners | `userDataSyncHome` and `IEnvironmentService.sync` are used by Sync implementation roots; `--sync` is parsed in `node/argv.ts`. `--do-not-sync` also feeds machine-scoped CLI install options in code/server consumers. Keep legacy CLI/config tails until their exact edit surfaces and preserved machine-scope semantics are authorized. The standalone Monaco `userDataSyncHome` stub is out of grant and is not an active reader. | No edits to new argv/CLI paths without parent approval | Existing boundary test and compile only prove currently disconnected callers; no full environment/CLI absence claim |
+
+### U02 inbound-reference classification before extraction
+
+A fresh tracked-source scan, `git grep -n -E '(platform/userDataSync|workbench/services/userDataSync|workbench/contrib/userDataSync)' -- src/vs`, classified the importers below. This classification precedes helper extraction; it distinguishes protected local functions from Sync-only readers and consumer blocks. A path that only imports a Sync type is not automatically a local helper, and no broad import deletion is authorized.
+
+| Class | Exact importer paths / symbols | Disposition and retained boundary |
+| --- | --- | --- |
+| Local profile settings preservation | `src/vs/workbench/services/userDataProfile/browser/settingsResource.ts`: `updateIgnoredSettings`, `IUserDataSyncUtilService.resolveFormattingOptions` | Extract only formatting and machine-scoped setting-preservation behavior into the existing `services/userDataProfile` layer; retain profile import/export and test profile-local data round-trips. The Sync merge/config/disallowed-setting policy is not retained. |
+| Local ignored-extension policy | `src/vs/platform/userDataSync/common/ignoredExtensions.ts` consumed from `workbench.common.main.ts`, `workbench/contrib/extensions/browser/extensionsWorkbenchService.ts`, and `workbench/contrib/extensions/electron-browser/remoteExtensionsInit.ts` | Preserve only independent lower-case extension IDs, machine-scoped defaults and +/- overrides in the existing extension-management layer with parity tests. Remove remote initializer and trigger/Sync UI consumers; retain local extension installation, enablement, profiles and metadata. |
+| Sync-only extension management branches | `src/vs/workbench/services/extensionManagement/common/extensionManagementService.ts` (Sync-enabled machine-scope prompt); `src/vs/workbench/services/extensionManagement/electron-browser/extensionManagementService.ts` (forwarded Sync DI); `src/vs/workbench/services/extensionManagement/browser/extensionEnablementService.ts` (Sync account/provider restriction); `src/vs/workbench/contrib/extensions/browser/{extensions.contribution.ts,extensionsWorkbenchService.ts}` (Sync enablement context/install prompt/toggle/trigger); `src/vs/workbench/contrib/extensions/browser/{extensionRecommendationNotificationService.ts,extensionsActions.ts,extensionsWidgets.ts}` | Remove Sync enablement, badge/action/recommendation, account restriction and upload trigger logic; preserve general recommendations, install/uninstall/update, local ignored extension config parity only where task requires it, and ordinary extension enablement. `extensionsActions.test.ts` and `extensionEnablementService.test.ts` contain corresponding Sync test fixtures to remove/replace in bounded leaves. |
+| Sync-only preferences, relaunch, update and onboarding | `src/vs/workbench/contrib/preferences/browser/{settingsEditor2.ts,settingsEditorSettingIndicators.ts,settingsTree.ts}` and `test/browser/settingsEditor2.test.ts`; `src/vs/workbench/contrib/relauncher/browser/relauncher.contribution.ts` and its test; `src/vs/workbench/contrib/update/browser/update.ts`; `src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedService.ts` | Remove Settings Sync UI/status/setting indicators, relaunch wait/commands, updater Sync actions/restart dependencies and Getting Started Sync CTA only. Preserve unrelated settings editor functionality, relaunch, update, welcome/personalization and profile switching. |
+| Desktop/web/shared/Sessions bootstrap | `src/vs/workbench/workbench.common.main.ts`, `workbench.desktop.main.ts`, `workbench/workbench.web.main.ts`, `workbench/browser/web.main.ts`, `src/vs/sessions/sessions.common.main.ts`, `sessions.desktop.main.ts`, `sessions.web.main.ts`, `src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts` | Disconnect Sync configuration, local/remote stores, account/log/util services, store/user-data initialization and IPC channels. Keep extension storage/enablement and unrelated shared-process/workbench services. Shared-process scope is parent-authorized Sync-only. |
+| Workbench Sync feature owner | `src/vs/workbench/contrib/userDataSync/**`, `src/vs/workbench/services/userDataSync/**` plus `src/vs/platform/userDataSync/**` imports internal to those roots | Parent-owned physical-deletion batches only after no inbound references remain. Obsolete tests/transports/resources go with their owning batch; this executor records exact manifests and never unlinks. |
+| Cross-family cloud consumers | `src/vs/workbench/contrib/editSessions/browser/{editSessions.contribution.ts,editSessionsStorageService.ts}`, `common/{editSessions.ts,editSessionsStorageClient.ts,workspaceStateSync.ts}`; `src/vs/workbench/contrib/chat/browser/promptSyntax/newPromptFileActions.ts` | Remove Sync-only error/synchronizer/store/enablement references before the A6 or chat owner physically deletes its consumer. Keep A6 and chat ownership distinct and do not remove local workspace identity, local prompt-file editing, or unrelated APIs. |
+| Workspace identity type-only edge | `src/vs/workbench/services/workspaces/common/workspaceIdentityService.ts`: `IWorkspaceStateFolder` import/signatures | Replace the Sync-owned structural type with a narrowly owned local workspace identity shape in this already approved file; preserve local workspace identity matching behavior. |
+| Environment and CLI flags | `src/vs/platform/environment/common/{environment.ts,environmentService.ts}`, `src/vs/workbench/services/environment/browser/environmentService.ts`, `src/vs/platform/environment/common/argv.ts`, `src/vs/platform/environment/node/argv.ts`, `src/vs/code/node/cliProcessMain.ts`, `src/vs/server/node/{serverEnvironmentService.ts,remoteExtensionsScanner.ts,remoteExtensionHostAgentCli.ts}` | `userDataSyncHome`/`.sync` feed Sync roots; `--sync` is parsed as an enablement override; `--do-not-sync` also selects machine-scoped installs. The additional common/node argv and CLI consumers are outside the current grant; obtain exact parent authorization and preserve/explicitly retire the machine-scope behavior before removing these flags. |
+| Other named direct consumers | `src/vs/workbench/contrib/extensions/{browser/extensions.contribution.ts,electron-browser/remoteExtensionsInit.ts}`; `src/vs/workbench/contrib/preferences/**`; `src/vs/workbench/contrib/relauncher/**`; `src/vs/workbench/contrib/update/browser/update.ts`; `src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedService.ts`; `src/vs/workbench/contrib/chat/browser/promptSyntax/newPromptFileActions.ts`; `src/vs/workbench/services/extensionManagement/electron-browser/extensionManagementService.ts` | These consumers are included above and remain separate code-owner leaves; this row records no additional scope. New path discovery requires a distinct approved leaf before any edit. |
+
+The direct-reference search found importers in the documented workbench, Sessions, shared-process, edit-session/chat consumer, local-profile, extension-management, preferences/relauncher/update/onboarding owners and the Sync implementation roots. Remaining textual matches are to be re-scanned after disconnection; the classification is semantic ownership evidence, not physical-removal evidence. Current helper extraction targets stay only in `src/vs/workbench/services/userDataProfile/**` and `src/vs/workbench/services/extensionManagement/**` already granted by parent.
+
+This manifest is a dependency map, not a claim of completion. U02.b.005.001 is implemented and verified in the cumulative apply record; U02.c.001.001 removes only the local workspace identity type edge. The remaining edit-session cloud dependencies and CLI/environment tails block the exact parent-owned deletion manifest and deletion-review batches. Parent scope/ordering approval is required before any A6 behavior or new argv/CLI path is edited. No Sync-tree file was physically removed in this pass.
+
+## U02.A6 bounded-leaf instantiation — cloud Edit Sessions
+
+Parent option 1 now authorizes A6-only disconnection on the added paths in `parent-authorization.md`. Ordinary Git, local workspace editing/restoration, generic window routing and unrelated API behavior remain protected. Parent alone performs physical deletion; no `rm`/unlink is performed here.
+
+| Leaf | Exact paths / seam | Prerequisite and owned behavior | Planned changed lines | Focused selector / evidence |
+| --- | --- | --- | ---: | --- |
+| U02.A6.a.001 | `workbench/workbench.common.main.ts`; `sessions/sessions.common.main.ts`; `workbench/api/browser/{extensionHost.contribution.ts,mainThreadWorkspace.ts}`; `workbench/api/common/{extHost.api.impl.ts,extHost.protocol.ts,extHostWorkspace.ts}`; `platform/extensions/common/extensionsApiProposals.ts`; `extensions/git/{package.json,tsconfig.json,src/main.ts}`; `workbench/services/workspaces/test/browser/workspaceEditingService.test.ts`; pending exact-path approval: `src/vs/workbench/api/common/extHostApiCommands.ts` | Remove Edit Session activation and extension identity-provider API/proposal/Git integration. Preserve Git SCM/commands/credential paths and local workspace editing. Focused test passes activation/identity checks but remains RED on the obsolete API command mapping outside the current grant. | 180–360 including tests and allocated artifacts | `./scripts/test.sh --run vs/workbench/services/workspaces/test/browser/workspaceEditingService.test`; `npm run compile-client` |
+| U02.A6.a.002 | `platform/environment/{common/{argv.ts,environment.ts,environmentService.ts},node/argv.ts}`; `workbench/{services/environment/browser/environmentService.ts,browser/web.api.ts}`; `code/electron-main/app.ts`; `platform/windows/electron-main/{windowsMainService.ts,windowImpl.ts}`; `workbench/contrib/editSessions/browser/editSessions.contribution.ts`; same focused workspace boundary test | Remove Continue On/edit-session launch transport and cloud auto-resume fields only. Keep unrelated URI/session routing, Sync configuration pending A5, and ordinary desktop/browser workspace restore. | 150–340 including tests and allocated artifacts | Workspace boundary test; `npm run compile-client`; focused workspace-restoration positive case |
+| U02.A6 pending deletion manifest | `workbench/contrib/editSessions/**` (9 tracked source/test files); `workbench/services/workspaces/common/workspaceIdentityService.ts`; parent-authorized manifest-only identity API/type files and Git provider are listed in apply-progress | Submit exact candidates only after external registrations, API command mapping, and API/package references are disconnected; parent runs `git rm`. Do not mark A6 tasks complete until physical deletion is observed. | Parent-owned deletion; excluded from executor edit budget | Final tracked-source reference scan, workspace boundary test, client compile before parent deletion |
+
+Out-of-scope literal hits are classified, not edited: `src/vs/base/test/node/uri.perf.data.txt` contains URI-performance corpus path strings; `src/vs/editor/test/node/diffing/fixtures/json-brackets/*.json` are diff input/expected text read as fixture content, not imports; and Copilot fixture snapshots contain a copied API implementation. These are non-entrypoint test data, not live product imports; the Copilot fixtures are removed by their later owning family.
+
+## U02 continuation — A6 parent batches and conditional A5 manifest
+
+This status supersedes the provisional “pending parent decision” / “no manifest ready” rows above. As of this inventory update, A6 cloud entrypoint/API/command edges and A5 Sync bootstrap/CLI flags are disconnected and focused tests compile/pass. Physical deletion remains parent-only. The tracked paths below were counted from the current checkout after edits, so their current line totals differ from the baseline census near the top of this document.
+
+### A6 exact parent-only deletion manifest and review batches
+
+| Batch | Ownership-coherent scope | Files | Current lines | Preconditions / retained boundary |
+| --- | --- | ---: | ---: | --- |
+| A6-D1 | Complete `src/vs/workbench/contrib/editSessions/` implementation and obsolete test tree | 9 | 2,721 | Workbench and Sessions entrypoints no longer import the contribution; the identity API participant and legacy extension-host command are disconnected. Local workspace restore remains green. All internal Sync imports stay within this batch; execute before A5 platform Sync batches. |
+| A6-D2 | `workspaceIdentityService`, `editSessionIdentityService`, platform identity contract, and main-thread participant | 4 | 325 | A6 runtime consumers are disconnected; after D1, re-scan for any remaining identity-service imports. This batch removes only cloud identity behavior, not the retained `IWorkspaceIdentityFolder` local structural shape. |
+| A6-D3 | Reserved proposed API declaration and Git identity-provider source | 2 | 207 | Git provider registration/proposal package entries are disconnected and the `vscode.experimental.editSession.continue` command mapping is removed. After deletion, rebuild the generated `extensionsApiProposals.ts` registry. Preserve Git SCM, ordinary commands, and `git.continueInLocalClone`. |
+| **Total A6** | Parent-owned physical deletion only | **15** | **3,253** | Do not check A6 task boxes until parent deletion is observed and fresh verification passes. |
+
+Exact A6-D1 paths:
+
+```text
+src/vs/workbench/contrib/editSessions/browser/editSessions.contribution.ts
+src/vs/workbench/contrib/editSessions/browser/editSessionsFileSystemProvider.ts
+src/vs/workbench/contrib/editSessions/browser/editSessionsStorageService.ts
+src/vs/workbench/contrib/editSessions/browser/editSessionsViews.ts
+src/vs/workbench/contrib/editSessions/common/editSessions.ts
+src/vs/workbench/contrib/editSessions/common/editSessionsLogService.ts
+src/vs/workbench/contrib/editSessions/common/editSessionsStorageClient.ts
+src/vs/workbench/contrib/editSessions/common/workspaceStateSync.ts
+src/vs/workbench/contrib/editSessions/test/browser/editSessions.test.ts
+```
+
+Exact A6-D2 paths:
+
+```text
+src/vs/platform/workspace/common/editSessions.ts
+src/vs/workbench/api/browser/mainThreadEditSessionIdentityParticipant.ts
+src/vs/workbench/services/workspaces/common/editSessionIdentityService.ts
+src/vs/workbench/services/workspaces/common/workspaceIdentityService.ts
+```
+
+Exact A6-D3 paths:
+
+```text
+extensions/git/src/editSessionIdentityProvider.ts
+src/vscode-dts/vscode.proposed.editSessionIdentityProvider.d.ts
+```
+
+The retained `workspaceEditingService.test.ts` and `userDataProfileSyncBoundary.test.ts` were adjusted so they no longer try to read implementation files that the parent will delete. Static assertions still check startup/API disconnection and retained local workspace behavior. The generated proposal registry and API type bridge are intentionally left for post-deletion regeneration/cleanup.
+
+### Conditional U02 Sync physical-deletion batches
+
+These are exact current tracked-file lists. Execute only after A6-D1–D3 have been deleted and a fresh `git grep`/import scan confirms no external platform-Sync consumers. The userDataSync client fixture was updated to remove the deleted `.sync` test override; current count is 52 platform files / 23,732 lines (not the pre-edit baseline 23,739). Parent runs `git rm`; executor does not unlink.
+
+| Batch | Ownership-coherent scope | Files | Current lines | Gate |
+| --- | --- | ---: | ---: | --- |
+| A5-C1 | Workbench Sync browser contribution, views, trigger, conflict UI | 5 | 2,394 | A5 startup/UI consumers are disconnected; retain local profile and extension-management helpers already extracted. |
+| A5-C2 | Workbench Sync Electron contributions and utility channel | 2 | 88 | Remove with its owning channel and contribution registration. |
+| A5-C3 | Sync utility-channel Electron test | 1 | 76 | Delete with C2; no non-Sync consumer. |
+| A5-S1 | Workbench Sync browser enablement/init/workbench services | 4 | 1,255 | A5 workbench registrations and startup consumers are disconnected; after A6 deletion there must be no external A6 imports. |
+| A5-S2 | Workbench Sync common contracts/utilities | 2 | 163 | Delete with S1 and all feature consumers. |
+| A5-S3 | Workbench Sync Electron auto-sync/service contributions | 2 | 56 | Delete with service registration/channel owners. |
+| A5-P1 | Platform Sync engine, account, enablement, local store, machine/service/IPC, and Node auto-sync | 16 | 5,799 | Requires A6 removal first; keep `userDataProfile` local settings/import/export, extension policy, and workspace behavior outside this batch. |
+| A5-P2 | Platform resource synchronizers/mergers and retired `ignoredExtensions` implementation | 17 | 5,682 | The independent ignored-extension policy already lives in extension-management; do not remove that local replacement. |
+| A5-P3 | Platform merge tests | 6 | 4,685 | Delete only with the corresponding resource implementation batch. |
+| A5-P4 | Platform resource synchronization tests | 8 | 4,366 | Delete only with the corresponding resource implementation batch. |
+| A5-P5 | Platform core synchronizer/auto-sync/client/service/store tests | 5 | 3,200 | Delete with P1 service/engine owners; no network test is run by this executor. |
+| **Total U02 A5** | Parent-owned conditional Sync-tree deletion | **68** | **27,764** | Execute only after A6 files/importers are physically removed and a fresh source scan/compile passes. |
+
+Exact A5-C1 paths:
+
+```text
+src/vs/workbench/contrib/userDataSync/browser/userDataSyncConflictsView.ts
+src/vs/workbench/contrib/userDataSync/browser/userDataSync.contribution.ts
+src/vs/workbench/contrib/userDataSync/browser/userDataSyncTrigger.ts
+src/vs/workbench/contrib/userDataSync/browser/userDataSync.ts
+src/vs/workbench/contrib/userDataSync/browser/userDataSyncViews.ts
+```
+
+Exact A5-C2 paths:
+
+```text
+src/vs/workbench/contrib/userDataSync/electron-browser/userDataSync.contribution.ts
+src/vs/workbench/contrib/userDataSync/electron-browser/userDataSyncUtilChannel.contribution.ts
+```
+
+Exact A5-C3 path:
+
+```text
+src/vs/workbench/contrib/userDataSync/test/electron-browser/userDataSyncUtilChannel.test.ts
+```
+
+Exact A5-S1 paths:
+
+```text
+src/vs/workbench/services/userDataSync/browser/userDataSyncEnablementService.ts
+src/vs/workbench/services/userDataSync/browser/userDataSyncInit.ts
+src/vs/workbench/services/userDataSync/browser/userDataSyncWorkbenchService.ts
+src/vs/workbench/services/userDataSync/browser/webUserDataSyncEnablementService.ts
+```
+
+Exact A5-S2 paths:
+
+```text
+src/vs/workbench/services/userDataSync/common/userDataSync.ts
+src/vs/workbench/services/userDataSync/common/userDataSyncUtil.ts
+```
+
+Exact A5-S3 paths:
+
+```text
+src/vs/workbench/services/userDataSync/electron-browser/userDataAutoSyncService.ts
+src/vs/workbench/services/userDataSync/electron-browser/userDataSyncService.ts
+```
+
+Exact A5-P1 paths:
+
+```text
+src/vs/platform/userDataSync/common/abstractJsonSynchronizer.ts
+src/vs/platform/userDataSync/common/abstractSynchronizer.ts
+src/vs/platform/userDataSync/common/content.ts
+src/vs/platform/userDataSync/common/userDataAutoSyncService.ts
+src/vs/platform/userDataSync/common/userDataSync.ts
+src/vs/platform/userDataSync/common/userDataSyncAccount.ts
+src/vs/platform/userDataSync/common/userDataSyncEnablementService.ts
+src/vs/platform/userDataSync/common/userDataSyncIpc.ts
+src/vs/platform/userDataSync/common/userDataSyncLocalStoreService.ts
+src/vs/platform/userDataSync/common/userDataSyncLog.ts
+src/vs/platform/userDataSync/common/userDataSyncMachines.ts
+src/vs/platform/userDataSync/common/userDataSyncResourceProvider.ts
+src/vs/platform/userDataSync/common/userDataSyncService.ts
+src/vs/platform/userDataSync/common/userDataSyncServiceIpc.ts
+src/vs/platform/userDataSync/common/userDataSyncStoreService.ts
+src/vs/platform/userDataSync/node/userDataAutoSyncService.ts
+```
+
+Exact A5-P2 paths:
+
+```text
+src/vs/platform/userDataSync/common/extensionsMerge.ts
+src/vs/platform/userDataSync/common/extensionsSync.ts
+src/vs/platform/userDataSync/common/globalStateMerge.ts
+src/vs/platform/userDataSync/common/globalStateSync.ts
+src/vs/platform/userDataSync/common/ignoredExtensions.ts
+src/vs/platform/userDataSync/common/keybindingsMerge.ts
+src/vs/platform/userDataSync/common/keybindingsSync.ts
+src/vs/platform/userDataSync/common/mcpSync.ts
+src/vs/platform/userDataSync/common/promptsSync/promptsMerge.ts
+src/vs/platform/userDataSync/common/promptsSync/promptsSync.ts
+src/vs/platform/userDataSync/common/settingsMerge.ts
+src/vs/platform/userDataSync/common/settingsSync.ts
+src/vs/platform/userDataSync/common/snippetsMerge.ts
+src/vs/platform/userDataSync/common/snippetsSync.ts
+src/vs/platform/userDataSync/common/tasksSync.ts
+src/vs/platform/userDataSync/common/userDataProfilesManifestMerge.ts
+src/vs/platform/userDataSync/common/userDataProfilesManifestSync.ts
+```
+
+Exact A5-P3 paths:
+
+```text
+src/vs/platform/userDataSync/test/common/extensionsMerge.test.ts
+src/vs/platform/userDataSync/test/common/globalStateMerge.test.ts
+src/vs/platform/userDataSync/test/common/keybindingsMerge.test.ts
+src/vs/platform/userDataSync/test/common/settingsMerge.test.ts
+src/vs/platform/userDataSync/test/common/snippetsMerge.test.ts
+src/vs/platform/userDataSync/test/common/userDataProfilesManifestMerge.test.ts
+```
+
+Exact A5-P4 paths:
+
+```text
+src/vs/platform/userDataSync/test/common/globalStateSync.test.ts
+src/vs/platform/userDataSync/test/common/keybindingsSync.test.ts
+src/vs/platform/userDataSync/test/common/mcpSync.test.ts
+src/vs/platform/userDataSync/test/common/promptsSync.test.ts
+src/vs/platform/userDataSync/test/common/settingsSync.test.ts
+src/vs/platform/userDataSync/test/common/snippetsSync.test.ts
+src/vs/platform/userDataSync/test/common/tasksSync.test.ts
+src/vs/platform/userDataSync/test/common/userDataProfilesManifestSync.test.ts
+```
+
+Exact A5-P5 paths:
+
+```text
+src/vs/platform/userDataSync/test/common/synchronizer.test.ts
+src/vs/platform/userDataSync/test/common/userDataAutoSyncService.test.ts
+src/vs/platform/userDataSync/test/common/userDataSyncClient.ts
+src/vs/platform/userDataSync/test/common/userDataSyncService.test.ts
+src/vs/platform/userDataSync/test/common/userDataSyncStoreService.test.ts
+```
+
+### External tails and deletion gates
+
+- A source scan finds five cross-family imports of `src/vs/platform/userDataSync/**` in A6-D1: `editSessions.contribution.ts`, `editSessionsStorageService.ts`, `common/editSessions.ts`, `common/editSessionsStorageClient.ts`, and `common/workspaceStateSync.ts`. All other Sync imports are internal to the A5 deletion roots. The previously missed `sessions.web.main.ts` Sync registrations were removed and the boundary test now covers common, desktop, and web Sessions entrypoints. This is why the A5 manifest remains conditional on A6 physical removal.
+- `userDataSyncHome` remains in environment interfaces/getters and the standalone environment stub because Sync implementation sources still compile until parent deletion. Remove the interface/getter tails in a later authorized cleanup after A5 tree deletion; `src/vs/editor/standalone/browser/standaloneServices.ts` also contains unused `continueOn` / `editSessionId` and extra `sync` properties, is outside this grant, and has been reported to the parent for a follow-up authorization decision.
+- `src/vs/platform/extensions/common/extensionsApiProposals.ts` is regenerated from proposed declaration files. The generated `editSessionIdentityProvider` registry entry must be removed by parent deletion of the reserved `.d.ts` followed by compile, not by editing generated output.
+- `src/vs/base/common/product.ts` still carries the `editSessions.store` type key until A6 source deletion; the root `product.json` has no runtime value. The API type bridge and no-op protocol residue are also post-deletion cleanup, not part of the physical manifest.
+- Do not check A5/A6 family checkboxes or claim closure until parent deletion evidence and an independent fresh verification are recorded. No physical deletion, staging, or commit occurred here.
+
+## U02 post-parent deletion reconciliation — 2026-10-05
+
+This section supersedes the conditional A5 manifest/deletion-gate statements above. Parent evidence: A6-D1–D3 physically removed all **15 manifest files**, including the five manifest-only paths; the generated proposal registry was rebuilt by `npm run compile-client` (**PASS**). The parent then physically removed all **68/68** manifest Sync files; `platform/userDataSync/`, `workbench/contrib/userDataSync/`, and `workbench/services/userDataSync/` are absent. Parent `npm run compile-client` passed after the A5 batches. The A6 local workspace positive suite passed 9/9. The parent-reported profile/Sync-boundary suite failure was test-code `ENOENT` from reading deleted `workspaces/common/workspaceIdentityService.ts`, not a production compile/runtime failure; the test now asserts the path is absent.
+
+The final source-tail leaf removes `userDataSyncHome`/`sync` interface/getter members from the three environment files, and the inert Sync/Edit Sessions fields from standalone Monaco's environment stub. The standalone stub no longer advertises `userDataSyncHome`, `sync`, `continueOn`, or `editSessionId`.
+
+The machine-scope disposition was resolved under the parent's `approve-all` P01–P11 grant. The only live behavioral reader of `isMachineScoped` was the `IgnoredExtensionsManagementService`, deriving `settingsSync.ignoredExtensions`; install implementations merely serialized/copied metadata, and no installation-location branch existed. Accordingly, the machine-scope option/metadata field and Sync-only helper, registrations, and obsolete behavior tests were removed from P01–P11 plus the seven granted consumer paths. `isApplicationScoped`, profile location/resource behavior, ordinary installs, remote installs, language packs, themes, recommendations, and application-wide profile installs remain. The earlier classification row describing the ignored-extension helper as independently local is superseded: it had no non-Sync consumer and was not a retained local helper.
+
+Fresh U02 evidence now includes a passing 19/19 Sync boundary test (including deleted-file absence, environment-tail absence, standalone-tail absence, and local profile switching), the machine-scope absence/preservation test, copied-legacy-state profile service test (33/33), and workspace editing test (9/9). Parent compile/test outputs remain separately labeled in `apply-progress.md`. The tracked-source audit leaves `isMachineScoped` only in the negative source assertion itself; `userDataSyncHome`/Sync environment and standalone fields have no source declarations or consumers. No user files, secrets, local repositories, or remote state were modified; no live provider/network probe or sign-out was performed. Physical deletions were parent-executed; this executor performed no unlink, staging, or commit.
