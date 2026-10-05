@@ -4,53 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
-import { mock } from '../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../base/test/common/utils.js';
-import { ICommandService } from '../../../platform/commands/common/commands.js';
-import { createSessionsSignInDialogOptions } from '../../browser/sessionsSignInDialog.js';
+import { shouldShowSessionsWelcome } from '../../browser/sessionsSetUpService.js';
 
-suite('Sessions - Sign-In Dialog', () => {
+suite('Sessions - Setup Flow', () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('offers signed-out continuation only when allowed', () => {
-		const commandService = new class extends mock<ICommandService>() { }();
-		let continueCount = 0;
-		const required = createSessionsSignInDialogOptions(commandService, false);
-		const optional = createSessionsSignInDialogOptions(commandService, false, true, () => continueCount++);
-
-		optional.onDidDismissDialog?.();
-
-		assert.deepStrictEqual({
-			required: {
-				disableCloseButton: required.disableCloseButton,
-				autoDismissOnSignIn: required.autoDismissOnSignIn,
-				allowContinueWithoutSignIn: required.allowContinueWithoutSignIn,
-				hasFooter: required.renderDialogFooter !== undefined,
-				hasDismissHandler: required.onDidDismissDialog !== undefined,
-			},
-			optional: {
-				disableCloseButton: optional.disableCloseButton,
-				autoDismissOnSignIn: optional.autoDismissOnSignIn,
-				allowContinueWithoutSignIn: optional.allowContinueWithoutSignIn,
-				hasFooter: optional.renderDialogFooter !== undefined,
-				continueCount,
-			},
-		}, {
-			required: {
-				disableCloseButton: true,
-				autoDismissOnSignIn: true,
-				allowContinueWithoutSignIn: false,
-				hasFooter: false,
-				hasDismissHandler: false,
-			},
-			optional: {
-				disableCloseButton: false,
-				autoDismissOnSignIn: true,
-				allowContinueWithoutSignIn: true,
-				hasFooter: false,
-				continueCount: 1,
-			},
-		});
+	test('first-run welcome is independent of account authentication', () => {
+		assert.deepStrictEqual([
+			shouldShowSessionsWelcome(true, false),
+			shouldShowSessionsWelcome(true, true),
+			shouldShowSessionsWelcome(false, false),
+			shouldShowSessionsWelcome(false, true),
+		], [true, false, false, false]);
 	});
 });

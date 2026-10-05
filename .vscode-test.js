@@ -151,6 +151,41 @@ if (!lintAllowLists[1].includes('src/vs/platform/github/common/githubTransport.t
 	throw new Error('Generic GitHub transport must remain in the bracket-notation allowlist.');
 }
 
+const defaultAccountSource = readFileSync(path.join(__dirname, 'src/vs/workbench/services/accounts/browser/defaultAccount.ts'), 'utf8');
+const accountSettingSource = readFileSync(path.join(__dirname, 'src/vs/workbench/services/authentication/common/authentication.ts'), 'utf8');
+const workbenchConfiguration = readFileSync(path.join(__dirname, 'src/vs/workbench/browser/workbench.contribution.ts'), 'utf8');
+const sessionsEntrypoint = readFileSync(path.join(__dirname, 'src/vs/sessions/sessions.common.main.ts'), 'utf8');
+const mobileTitlebar = readFileSync(path.join(__dirname, 'src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts'), 'utf8');
+if (/account|avatar|sign.?in|sign.?out/i.test(mobileTitlebar)) {
+	throw new Error('The mobile titlebar must not contain account or sign-in presentation.');
+}
+if (/DEFAULT_ACCOUNT_SIGN_IN_COMMAND|DefaultAccountProviderContribution/.test(defaultAccountSource)) {
+	throw new Error('Default-account sign-in commands and provider activation must not be registered.');
+}
+if (/ACCOUNTS_AVATAR_SETTING|workbench\.accounts\.showAvatar/.test(accountSettingSource)
+	|| /ACCOUNTS_AVATAR_SETTING|workbench\.accounts\.showAvatar/.test(workbenchConfiguration)) {
+	throw new Error('The account-avatar configuration setting must not be declared or registered.');
+}
+if (sessionsEntrypoint.includes("contrib/accountMenu/browser/account.contribution.js")) {
+	throw new Error('The Sessions entrypoint must not import account menu contributions.');
+}
+if (!sessionsEntrypoint.includes('registerUpdateTitleBarMenuPlacement')) {
+	throw new Error('The generic Sessions titlebar update placement must remain available.');
+}
+
+const staleProviderPaths = [
+	['.github/CODENOTIFY', readFileSync(path.join(__dirname, '.github/CODENOTIFY'), 'utf8')],
+	['.github/codeql/codeql-config.yml', readFileSync(path.join(__dirname, '.github/codeql/codeql-config.yml'), 'utf8')],
+	['eslint.config.js', readFileSync(path.join(__dirname, 'eslint.config.js'), 'utf8')],
+];
+if (staleProviderPaths.some(([, source]) => /extensions\/(?:github-authentication|microsoft-authentication|github)\//.test(source))) {
+	throw new Error('Deleted GitHub/Microsoft extension paths must not remain in repository configuration.');
+}
+const productConfiguration = readFileSync(path.join(__dirname, 'product.json'), 'utf8');
+if (/vscode:\/\/vscode\.(?:github|microsoft)-authentication\//.test(productConfiguration)) {
+	throw new Error('Deleted authentication callback URI handlers must not remain in the product configuration.');
+}
+
 const defaultLaunchArgs = process.env.API_TESTS_EXTRA_ARGS?.split(' ') || [
 	'--disable-telemetry', '--disable-experiments', '--skip-welcome', '--skip-release-notes', `--crash-reporter-directory=${__dirname}/.build/crashes`, `--logsPath=${__dirname}/.build/logs/integration-tests`, '--no-cached-data', '--disable-updates', '--use-inmemory-secretstorage', '--disable-extensions', '--disable-workspace-trust'
 ];

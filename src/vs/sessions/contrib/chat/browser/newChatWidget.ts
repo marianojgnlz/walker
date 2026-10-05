@@ -23,14 +23,12 @@ import { IContextMenuService } from '../../../../platform/contextview/browser/co
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
-import { IDefaultAccountService } from '../../../../platform/defaultAccount/common/defaultAccount.js';
 import { localize } from '../../../../nls.js';
 import { IActiveSession, ICreateNewSessionOptions, ISessionsManagementService, WorkspaceNotTrustedError } from '../../../services/sessions/common/sessionsManagement.js';
 import { GITHUB_REMOTE_FILE_SCHEME, ISession, ISessionWorkspace, SESSION_WORKSPACE_GROUP_GITHUB } from '../../../services/sessions/common/session.js';
 import { IOpenNewSessionResult, ISessionsService } from '../../../services/sessions/browser/sessionsService.js';
 import { ISessionsProvidersService } from '../../../services/sessions/browser/sessionsProvidersService.js';
-import { isAllowSignedOutWhenUsableEnabled, shouldShowGitHubWorkspaceGroupSignIn } from '../../../browser/sessionsAuthGate.js';
-import { AGENTIC_SIGN_IN_COMMAND_ID, FOCUS_NEW_SESSION_HARNESS_PICKER_COMMAND_ID, FOCUS_NEW_SESSION_WORKSPACE_PICKER_COMMAND_ID } from '../../../common/sessionCommands.js';
+import { FOCUS_NEW_SESSION_HARNESS_PICKER_COMMAND_ID, FOCUS_NEW_SESSION_WORKSPACE_PICKER_COMMAND_ID } from '../../../common/sessionCommands.js';
 import { isAgentHostProvider, LOCAL_AGENT_HOST_PROVIDER_ID } from '../../../common/agentHostSessionsProvider.js';
 import { IAquariumService, IMountedToggleHandle } from '../../aquarium/browser/aquariumOverlay.js';
 import { IWorkspacePickerNoWorkspaceOption, IWorkspacePickerTrigger, WorkspacePicker } from './sessionWorkspacePicker.js';
@@ -137,7 +135,6 @@ export class NewChatWidget extends Disposable {
 		@IChatPetService private readonly chatPetService: IChatPetService,
 		@IChatTipService private readonly chatTipService: IChatTipService,
 		@IOpenerService private readonly openerService: IOpenerService,
-		@IDefaultAccountService private readonly defaultAccountService: IDefaultAccountService,
 		@IStorageService private readonly storageService: IStorageService,
 		@INewSessionComposerService private readonly newSessionComposerService: INewSessionComposerService,
 		@ICommandService private readonly commandService: ICommandService,
@@ -190,20 +187,6 @@ export class NewChatWidget extends Disposable {
 			whenSelectionAccepted: async () => {
 				const result = await this._pendingWorkspaceCreation;
 				return !!result?.session && this._session.get()?.sessionId === result.session.sessionId;
-			},
-			getWorkspaceGroupAction: group => {
-				if (group === SESSION_WORKSPACE_GROUP_GITHUB && shouldShowGitHubWorkspaceGroupSignIn(
-					this.defaultAccountService.currentDefaultAccount !== null,
-					isAllowSignedOutWhenUsableEnabled(this.configurationService),
-				)) {
-					return {
-						label: localize('workspacePicker.signInGitHub', "Sign in to GitHub"),
-						icon: Codicon.signIn,
-						commandId: AGENTIC_SIGN_IN_COMMAND_ID,
-						hideWorkspaceItems: true,
-					};
-				}
-				return undefined;
 			},
 			getNoWorkspaceOption: () => this._getNoWorkspaceOption(),
 		}));

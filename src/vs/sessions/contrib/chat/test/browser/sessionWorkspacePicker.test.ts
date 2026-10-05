@@ -60,7 +60,6 @@ import { MockContextKeyService } from '../../../../../platform/keybinding/test/c
 import { IMenuService } from '../../../../../platform/actions/common/actions.js';
 import { INotification, INotificationHandle, INotificationService, NoOpNotification, NotificationMessage } from '../../../../../platform/notification/common/notification.js';
 import { TestNotificationService } from '../../../../../platform/notification/test/common/testNotificationService.js';
-import { AGENTIC_SIGN_IN_COMMAND_ID } from '../../../../common/sessionCommands.js';
 import { IChatRequestVariableEntry, toPasteVariableEntry } from '../../../../../workbench/contrib/chat/common/attachments/chatVariableEntries.js';
 import { getAdditionalFolderContextId, getAdditionalRepositoryContextId } from '../../common/newChatContextIds.js';
 import { IHoverService } from '../../../../../platform/hover/browser/hover.js';
@@ -3055,7 +3054,7 @@ suite('WorkspacePicker - Category Triggers', () => {
 		});
 	});
 
-	test('repository trigger respects the GitHub sign-in action before direct browsing', () => {
+	test('repository trigger respects a provider group action before direct browsing', () => {
 		class CapturingActionWidgetService extends mock<IActionWidgetService>() {
 			override isVisible = false;
 			readonly shownLabels: string[][] = [];
@@ -3094,9 +3093,9 @@ suite('WorkspacePicker - Category Triggers', () => {
 			undefined,
 			{
 				getWorkspaceGroupAction: group => group === SESSION_WORKSPACE_GROUP_GITHUB ? {
-					label: 'Sign in to GitHub',
-					icon: Codicon.signIn,
-					commandId: AGENTIC_SIGN_IN_COMMAND_ID,
+					label: 'Open provider workspace',
+					icon: Codicon.project,
+					commandId: 'test.providerAction',
 					hideWorkspaceItems: true,
 				} : undefined,
 			},
@@ -3112,7 +3111,7 @@ suite('WorkspacePicker - Category Triggers', () => {
 			shownLabels: actionWidgetService.shownLabels,
 		}, {
 			browseCalls: 0,
-			shownLabels: [['Sign in to GitHub']],
+			shownLabels: [['Open provider workspace']],
 		});
 	});
 
@@ -4549,7 +4548,7 @@ suite('WorkspacePicker - Tab discovery', () => {
 		});
 	});
 
-	test('keeps unified action dispatch stable when GitHub actions are hidden', async () => {
+	test('keeps unified action dispatch stable when provider actions are hidden', async () => {
 		const selectedActions: string[] = [];
 		const providers = [
 			createMockProvider('remote', {
@@ -4571,9 +4570,9 @@ suite('WorkspacePicker - Tab discovery', () => {
 		providersService.setProviders(providers);
 		const options: IWorkspacePickerOptions = {
 			getWorkspaceGroupAction: group => group === SESSION_WORKSPACE_GROUP_GITHUB ? {
-				label: 'Sign in to GitHub',
-				icon: Codicon.signIn,
-				commandId: AGENTIC_SIGN_IN_COMMAND_ID,
+				label: 'Open provider workspace',
+				icon: Codicon.project,
+				commandId: 'test.providerAction',
 				hideWorkspaceItems: true,
 			} : undefined,
 		};
@@ -4585,7 +4584,7 @@ suite('WorkspacePicker - Tab discovery', () => {
 			items: picker.getItemLabels(),
 			selectedActions,
 		}, {
-			items: ['Sign in to GitHub', 'Open Folder...', 'Select Remote'],
+			items: ['Open provider workspace', 'Open Folder...', 'Select Remote'],
 			selectedActions: ['remote'],
 		});
 	});
@@ -4976,9 +4975,9 @@ suite('WorkspacePicker - Tab discovery', () => {
 		const picker = createTestablePicker(disposables, providersService, true, {
 			restoreFromSessions: false,
 			getWorkspaceGroupAction: group => group === SESSION_WORKSPACE_GROUP_GITHUB ? {
-				label: 'Sign in to GitHub',
-				icon: Codicon.signIn,
-				commandId: AGENTIC_SIGN_IN_COMMAND_ID,
+				label: 'Open provider workspace',
+				icon: Codicon.project,
+				commandId: 'test.providerAction',
 				hideWorkspaceItems: true,
 			} : undefined,
 		}, undefined, storage, true);
@@ -4999,7 +4998,7 @@ suite('WorkspacePicker - Tab discovery', () => {
 			items: [
 				'remote-project',
 				'microsoft/vscode/HEAD',
-				'Sign in to GitHub',
+				'Open provider workspace',
 				'Provider agenthost-menu',
 				'Repository',
 				'Attach Repository',
@@ -5039,7 +5038,7 @@ suite('WorkspacePicker - Tab discovery', () => {
 		assert.deepStrictEqual(picker.getAvailableTabs(), [SESSION_WORKSPACE_GROUP_LOCAL, SESSION_WORKSPACE_GROUP_REMOTE]);
 	});
 
-	test('shows a sign-in action in the GitHub group', async () => {
+	test('shows a generic action in the GitHub group', async () => {
 		const executedCommands: string[] = [];
 		const storage = disposables.add(new TestStorageService());
 		seedStorage(storage, [{ uri: URI.file('/recent-repository'), providerId: 'p1', checked: true }]);
@@ -5056,9 +5055,9 @@ suite('WorkspacePicker - Tab discovery', () => {
 		const picker = createTestablePicker(disposables, providersService, false, {
 			restoreFromSessions: false,
 			getWorkspaceGroupAction: group => group === SESSION_WORKSPACE_GROUP_GITHUB ? {
-				label: 'Sign in to GitHub',
-				icon: Codicon.signIn,
-				commandId: AGENTIC_SIGN_IN_COMMAND_ID,
+				label: 'Open provider workspace',
+				icon: Codicon.project,
+				commandId: 'test.providerAction',
 				hideWorkspaceItems: true,
 			} : undefined,
 		}, {
@@ -5067,15 +5066,15 @@ suite('WorkspacePicker - Tab discovery', () => {
 			},
 		}, storage);
 		picker.selectWorkspaceGroup(SESSION_WORKSPACE_GROUP_GITHUB);
-		await picker.select('Sign in to GitHub');
+		await picker.select('Open provider workspace');
 		assert.deepStrictEqual({
 			tabs: picker.getAvailableTabs(),
 			itemLabels: picker.getItemLabels(),
 			executedCommands,
 		}, {
 			tabs: [SESSION_WORKSPACE_GROUP_GITHUB],
-			itemLabels: ['Sign in to GitHub'],
-			executedCommands: [AGENTIC_SIGN_IN_COMMAND_ID],
+			itemLabels: ['Open provider workspace'],
+			executedCommands: ['test.providerAction'],
 		});
 	});
 
@@ -5143,9 +5142,9 @@ suite('WorkspacePicker - Tab discovery', () => {
 			_directPickerGroup: undefined,
 			options: {
 				getWorkspaceGroupAction: group => group === SESSION_WORKSPACE_GROUP_GITHUB ? {
-					label: 'Sign in to GitHub',
-					icon: Codicon.signIn,
-					commandId: AGENTIC_SIGN_IN_COMMAND_ID,
+					label: 'Open provider workspace',
+					icon: Codicon.project,
+					commandId: 'test.providerAction',
 					hideWorkspaceItems: true,
 				} : undefined,
 			},
@@ -5164,7 +5163,7 @@ suite('WorkspacePicker - Tab discovery', () => {
 			'remote/project',
 			'microsoft/vscode/HEAD',
 			'',
-			'Sign in to GitHub',
+			'Open provider workspace',
 			'Select Remote...',
 			'Repository...',
 		]);

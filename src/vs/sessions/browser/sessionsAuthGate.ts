@@ -71,9 +71,9 @@ export function resolveSignedOutWindowGate(allowSignedOutWhenUsable: boolean, au
 		: SignedOutWindowGate.ForceGitHubSignIn;
 }
 
-/** Whether the GitHub workspace group should offer sign-in. */
-export function shouldShowGitHubWorkspaceGroupSignIn(signedIn: boolean, allowSignedOutWhenUsable: boolean): boolean {
-	return !signedIn && allowSignedOutWhenUsable;
+/** Account sign-in is no longer offered from the workspace picker. */
+export function shouldShowGitHubWorkspaceGroupSignIn(_signedIn: boolean, _allowSignedOutWhenUsable: boolean): boolean {
+	return false;
 }
 
 /**

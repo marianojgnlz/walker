@@ -4,33 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import './mobileChatShell.css';
-import { Disposable, DisposableStore, MutableDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
+import { Disposable, toDisposable } from '../../../../base/common/lifecycle.js';
 import { $, addDisposableListener, append, EventType } from '../../../../base/browser/dom.js';
 import { Emitter, Event } from '../../../../base/common/event.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
 import { Codicon } from '../../../../base/common/codicons.js';
-import { IAction, Separator } from '../../../../base/common/actions.js';
 import { localize } from '../../../../nls.js';
 import { autorun } from '../../../../base/common/observable.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { HiddenItemStrategy, MenuWorkbenchToolBar } from '../../../../platform/actions/browser/toolbar.js';
-import { IMenuService } from '../../../../platform/actions/common/actions.js';
-import { fillInActionBarActions } from '../../../../platform/actions/browser/menuEntryActionViewItem.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { IDefaultAccountService } from '../../../../platform/defaultAccount/common/defaultAccount.js';
-import { ACCOUNTS_AVATAR_SETTING, IAuthenticationService } from '../../../../workbench/services/authentication/common/authentication.js';
 import { ISessionsService } from '../../../services/sessions/browser/sessionsService.js';
 import { ISessionFileChange } from '../../../services/sessions/common/session.js';
 import { IsNewChatSessionContext } from '../../../common/contextkeys.js';
 import { SideBarVisibleContext } from '../../../../workbench/common/contextkeys.js';
 import { Menus } from '../../menus.js';
-import { ChatEntitlement, ChatEntitlementService, IChatEntitlementService } from '../../../../workbench/services/chat/common/chatEntitlementService.js';
-import { getAccountTitleBarState, getAccountProfileImageUrl, getAccountTitleBarBadgeKey, resolveAccountInfo } from '../../accountTitleBarState.js';
-import { IChatDashboardService } from '../../chatDashboardService.js';
 import { MOBILE_OPEN_CHANGES_VIEW_COMMAND_ID } from './contributions/mobileChangesView.js';
-import { URI } from '../../../../base/common/uri.js';
 
 /**
  * Mobile titlebar — prepended above the workbench grid on phone viewports
@@ -39,7 +29,7 @@ import { URI } from '../../../../base/common/uri.js';
  * Layout (contextual right slot):
  *
  *  - **In a chat session** → `[toggle sidebar]  [session title]  [changes pill]  [+]`
- *  - **Welcome / new session** → `[toggle sidebar]  [host widget | title]  [account]`
+ *  - **Welcome / new session** → `[toggle sidebar]  [host widget | title]`
  *
  * The center slot switches content based on whether the sessions welcome
  * (home/empty) screen is visible:
@@ -54,11 +44,7 @@ import { URI } from '../../../../base/common/uri.js';
  * items the title is shown; as soon as it has items the title is hidden
  * and the toolbar fills the slot.
  *
- * The right slot swaps between the new-session (+) button (in a chat)
- * and the account indicator (on welcome / new session). The account
- * indicator shows the user's avatar or a person icon with an optional
- * dot badge for quota/status warnings. Tapping it opens a panel with
- * account info, copilot status dashboard, and sign-in/sign-out actions.
+ * The new-session (+) button is shown when a chat session is active.
  */
 export class MobileTitlebarPart extends Disposable {
 
@@ -77,27 +63,6 @@ export class MobileTitlebarPart extends Disposable {
 	private readonly _onDidClickTitle = this._register(new Emitter<void>());
 	readonly onDidClickTitle: Event<void> = this._onDidClickTitle.event;
 
-	// Account indicator state
-	private readonly accountButton: HTMLElement;
-	private readonly accountAvatarElement: HTMLImageElement;
-	private readonly accountIconElement: HTMLElement;
-	private readonly accountBadgeElement: HTMLElement;
-	private accountName: string | undefined;
-	private accountProviderId: string | undefined;
-	private accountProviderLabel: string | undefined;
-	private accountIcon: URI | undefined;
-	private isAccountLoading = true;
-	private accountRequestCounter = 0;
-	private avatarRequestCounter = 0;
-	private currentAvatarUrl: string | undefined;
-	private loadedAvatarUrl: string | undefined;
-	private isAccountMenuVisible = false;
-	private lastBadgeKey: string | undefined;
-	private dismissedBadgeKey: string | undefined;
-	private readonly accountPanelDisposable = this._register(new MutableDisposable<DisposableStore>());
-	private readonly avatarLoadDisposable = this._register(new MutableDisposable());
-	private readonly copilotDashboardStore = this._register(new MutableDisposable<DisposableStore>());
-
 	// Changes pill state — kept here so the click handler can read the
 	// latest set without re-deriving it on each tap.
 	private latestChanges: readonly ISessionFileChange[] = [];
@@ -106,14 +71,8 @@ export class MobileTitlebarPart extends Disposable {
 		parent: HTMLElement,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@ISessionsService private readonly sessionsService: ISessionsService,
-		@IContextKeyService private readonly contextKeyService: IContextKeyService,
-		@IDefaultAccountService private readonly defaultAccountService: IDefaultAccountService,
-		@IAuthenticationService private readonly authenticationService: IAuthenticationService,
-		@IChatEntitlementService private readonly chatEntitlementService: ChatEntitlementService,
-		@IMenuService private readonly menuService: IMenuService,
-		@IChatDashboardService private readonly chatDashboardService: IChatDashboardService,
+		@IContextKeyService contextKeyService: IContextKeyService,
 		@ICommandService private readonly commandService: ICommandService,
-		@IConfigurationService private readonly configurationService: IConfigurationService,
 	) {
 		super();
 
@@ -182,31 +141,6 @@ export class MobileTitlebarPart extends Disposable {
 		newSessionIcon.classList.add(...ThemeIcon.asClassNameArray(Codicon.plus));
 		this._register(addDisposableListener(newSessionButton, EventType.CLICK, () => this._onDidClickNewSession.fire()));
 
-		// Account indicator — shown on welcome/new session, hidden in a chat
-		this.accountButton = append(this.element, $('button.mobile-top-bar-button.mobile-account-indicator'));
-		this.accountButton.setAttribute('aria-label', localize('mobileTopBar.account', "Account"));
-		this.accountAvatarElement = append(this.accountButton, $('img.mobile-account-avatar', { alt: '', draggable: 'false' })) as HTMLImageElement;
-		this.accountAvatarElement.decoding = 'async';
-		this.accountAvatarElement.referrerPolicy = 'no-referrer';
-		this.accountIconElement = append(this.accountButton, $('span'));
-		this.accountBadgeElement = append(this.accountButton, $('span.mobile-account-badge'));
-		this._register(addDisposableListener(this.accountButton, EventType.CLICK, () => this.showAccountPanel()));
-
-		// Track account state — listen to multiple sources to catch
-		// updates regardless of service initialization ordering.
-		this._register(this.defaultAccountService.onDidChangeDefaultAccount(() => this.refreshAccount()));
-		this._register(this.authenticationService.onDidChangeSessions(() => this.refreshAccount()));
-		this._register(this.chatEntitlementService.onDidChangeEntitlement(() => this.renderAccountState()));
-		this._register(this.chatEntitlementService.onDidChangeSentiment(() => this.renderAccountState()));
-		this._register(this.chatEntitlementService.onDidChangeQuotaExceeded(() => this.renderAccountState()));
-		this._register(this.chatEntitlementService.onDidChangeQuotaRemaining(() => this.renderAccountState()));
-		this._register(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration(ACCOUNTS_AVATAR_SETTING)) {
-				this.refreshAvatar();
-			}
-		}));
-		this.refreshAccount();
-
 		// Keep the title in sync with the active session
 		this._register(autorun(reader => {
 			const session = this.sessionsService.activeSession.read(reader);
@@ -270,9 +204,7 @@ export class MobileTitlebarPart extends Disposable {
 			const hasActions = toolbar.getItemsLength() > 0;
 			this.element.classList.toggle('show-actions', isNewChat && hasActions);
 
-			// Right slot: swap between [+] (in-chat) and [account] (welcome)
 			newSessionButton.style.display = isNewChat ? 'none' : '';
-			this.accountButton.style.display = isNewChat ? '' : 'none';
 
 			// Changes pill follows the in-chat state — hidden on welcome.
 			isNewChatRef.value = isNewChat;
@@ -326,258 +258,4 @@ export class MobileTitlebarPart extends Disposable {
 		this.commandService.executeCommand(MOBILE_OPEN_CHANGES_VIEW_COMMAND_ID);
 	}
 
-	// --- Account Indicator --- //
-
-	private async refreshAccount(): Promise<void> {
-		const requestId = ++this.accountRequestCounter;
-		this.isAccountLoading = true;
-		this.renderAccountState();
-
-		const info = await resolveAccountInfo(this.defaultAccountService, this.authenticationService);
-		if (requestId !== this.accountRequestCounter || this._store.isDisposed) {
-			return;
-		}
-
-		this.accountName = info?.accountName;
-		this.accountProviderId = info?.accountProviderId;
-		this.accountProviderLabel = info?.accountProviderLabel;
-		this.accountIcon = info?.accountIcon;
-		this.isAccountLoading = false;
-		this.refreshAvatar();
-		this.renderAccountState();
-	}
-
-	private renderAccountState(): void {
-		// When we have a session from the auth service but the entitlement
-		// service hasn't resolved yet (still Unknown), treat it as the
-		// account being available rather than signed out. This avoids
-		// showing "Sign In" right after the walkthrough completes.
-		const entitlement = this.accountName && this.chatEntitlementService.entitlement === ChatEntitlement.Unknown
-			? ChatEntitlement.Unresolved
-			: this.chatEntitlementService.entitlement;
-
-		const state = getAccountTitleBarState({
-			isAccountLoading: this.isAccountLoading,
-			accountName: this.accountName,
-			accountProviderLabel: this.accountProviderLabel,
-			entitlement,
-			sentiment: this.chatEntitlementService.sentiment,
-			quotas: this.chatEntitlementService.quotas,
-			// The conditional-auth opt-in is desktop-only (the native agent host it
-			// lets in does not run on mobile/web).
-			allowSignedOutWhenUsable: false,
-		});
-
-		// Avatar
-		const hasAvatar = !!this.loadedAvatarUrl && !this.isAccountLoading;
-		this.accountAvatarElement.classList.toggle('visible', hasAvatar);
-		if (hasAvatar && this.accountAvatarElement.src !== this.loadedAvatarUrl) {
-			this.accountAvatarElement.src = this.loadedAvatarUrl!;
-		} else if (!hasAvatar) {
-			this.accountAvatarElement.removeAttribute('src');
-		}
-
-		// Codicon fallback
-		const titleBarIcon = state.dotBadge ? Codicon.account : state.icon;
-		this.accountIconElement.className = ThemeIcon.asClassName(titleBarIcon);
-		this.accountIconElement.classList.toggle('hidden', hasAvatar);
-
-		// Dot badge
-		const badgeKey = getAccountTitleBarBadgeKey(state);
-		if (badgeKey !== this.lastBadgeKey) {
-			this.lastBadgeKey = badgeKey;
-			this.dismissedBadgeKey = undefined;
-		}
-		const showBadge = !!badgeKey && badgeKey !== this.dismissedBadgeKey;
-		this.accountBadgeElement.style.display = showBadge ? '' : 'none';
-		this.accountBadgeElement.classList.toggle('dot-badge-warning', showBadge && state.dotBadge === 'warning');
-		this.accountBadgeElement.classList.toggle('dot-badge-error', showBadge && state.dotBadge === 'error');
-
-		// ARIA
-		this.accountButton.setAttribute('aria-label', state.ariaLabel);
-	}
-
-	private refreshAvatar(): void {
-		const avatarUrl = this.configurationService.getValue<boolean>(ACCOUNTS_AVATAR_SETTING)
-			? getAccountProfileImageUrl(this.accountProviderId, this.accountName, this.accountIcon)
-			: undefined;
-		if (avatarUrl === this.currentAvatarUrl) {
-			return;
-		}
-
-		this.currentAvatarUrl = avatarUrl;
-		this.loadedAvatarUrl = undefined;
-		this.avatarLoadDisposable.clear();
-		const requestId = ++this.avatarRequestCounter;
-
-		if (!avatarUrl) {
-			this.renderAccountState();
-			return;
-		}
-
-		const image = new Image();
-		image.referrerPolicy = 'no-referrer';
-		const clearHandlers = () => { image.onload = null; image.onerror = null; };
-		image.onload = () => {
-			if (requestId !== this.avatarRequestCounter) { return; }
-			this.loadedAvatarUrl = avatarUrl;
-			this.renderAccountState();
-			clearHandlers();
-		};
-		image.onerror = () => {
-			if (requestId !== this.avatarRequestCounter) { return; }
-			this.loadedAvatarUrl = undefined;
-			this.renderAccountState();
-			clearHandlers();
-		};
-		this.avatarLoadDisposable.value = toDisposable(() => { clearHandlers(); image.src = ''; });
-		image.src = avatarUrl;
-	}
-
-	// --- Account Sheet --- //
-
-	private showAccountPanel(): void {
-		if (this.isAccountMenuVisible) {
-			this.accountPanelDisposable.clear();
-			return;
-		}
-
-		this.accountPanelDisposable.clear();
-
-		const panelStore = new DisposableStore();
-		this.accountPanelDisposable.value = panelStore;
-
-		const badgeKey = getAccountTitleBarBadgeKey(getAccountTitleBarState({
-			isAccountLoading: this.isAccountLoading,
-			accountName: this.accountName,
-			accountProviderLabel: this.accountProviderLabel,
-			entitlement: this.chatEntitlementService.entitlement,
-			sentiment: this.chatEntitlementService.sentiment,
-			quotas: this.chatEntitlementService.quotas,
-			allowSignedOutWhenUsable: false,
-		}));
-		if (badgeKey) {
-			this.dismissedBadgeKey = badgeKey;
-		}
-
-		this.isAccountMenuVisible = true;
-		this.renderAccountState();
-		panelStore.add({
-			dispose: () => {
-				this.isAccountMenuVisible = false;
-				this.copilotDashboardStore.clear();
-				this.renderAccountState();
-			}
-		});
-
-		const closeSheet = () => this.accountPanelDisposable.clear();
-
-		// Full-screen sheet inside the workbench container
-		const workbenchContainer = this.element.parentElement!;
-		const sheet = append(workbenchContainer, $('div.mobile-account-sheet'));
-		panelStore.add(toDisposable(() => sheet.remove()));
-
-		// Header: title + close button
-		const header = append(sheet, $('div.mobile-account-sheet-header'));
-		const headerTitle = append(header, $('h2.mobile-account-sheet-title'));
-		headerTitle.textContent = localize('mobileAccount.title', "Account");
-		const closeButton = append(header, $('button.mobile-account-sheet-close', { type: 'button' })) as HTMLButtonElement;
-		closeButton.setAttribute('aria-label', localize('mobileAccount.close', "Close"));
-		append(closeButton, $('span')).classList.add(...ThemeIcon.asClassNameArray(Codicon.close));
-		panelStore.add(addDisposableListener(closeButton, EventType.CLICK, closeSheet));
-
-		// Scrollable content
-		const content = append(sheet, $('div.mobile-account-sheet-content'));
-
-		// Profile section
-		const profile = append(content, $('div.mobile-account-sheet-profile'));
-		if (this.loadedAvatarUrl) {
-			const avatar = append(profile, $('img.mobile-account-sheet-avatar', { alt: '', draggable: 'false' })) as HTMLImageElement;
-			avatar.src = this.loadedAvatarUrl;
-			avatar.referrerPolicy = 'no-referrer';
-			avatar.decoding = 'async';
-		} else {
-			const avatarPlaceholder = append(profile, $('div.mobile-account-sheet-avatar-placeholder'));
-			append(avatarPlaceholder, $('span')).classList.add(...ThemeIcon.asClassNameArray(Codicon.account));
-		}
-		const profileInfo = append(profile, $('div.mobile-account-sheet-profile-info'));
-		if (this.isAccountLoading) {
-			append(profileInfo, $('div.mobile-account-sheet-name')).textContent = localize('mobileAccount.loading', "Loading...");
-		} else if (this.accountName) {
-			append(profileInfo, $('div.mobile-account-sheet-name')).textContent = this.accountName;
-			if (this.accountProviderLabel) {
-				append(profileInfo, $('div.mobile-account-sheet-provider')).textContent = this.accountProviderLabel;
-			}
-		} else {
-			append(profileInfo, $('div.mobile-account-sheet-name')).textContent = localize('mobileAccount.signedOut', "Not signed in");
-		}
-
-		// Copilot status dashboard — only when signed in AND entitlements
-		// have resolved. When entitlement is Unknown or Available (setup
-		// pending), the dashboard shows a "Set up Copilot" prompt that
-		// doesn't apply in the agents app.
-		const entitlement = this.chatEntitlementService.entitlement;
-		const showDashboard = !this.chatEntitlementService.sentiment.hidden
-			&& !!this.accountName
-			&& entitlement !== ChatEntitlement.Unknown
-			&& entitlement !== ChatEntitlement.Available;
-		if (showDashboard) {
-			const dashboardSection = append(content, $('div.mobile-account-sheet-section'));
-			const store = new DisposableStore();
-			this.copilotDashboardStore.value = store;
-			const dashboardElement = this.chatDashboardService.createDashboardElement(store);
-			if (dashboardElement) {
-				append(dashboardSection, dashboardElement);
-			}
-		}
-
-		// Actions list
-		const actionsSection = append(content, $('div.mobile-account-sheet-actions'));
-		const allActions = this.getSheetActions();
-		for (const action of allActions) {
-			if (action instanceof Separator) {
-				append(actionsSection, $('div.mobile-account-sheet-separator'));
-				continue;
-			}
-			const row = append(actionsSection, $('button.mobile-account-sheet-action', { type: 'button' })) as HTMLButtonElement;
-			row.disabled = !action.enabled;
-			row.setAttribute('aria-label', action.tooltip || action.label);
-			const icon = this.getActionIcon(action);
-			if (icon) {
-				append(row, $('span.mobile-account-sheet-action-icon')).classList.add(...ThemeIcon.asClassNameArray(icon));
-			}
-			append(row, $('span.mobile-account-sheet-action-label')).textContent = action.label;
-			panelStore.add(addDisposableListener(row, EventType.CLICK, async event => {
-				event.preventDefault();
-				event.stopPropagation();
-				closeSheet();
-				await Promise.resolve(action.run());
-			}));
-		}
-	}
-
-	private getSheetActions(): IAction[] {
-		const menu = this.menuService.createMenu(Menus.AccountMenu, this.contextKeyService);
-		const rawActions: IAction[] = [];
-		fillInActionBarActions(menu.getActions(), rawActions);
-		menu.dispose();
-		return rawActions.filter(action => {
-			if (action instanceof Separator) {
-				return true;
-			}
-			if (this.isAccountLoading && action.id === 'workbench.action.agenticSignIn') {
-				return false;
-			}
-			return !action.id.startsWith('update.');
-		});
-	}
-
-	private getActionIcon(action: IAction): ThemeIcon | undefined {
-		switch (action.id) {
-			case 'workbench.action.openSettings': return Codicon.settingsGear;
-			case 'workbench.action.agenticSignOut': return Codicon.signOut;
-			case 'workbench.action.agenticSignIn': return Codicon.signIn;
-			default: return undefined;
-		}
-	}
 }

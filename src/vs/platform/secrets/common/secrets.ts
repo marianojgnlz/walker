@@ -79,9 +79,7 @@ export async function writeEncryptedSecret(
  * When the agents app starts and doesn't have these secrets, it requests them
  * from VS Code via crossAppIPC.
  */
-export const CROSS_APP_SHARED_SECRET_KEYS: readonly string[] = [
-	'{"extensionId":"vscode.github-authentication","key":"github.auth"}',
-];
+export const CROSS_APP_SHARED_SECRET_KEYS: readonly string[] = [];
 
 export const ISecretStorageService = createDecorator<ISecretStorageService>('secretStorageService');
 

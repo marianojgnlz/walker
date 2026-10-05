@@ -15,13 +15,10 @@ import { isWeb } from '../../../../base/common/platform.js';
 import { IDefaultChatAgent } from '../../../../base/common/product.js';
 import { isString, isUndefined, Mutable } from '../../../../base/common/types.js';
 import { IRequestContext } from '../../../../base/parts/request/common/request.js';
-import { localize2 } from '../../../../nls.js';
-import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IContextKey, IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
 import { IDefaultAccountProvider, IDefaultAccountRefreshOptions, IDefaultAccountService, IManagedSettingsCompatibilityError, MANAGED_SETTINGS_UPDATE_REQUIRED_ERROR_CODE, ManagedSettingsFetchStatus } from '../../../../platform/defaultAccount/common/defaultAccount.js';
-import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IFileManagedSettingsService, INativeManagedSettingsService, ManagedSettingsChannel, ManagedSettingsData, resolveForceRemoteSettingsRefresh } from '../../../../platform/policy/common/copilotManagedSettings.js';
 import { IManagedSettingsFreshness, IManagedSettingsFreshnessScope, isManagedSettingsFreshnessBlocking, isManagedSettingsFreshnessSatisfiedFor, MANAGED_SETTINGS_FRESHNESS_NOT_REQUIRED, ManagedSettingsFreshnessFailure, ManagedSettingsFreshnessState } from '../../../../platform/policy/common/managedSettingsFreshness.js';
@@ -29,7 +26,6 @@ import { IProductService } from '../../../../platform/product/common/productServ
 import { asJson, asText, IRequestService, isClientError, isSuccess, readHeader, retryAfterFromHeaders } from '../../../../platform/request/common/request.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { IWorkbenchContribution, registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
 import { AuthenticationSession, AuthenticationSessionAccount, IAuthenticationExtensionsService, IAuthenticationService } from '../../authentication/common/authentication.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
 import { IExtensionService } from '../../extensions/common/extensions.js';
@@ -56,8 +52,6 @@ interface IDefaultAccountConfig {
 	readonly mcpRegistryDataUrl: string;
 	readonly managedSettingsUrl: string;
 }
-
-export const DEFAULT_ACCOUNT_SIGN_IN_COMMAND = 'workbench.actions.accounts.signIn';
 
 export const enum DefaultAccountStatus {
 	Uninitialized = 'uninitialized',
@@ -1630,33 +1624,3 @@ export class DefaultAccountProvider extends Disposable implements IDefaultAccoun
 	}
 
 }
-
-class DefaultAccountProviderContribution extends Disposable implements IWorkbenchContribution {
-
-	static ID = 'workbench.contributions.defaultAccountProvider';
-
-	constructor(
-		@IProductService productService: IProductService,
-		@IInstantiationService instantiationService: IInstantiationService,
-		@IDefaultAccountService defaultAccountService: IDefaultAccountService,
-	) {
-		super();
-		const defaultAccountProvider = this._register(instantiationService.createInstance(DefaultAccountProvider, toDefaultAccountConfig(productService.defaultChatAgent)));
-		defaultAccountService.setDefaultAccountProvider(defaultAccountProvider);
-	}
-}
-
-registerAction2(class extends Action2 {
-	constructor() {
-		super({
-			id: DEFAULT_ACCOUNT_SIGN_IN_COMMAND,
-			title: localize2('signIn', 'Sign In'),
-		});
-	}
-	async run(accessor: ServicesAccessor): Promise<void> {
-		const defaultAccountService = accessor.get(IDefaultAccountService);
-		await defaultAccountService.signIn();
-	}
-});
-
-registerWorkbenchContribution2(DefaultAccountProviderContribution.ID, DefaultAccountProviderContribution, WorkbenchPhase.BlockStartup);

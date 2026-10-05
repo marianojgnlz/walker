@@ -212,3 +212,99 @@ A3's broader default-account service/consumer removals remain incomplete pending
 - G1's RED/GREEN/TRIANGULATE checkboxes were already complete and remain so. A3.b.017–b.018 are checked; broad A3 UI/default-account triangulation and the gate-only file deletion remain open. No broader A3 completion is claimed.
 - **Pending physical deletion (parent):** the complete exact manifest above remains authoritative: `extensions/github-authentication/`, `extensions/microsoft-authentication/`, `extensions/github/`, `src/vs/workbench/services/policies/browser/accountPolicyGate.contribution.ts`, `src/vs/workbench/services/policies/browser/accountPolicyGateContribution.ts`, and `src/vs/workbench/services/policies/test/browser/accountPolicyGateContribution.test.ts`. Parent executes `git rm` between passes; all physical-removal checkboxes remain unchecked until deletion is observed.
 - Review focus: after parent deletion, independently recheck remaining provider/Git integration references and run the retained `git,git-base` suites through a safe approved harness; verify plain github.com remotes continue through OS/Git credentials, with no OAuth or integration activation. Live Open VSX verification remains U12-owned.
+
+## Verification — U01
+
+This is the latest cumulative account-UI and A4/A8 verification record; earlier per-leaf U01 results above remain part of the evidence and are not overwritten. This pass completed only bounded disconnections and regressions. A3 is **not** complete: discovered sign-in/account-gate consumers outside the grant and a mixed Chat Pet/account contribution remain for parent scope and product resolution.
+
+### Structured status and scope
+
+- Parent-authored `parent-authorization.md` was read as the resume source of truth: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; entry count was 101 tasks / 76 remaining / parent 0 / errors 0. Action context is `mode=apply`, workspace `/home/marialez/Work/walker`, branch `product-debloat`; the exact allowed surfaces and `feature-branch-chain`/400-line/no-exception gate were followed.
+- Current persisted checkbox recount: **101 total, 32 checked, 69 unchecked** (implementation-owned rows); this recount is evidence for the parent to derive fresh structured status, not a status override. A3.RED→GREEN and A3.TRIANGULATE remain unchecked. A4 and A8 triangulation are checked on the combined fresh and parent-run evidence described below.
+- Node 24.18.0 was used via the authorized mise PATH. No files were staged or committed. Existing `.pi/` and the parent authorization artifact were preserved.
+
+### Bounded work completed in this pass
+
+- Removed the default-account sign-in command/action and `DefaultAccountProviderContribution` activation from `services/accounts/browser/defaultAccount.ts`; removed the account-avatar setting constant/configuration registration from authentication/workbench configuration. Managed settings and stored account/update state were not cleared.
+- Disconnected `account.contribution.js` from `sessions.common.main.ts`, removed mobile account/avatar/sign-in presentation and its service dependencies, and re-registered the generic Sessions update titlebar placement at the entrypoint. Updated the account-menu/titlebar absence tests. The source contribution/helper/styles remain on the parent-deletion/review manifest; they are not represented as physically removed.
+- Cleaned stale provider paths from `.github/CODENOTIFY`, CodeQL config, and `eslint.config.js`. `.vscode-test.js` now checks account setting/entrypoint/mobile absence, retained generic titlebar placement, Git/Git Base discovery and launches, removed provider paths, and inactive callback URIs.
+- Read-only inventory found additional sign-in/account-gate code in `src/vs/sessions/contrib/chat/browser/newChatWidget.ts`, `src/vs/sessions/browser/sessionsAuthGate.ts`, `src/vs/sessions/browser/sessionsSetUpService.ts`, `src/vs/sessions/browser/sessionsSignInDialog.ts`, and `src/vs/sessions/contrib/chat/browser/sessionTypePicker.ts`, with assertions in `src/vs/sessions/test/browser/{sessionsAuthGate,sessionsSignInDialog}.test.ts` and `src/vs/sessions/contrib/chat/test/browser/sessionWorkspacePicker.test.ts`. These paths are outside the grant except for the separately authorized `sessionCommands.ts`; they were not edited. The persisted `AGENTIC_SIGN_IN_COMMAND_ID` still feeds the workspace-picker sign-in UI, so a whole-product no-sign-in assertion is not claimed.
+
+### Fresh verification from this pass
+
+- Node 24.18.0 `npm run compile-client`: **passed**, zero compile errors. The authorized target runs Gulp `clean-out`; it cleared and rebuilt existing `out/**` state. This supersedes the earlier checkpoint that stale compiled provider output under `out/` remained. No manual deletion was run; `dist/` and dependency-marker/build-info paths were not touched. Parent was notified.
+- `./scripts/test.sh --run vs/sessions/contrib/accountMenu/test/browser/account.contribution.test`: **4 passing** after removing the temporary direct account-contribution test import; includes account-menu/sign-in absence and independent Chat Pet badge component behavior.
+- `./scripts/test.sh --run vs/sessions/contrib/accountMenu/test/browser/accountTitleBarState.test`: **2 passing**; no account menu/titlebar action is registered.
+- `./scripts/test.sh --run vs/workbench/test/browser/parts/globalCompositeBar.test`: **12 passing**; no Accounts visibility action and generic global activity behavior remains.
+- `./scripts/test.sh --run vs/workbench/test/browser/parts/titlebar/titlebarPart.test`: **5 passing**; no Accounts titlebar action and unrelated titlebar behavior remains.
+- `./scripts/test.sh --run vs/workbench/services/accounts/test/browser/defaultAccount.test`: **51 passing**, including updater legacy-state preservation and existing managed-settings/sign-in service contracts.
+- `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test`: **5 passing** for passive-empty reads, unsupported create/force/provider registration, proposal guards, and inert events.
+- Node 24.18.0 `node --check .vscode-test.js` and dynamic import: **passed**. `git diff --check`: **passed**.
+- Read-only path scans found no provider-extension references in `.github`, `.vscode`, build, product, package, or script configuration; `HEAD` contains no parent-deleted auth/GitHub extension trees. Exact GitHub/Microsoft auth callback URI strings are absent. A wider `auth-redirect` text search only found unrelated session test fixture branch/path names.
+
+### Parent-run and historical evidence
+
+- Parent-verified at `dd1a928fd15`: `npm run compile-client` **PASS**, `npm run compile-extensions` **PASS**, and `./scripts/test-integration.sh --suite 'git,git-base'` exit **0** after the parent removed the provider/GitHub and account-policy-gate trees. This pass did not rerun the integration runner: its cleanup uses `rm -rf` and its extension setup writes generated/profile output beyond this executor's safe-run boundary. Earlier recorded suite detail is Git **60 passed / 2 pending**, Git Base **14 passed**, with synthetic remote/SSH/askpass fixtures and no supplied user credentials. No real user repository, credential, or network GitHub account was used.
+- Earlier U00 profile boundary results remain recorded as `userDataProfileService.test` **32/32** and `snippetsResource.test` **5/5**; they were not rerun because those exact test paths are outside this pass's authorized test surface. Thus this pass does not claim fresh/copied persisted-profile triangulation.
+- Live Open VSX/package lifecycle remains U12-owned. The existing Open VSX unit/build evidence above is not represented as live provider verification.
+
+### Remaining boundaries and review focus
+
+- A3 remains open: beyond the out-of-grant sign-in/account-gate consumers, `mobileChatShell.css` retains inert account-sheet/avatar selectors (path not authorized). `account.contribution.ts` also instantiates `SessionsChatPetAchievementBadges` and a mobile chat-dashboard service; deleting it wholesale would remove the Chat Pet badge-selection UI. Parent must decide whether that behavior loss is intended or assign a separate account-independent placement before deleting this mixed contribution. `accountTitleBarState.ts` and account widget styles are disconnected candidates, not deleted files.
+- `src/vs/platform/secrets/common/secrets.ts` still lists the old `vscode.github-authentication` secret key in `CROSS_APP_SHARED_SECRET_KEYS`; this is a sharing reference, not an active provider callback. Its path was outside the grant; no stored secret value was read, migrated, or removed. Parent was notified.
+- A4/A8 retained-Git evidence is from authorized compilation plus parent-run integration and earlier synthetic helper tests. No live github.com push with a user's OS credentials was attempted. The generic Git/Git Base implementations, transport, SSH/askpass and plain remote host handling were not edited.
+- The account panel's mixed Pet behavior, the exact out-of-grant sign-in/test paths, mobile CSS, and old secret-sharing key are the next review/authorization decisions. No implementation or task completion is claimed for those paths.
+
+### Pending physical deletion and parent decision
+
+- Parent-owned deletion candidates, pending product-scope resolution: `src/vs/sessions/contrib/accountMenu/browser/account.contribution.ts`, `src/vs/sessions/browser/accountTitleBarState.ts`, `src/vs/sessions/contrib/accountMenu/browser/media/accountTitleBarWidget.css`, and `src/vs/sessions/contrib/accountMenu/browser/media/accountWidget.css`. Parent executes deletion only after deciding whether the Chat Pet badge-selection UI must be retained elsewhere.
+- Do not delete `src/vs/sessions/contrib/accountMenu/browser/chatPetAchievementBadges.ts` or its tests as an incidental account cleanup; the component still tests independently, while its only runtime host is the mixed account panel. Other residual sign-in/account-gate paths remain outside this grant, as listed above.
+
+### Workload and file boundary
+
+- The source/test work is split as three cohesive feature-chain leaves: default-account setting/entrypoint/action disconnection (**121 changed lines**); mobile account-titlebar removal (**330**); and account-menu/titlebar absence tests plus A4/A8 stale-config assertions and allocated artifacts (**349**). Total measured worktree diff is **800 additions+deletions** across the three leaves. Every leaf remains within the 120–400 budget; no physical file deletion, exception, or unrelated refactor.
+- Files changed in this pass: `.github/CODENOTIFY`, `.github/codeql/codeql-config.yml`, `.vscode-test.js`, `eslint.config.js`, `openspec/changes/product-debloat/{tasks.md,removal-inventory.md,apply-progress.md}`, `src/vs/sessions/{sessions.common.main.ts,browser/parts/mobile/mobileTitlebarPart.ts,contrib/accountMenu/browser/account.contribution.ts,contrib/accountMenu/test/browser/account.contribution.test.ts,contrib/accountMenu/test/browser/accountTitleBarState.test.ts}`, `src/vs/workbench/browser/workbench.contribution.ts`, `src/vs/workbench/services/accounts/browser/defaultAccount.ts`, and `src/vs/workbench/services/authentication/common/authentication.ts`.
+
+## U01 A3 auth/setup continuation — final authorized follow-up
+
+This continuation supersedes prior checkpoint statements that A3 remained open and the Chat Pet loss awaited a decision; the parent has accepted the loss and the authorized A3 tasks are now complete.
+
+### Structured status consumed
+
+- Parent-authored status in `parent-authorization.md`: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; action context `mode=apply`, workspace `/home/marialez/Work/walker`, branch `product-debloat`, exact edit roots in that grant; action-context warnings: none. Review workload is resolved to `feature-branch-chain`, 400 lines per leaf, no exception.
+- The parent's input accounting said 101 tasks / 76 remaining; the current persisted checkbox recount before this edit was 101 total / 32 checked / 69 unchecked. I used the authoritative `applyState` and scope, did not override status, and recorded this count mismatch for the parent to refresh. Task ownership markers were checked: no malformed or non-terminal marker found.
+
+### Completed work and persisted tasks
+
+- Removed account-auth startup/watch/sign-in dialog behavior from `sessionsSetUpService.ts`; first-run welcome now depends on first-launch storage and the existing skip-welcome environment condition, not account state. Generic setup completion and AI-disabled handling remain; `initialSignInDialogShown` reports false.
+- Removed the workspace-picker GitHub sign-in action and its default-account injection; removed the type picker's signed-out opt-in dependency and map `SignInRequired` to `NoModels`. Generic provider workspace actions and local folder/remote selection remain.
+- Removed only the obsolete GitHub cross-app shared-secret allowlist entry. `CROSS_APP_SHARED_SECRET_KEYS` is empty; no stored secret values were read, migrated, overwritten, or deleted.
+- Parent accepted the loss of Chat Pet badge-selection UI when the mixed account contribution is removed. The contribution/helper/services remain physically present for parent-owned U06 deletion; no achievement unlock service was changed.
+- Re-read `tasks.md`: A3.RED → GREEN and A3.TRIANGULATE → REFACTOR are both visibly `[x]`. Current checkbox count is 101 total / 34 checked / 67 unchecked; no implementation-owned A3 checkbox remains unchecked. All other unchecked rows are outside this assigned U01 leaf and do not declare the overall change complete.
+
+### Residual source audit and parent boundaries
+
+- `SessionsSigningInDialog`/`createSessionsSignInDialogOptions` have no runtime callers; `sessionsSignInDialog.ts` remains referenced by the workbench component fixture only. `AGENTIC_SIGN_IN_COMMAND_ID` remains in `sessionCommands.ts` and is used only by the unregistered `account.contribution.ts`.
+- `sessionsPolicyBlocked.ts` still contains account-gate/sign-in branches and injects default-account service, but its active registered contribution currently invokes only the generic `AgentDisabled` reason. That source path was outside this grant and was not changed; it remains parent/U06-owned. `mobileChatShell.css` also retains inert account selectors.
+- These disconnected/test-only remnants do not expose a runtime sign-in path through the authorized entrypoints. Physical deletion remains parent-owned; no scope was widened.
+- Files changed by the auth follow-up: `src/vs/sessions/browser/sessionsSetUpService.ts`, `src/vs/sessions/browser/sessionsAuthGate.ts`, `src/vs/sessions/contrib/chat/browser/newChatWidget.ts`, `src/vs/sessions/contrib/chat/browser/sessionTypePicker.ts`, `src/vs/sessions/test/browser/sessionsAuthGate.test.ts`, `src/vs/sessions/test/browser/sessionsSignInDialog.test.ts`, `src/vs/sessions/contrib/chat/test/browser/sessionWorkspacePicker.test.ts`, `src/vs/platform/secrets/common/secrets.ts`, `openspec/changes/product-debloat/tasks.md`, `openspec/changes/product-debloat/removal-inventory.md`, and `openspec/changes/product-debloat/apply-progress.md`. `src/vs/sessions/common/sessionCommands.ts` and `src/vs/sessions/browser/sessionsSignInDialog.ts` were reviewed but not modified.
+
+### Verification evidence
+
+- Latest authorized Node 24.18.0 `npm run compile-client`: passed with zero compile errors. As documented earlier, its `clean-out` task rebuilt `out/**`; no manual deletion occurred.
+- `./scripts/test.sh --run vs/sessions/test/browser/sessionsAuthGate.test`: passed; `sessionsSignInDialog.test`: passed on first-run welcome predicate; `vs/sessions/contrib/chat/test/browser/sessionWorkspacePicker.test`: passed with generic provider actions.
+- Local profile preservation selectors passed: `vs/platform/userDataProfile/test/common/userDataProfileService.test` (32/32) and `vs/workbench/services/userDataProfile/test/browser/snippetsResource.test` (5/5).
+- Previously passing A3 absence/layout selectors remain recorded above: account contribution (4), account titlebar state (2), global composite bar (12), titlebar part (5), and default account (51). The earlier Git/Git Base integration result is parent-owned/historical, not rerun here; live GitHub push and live Open VSX verification were not attempted.
+- Final `git diff --check` is recorded after this appendix and artifact edits; no stage or commit was performed.
+
+### Workload and PR boundary
+
+- Auth follow-up source/test diff: 591 additions+deletions, separated into three feature-chain leaves with artifacts allocated below. `.019` removes setup auth state/watchers (280 source lines); `.020` makes welcome account-independent (162 setup-service + 52 focused test lines); `.021` removes workspace-picker/type-picker gating and the old shared-secret allowlist (97 source/test lines).
+- Allocated OpenSpec changes are included in those counts: 5 lines to `.019`, 7 to `.020`, and 45 to `.021` (including the A3 checkbox updates and inventory residual corrections). Measured leaf totals: **285**, **221**, and **142** changed lines, respectively; all are within 120–400, with no size exception.
+- Scope remains U01 A3 account-free startup and UI/settings. Generic Git remotes, OS credentials, local profiles, managed settings, generic provider actions, and unrelated secret storage are retained.
+
+### Remaining parent-owned work / review focus
+
+- Parent/U06 deletes the physically present Sessions/account-menu contribution and remaining dormant session-only sources; do not delete mixed Chat Pet helpers or achievement services outside that ordered deletion.
+- Verify the final absence boundary independently against account command/menu/titlebar/settings registrations and the first-run welcome; inspect the dormant policy-blocked source under its parent-owned scope if it will ship before U06.
+- U12 still owns live Open VSX/package verification. No real user credentials, stored secrets, repositories, or remotes were accessed.

@@ -32,7 +32,6 @@ import { canInitializeSessionTypeOnSelection, getSessionTypeAvailability, getSes
 import { IChatEntitlementService } from '../../../../workbench/services/chat/common/chatEntitlementService.js';
 import { markOnboardingTarget } from '../../../../workbench/contrib/onboarding/browser/spotlight/onboardingTarget.js';
 import { reportNewChatPickerClosed } from './newChatPickerTelemetry.js';
-import { isAllowSignedOutWhenUsableEnabled } from '../../../browser/sessionsAuthGate.js';
 import { registerPickerKeybindingPresentation } from './newChatPickerKeybinding.js';
 
 const STORAGE_KEY_LAST_SESSION_TYPE = 'sessions.userSelectedSessionType';
@@ -402,19 +401,21 @@ export class SessionTypePicker extends Disposable {
 	/** Availability shared by the desktop popup and the mobile picker sheet. */
 	protected _getPickerAvailability(sessionType: ISessionType): SessionTypeAvailability {
 		const modelTarget = sessionType.chatSessionType ?? sessionType.id;
-		const allowSignedOutWhenUsable = isAllowSignedOutWhenUsableEnabled(this.configurationService);
 		const initialization = sessionType.initializationOnSelection;
-		return getSessionTypePickerAvailability(
+		const availability = getSessionTypePickerAvailability(
 			modelTarget,
-			getSessionTypeAvailability(this.chatSessionsService, this.chatEntitlementService, this.languageModelsService, modelTarget, allowSignedOutWhenUsable),
-			allowSignedOutWhenUsable,
+			getSessionTypeAvailability(this.chatSessionsService, this.chatEntitlementService, this.languageModelsService, modelTarget),
+			false,
 			canInitializeSessionTypeOnSelection(
 				this.chatEntitlementService.entitlement,
-				allowSignedOutWhenUsable,
+				false,
 				initialization !== undefined,
 				initialization?.canInitializeWithoutGitHub,
 			),
 		);
+		return availability === SessionTypeAvailability.SignInRequired
+			? SessionTypeAvailability.NoModels
+			: availability;
 	}
 
 	render(container: HTMLElement, options?: { className?: string }): void {

@@ -9,6 +9,20 @@ import '../editor/editor.all.js';
 import { getColorRegistry } from '../platform/theme/common/colorUtils.js';
 import { PANEL_BACKGROUND } from '../workbench/common/theme.js';
 import { TERMINAL_BACKGROUND_COLOR } from '../workbench/contrib/terminal/common/terminalColorRegistry.js';
+import { ContextKeyExpr } from '../platform/contextkey/common/contextkey.js';
+import { IsAuxiliaryWindowContext } from '../workbench/common/contextkeys.js';
+import { registerUpdateTitleBarMenuPlacement } from '../workbench/contrib/update/browser/updateTitleBarEntry.js';
+import { Menus } from './browser/menus.js';
+import { SessionsWelcomeVisibleContext } from './common/contextkeys.js';
+
+registerUpdateTitleBarMenuPlacement(Menus.TitleBarLeftLayout, {
+	group: 'navigation',
+	order: 2,
+	when: ContextKeyExpr.and(
+		IsAuxiliaryWindowContext.toNegated(),
+		SessionsWelcomeVisibleContext.toNegated()
+	),
+});
 
 import '../workbench/api/browser/extensionHost.contribution.js';
 import '../workbench/browser/workbench.contribution.js';
@@ -464,7 +478,6 @@ import './services/customView/browser/customViewService.js';
 import './browser/parts/menubar.contribution.js';
 import './browser/layoutActions.js';
 
-import './contrib/accountMenu/browser/account.contribution.js';
 import './contrib/aiCustomizationTreeView/browser/aiCustomizationTreeView.contribution.js';
 import './contrib/chat/browser/chat.contribution.js';
 import './contrib/chat/browser/btwSlashCommand.contribution.js';

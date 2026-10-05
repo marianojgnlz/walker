@@ -34,13 +34,13 @@ suite('Sessions - Auth Gate', () => {
 		});
 	});
 
-	test('GitHub workspace group offers sign-in only for signed-out opted-in users', () => {
+	test('GitHub workspace group never offers account sign-in', () => {
 		assert.deepStrictEqual([
 			shouldShowGitHubWorkspaceGroupSignIn(false, false),
 			shouldShowGitHubWorkspaceGroupSignIn(false, true),
 			shouldShowGitHubWorkspaceGroupSignIn(true, false),
 			shouldShowGitHubWorkspaceGroupSignIn(true, true),
-		], [false, true, false, false]);
+		], [false, false, false, false]);
 	});
 
 	test('conditionalAuthState treats an unresolved account as unknown, never signed out', () => {

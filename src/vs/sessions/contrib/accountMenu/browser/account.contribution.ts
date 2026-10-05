@@ -40,7 +40,7 @@ import { IsPhoneLayoutContext, SessionsWelcomeVisibleContext } from '../../../co
 import { IsAuxiliaryWindowContext } from '../../../../workbench/common/contextkeys.js';
 import { IAuthenticationAccessService } from '../../../../workbench/services/authentication/browser/authenticationAccessService.js';
 import { IAuthenticationUsageService } from '../../../../workbench/services/authentication/browser/authenticationUsageService.js';
-import { ACCOUNTS_AVATAR_SETTING, IAuthenticationService } from '../../../../workbench/services/authentication/common/authentication.js';
+import { IAuthenticationService } from '../../../../workbench/services/authentication/common/authentication.js';
 import { URI } from '../../../../base/common/uri.js';
 import { IChatDashboardService } from '../../../browser/chatDashboardService.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
@@ -244,10 +244,6 @@ class TitleBarAccountWidget extends BaseActionViewItem {
 				this.clickPanelDisposable.clear();
 				this.renderState();
 			}
-			if (event.affectsConfiguration(ACCOUNTS_AVATAR_SETTING)) {
-				this.refreshAvatar();
-				this.refreshCodexAvatar();
-			}
 		}));
 		// A signed-out user sees either a quiet "Sign In" (the opt-in is on, so signing
 		// in is optional) or a prominent "Agents Signed Out". Re-render so toggling the
@@ -397,9 +393,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
 	}
 
 	private refreshAvatar(): void {
-		const avatarUrl = this.configurationService.getValue<boolean>(ACCOUNTS_AVATAR_SETTING)
-			? getAccountProfileImageUrl(this.accountProviderId, this.accountName, this.accountIcon)
-			: undefined;
+		const avatarUrl = getAccountProfileImageUrl(this.accountProviderId, this.accountName, this.accountIcon);
 		if (avatarUrl === this.currentAvatarUrl) {
 			return;
 		}
@@ -448,7 +442,7 @@ class TitleBarAccountWidget extends BaseActionViewItem {
 
 	private refreshCodexAvatar(): void {
 		const account = this.codexAccountService.account;
-		const avatarUrl = this.configurationService.getValue<boolean>(ACCOUNTS_AVATAR_SETTING) && account.status === 'signedIn'
+		const avatarUrl = account.status === 'signedIn'
 			? account.profileImageDataUri
 			: undefined;
 		if (avatarUrl === this.currentCodexAvatarUrl) {
