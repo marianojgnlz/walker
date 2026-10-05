@@ -6,6 +6,7 @@
 //@ts-check
 
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'url';
 import * as path from 'path';
 import * as os from 'os';
@@ -63,15 +64,6 @@ const extensions = [
 		mocha: { timeout: 60_000 }
 	},
 	{
-		label: 'github-authentication',
-		workspaceFolder: path.join(os.tmpdir(), `msft-auth-${Math.floor(Math.random() * 100000)}`),
-		mocha: { timeout: 60_000 }
-	},
-	{
-		label: 'microsoft-authentication',
-		mocha: { timeout: 60_000 }
-	},
-	{
 		label: 'vscode-api-tests-folder',
 		extensionDevelopmentPath: `extensions/vscode-api-tests`,
 		workspaceFolder: `extensions/vscode-api-tests/testWorkspace`,
@@ -96,6 +88,68 @@ const extensions = [
 	}
 ];
 
+
+const extensionDirectories = readFileSync(path.join(__dirname, 'build/npm/dirs.ts'), 'utf8');
+const extensionCompilations = readFileSync(path.join(__dirname, 'build/gulpfile.extensions.ts'), 'utf8');
+const githubIntegrationDiscovery = /['"]extensions\/github(?:\/tsconfig\.json)?['"]/;
+const authenticationProviderDiscovery = /['"]extensions\/(?:github-authentication|microsoft-authentication)(?:\/tsconfig\.json)?['"]/;
+if (githubIntegrationDiscovery.test(extensionDirectories) || githubIntegrationDiscovery.test(extensionCompilations)) {
+	throw new Error('The removed GitHub integration must not be included in extension discovery or compilation.');
+}
+if (authenticationProviderDiscovery.test(extensionDirectories) || authenticationProviderDiscovery.test(extensionCompilations)
+	|| extensions.some(extension => extension.label === 'github-authentication' || extension.label === 'microsoft-authentication')) {
+	throw new Error('Removed authentication providers must not be included in extension discovery, compilation, or test labels.');
+}
+for (const extension of ['git', 'git-base']) {
+	if (!extensionDirectories.includes(`'extensions/${extension}',`) || !extensionCompilations.includes(`'extensions/${extension}/tsconfig.json',`)) {
+		throw new Error(`Retained Git extension '${extension}' must remain in discovery and compilation.`);
+	}
+}
+for (const template of ['build/vite/workbench-vite.html', 'build/rspack/workbench-rspack.html']) {
+	const configuration = readFileSync(path.join(__dirname, template), 'utf8');
+	if (/&quot;trustedExtensionAuthAccess&quot;|&quot;github\.remotehub&quot;/.test(configuration)) {
+		throw new Error(`Removed GitHub integration auth grants must not remain in ${template}.`);
+	}
+}
+
+const integrationRunnerPaths = [
+	'scripts/test-integration.sh',
+	'scripts/test-integration.bat',
+	'.github/skills/integration-tests/SKILL.md',
+];
+const integrationRunnerSources = integrationRunnerPaths.map(file => readFileSync(path.join(__dirname, file), 'utf8'));
+if (integrationRunnerSources.some(source => source.includes('github-authentication'))) {
+	throw new Error('Removed GitHub authentication tests must not remain in integration runner selection or documentation.');
+}
+if (integrationRunnerSources.some(source => !source.includes('git-base') || !source.includes('git'))) {
+	throw new Error('The retained Git and Git Base integration suites must remain documented and selectable.');
+}
+if (!integrationRunnerSources[0].includes('if should_run_suite git; then')
+	|| !integrationRunnerSources[0].includes('if should_run_suite git-base; then')) {
+	throw new Error('The Bash runner must keep executable Git and Git Base suite branches.');
+}
+if (!integrationRunnerSources[1].includes('call :should_run_suite git || goto skip_git')
+	|| !integrationRunnerSources[1].includes('call :should_run_suite git-base || goto skip_git_base')) {
+	throw new Error('The Windows runner must keep executable Git and Git Base suite branches.');
+}
+const launchConfiguration = readFileSync(path.join(__dirname, '.vscode/launch.json'), 'utf8');
+if (/extensions\/github(?:\/|["\\])|VS Code Github Tests/i.test(launchConfiguration)) {
+	throw new Error('The removed GitHub extension must not have a test launch configuration.');
+}
+if (!launchConfiguration.includes('"name": "VS Code Git Tests"')
+	|| !launchConfiguration.includes('--extensionDevelopmentPath=${workspaceFolder}/extensions/git')) {
+	throw new Error('Plain Git extension test launch support must remain configured.');
+}
+const lintAllowLists = [
+	readFileSync(path.join(__dirname, '.eslint-allowed-javascript-files'), 'utf8'),
+	readFileSync(path.join(__dirname, '.eslint-allowed-bracket-notation-files'), 'utf8'),
+];
+if (lintAllowLists.some(source => /extensions\/(?:github-authentication|microsoft-authentication)\//.test(source))) {
+	throw new Error('Removed authentication extension paths must not remain in lint allowlists.');
+}
+if (!lintAllowLists[1].includes('src/vs/platform/github/common/githubTransport.ts')) {
+	throw new Error('Generic GitHub transport must remain in the bracket-notation allowlist.');
+}
 
 const defaultLaunchArgs = process.env.API_TESTS_EXTRA_ARGS?.split(' ') || [
 	'--disable-telemetry', '--disable-experiments', '--skip-welcome', '--skip-release-notes', `--crash-reporter-directory=${__dirname}/.build/crashes`, `--logsPath=${__dirname}/.build/logs/integration-tests`, '--no-cached-data', '--disable-updates', '--use-inmemory-secretstorage', '--disable-extensions', '--disable-workspace-trust'

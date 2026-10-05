@@ -15,11 +15,6 @@ import { NotificationPriority } from '../../../platform/notification/common/noti
 @extHostNamedCustomer(MainContext.MainThreadProgress)
 export class MainThreadProgress implements MainThreadProgressShape {
 
-	private static readonly URGENT_PROGRESS_SOURCES = [
-		'vscode.github-authentication',
-		'vscode.microsoft-authentication'
-	];
-
 	private readonly _progressService: IProgressService;
 	private _progress = new Map<number, { resolve: () => void; progress: IProgress<IProgressStep> }>();
 	private readonly _proxy: ExtHostProgressShape;
@@ -42,10 +37,9 @@ export class MainThreadProgress implements MainThreadProgressShape {
 		const task = this._createTask(handle);
 
 		if (options.location === ProgressLocation.Notification && extensionId) {
-			const sourceIsUrgent = MainThreadProgress.URGENT_PROGRESS_SOURCES.includes(extensionId);
 			const notificationOptions: IProgressNotificationOptions = {
 				...options,
-				priority: sourceIsUrgent ? NotificationPriority.URGENT : NotificationPriority.DEFAULT,
+				priority: NotificationPriority.DEFAULT,
 				location: ProgressLocation.Notification,
 				secondaryActions: [toAction({
 					id: extensionId,

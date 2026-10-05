@@ -14,7 +14,7 @@ import { createDecorator } from '../../../../platform/instantiation/common/insta
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { INativeManagedSettingsService, IFileManagedSettingsService, IManagedSettingsPick, IManagedSettingsService, MANAGED_SETTINGS_CHANNELS, ManagedSettingsChannel, collectManagedSettingsDefinitions, hasManagedSettingsDefinitions, hasRawManagedSettings, projectManagedSettings, pickManagedSettings } from '../../../../platform/policy/common/copilotManagedSettings.js';
 import { IManagedSettingsFreshness, isManagedSettingsFreshnessBlocking } from '../../../../platform/policy/common/managedSettingsFreshness.js';
-import { AbstractPolicyService, getRestrictedPolicyValue, IPolicyService, PolicyDefinition, PolicyValue, PolicyValueSource } from '../../../../platform/policy/common/policy.js';
+import { AbstractPolicyService, IPolicyService, PolicyDefinition, PolicyValue, PolicyValueSource } from '../../../../platform/policy/common/policy.js';
 import { IDefaultAccountService } from '../../../../platform/defaultAccount/common/defaultAccount.js';
 
 /**
@@ -153,17 +153,8 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 		this._gateInfo = this.computeGateInfo();
 		const gateInfoChanged = !equals(previousInfo, this._gateInfo);
 
-		// `policyNotResolved` is a transient state where the user IS in an approved
-		// org but account-side policy data hasn't loaded yet. We don't force restricted
-		// values here — `policy.value(policyData)` naturally returns undefined when
-		// `policyData` is null, so no account overrides slip through. Forcing
-		// `restrictedValue` would transiently flip `chat.disableAIFeatures = true`,
-		// surfacing confusing "Unable to write" errors and a UI flash.
-		const gateRestricted = this._gateInfo.state === AccountPolicyGateState.Restricted
-			&& this._gateInfo.reason !== AccountPolicyGateUnsatisfiedReason.PolicyNotResolved;
-
 		for (const key in policyDefinitions) {
-			const resolvedPolicy = this.resolvePolicyValue(policyDefinitions[key], resolvedPolicyData, gateRestricted);
+			const resolvedPolicy = this.resolvePolicyValue(policyDefinitions[key], resolvedPolicyData);
 			if (this.updatePolicyValue(key, resolvedPolicy?.value, resolvedPolicy?.source)) {
 				updated.push(key);
 			}
@@ -177,11 +168,7 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 		}
 	}
 
-	private resolvePolicyValue(policy: PolicyDefinition, resolvedPolicyData: IResolvedPolicyData | undefined, gateRestricted: boolean): { value: PolicyValue; source: PolicyValueSource } | undefined {
-		if (gateRestricted && (policy.value !== undefined || policy.restrictedValue !== undefined)) {
-			return { value: getRestrictedPolicyValue(policy), source: PolicyValueSource.AccountGate };
-		}
-
+	private resolvePolicyValue(policy: PolicyDefinition, resolvedPolicyData: IResolvedPolicyData | undefined): { value: PolicyValue; source: PolicyValueSource } | undefined {
 		const valueProvider = policy.value;
 		if (!resolvedPolicyData || !valueProvider) {
 			return undefined;

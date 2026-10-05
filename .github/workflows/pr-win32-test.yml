@@ -191,7 +191,6 @@ jobs:
             compile-extension:css-language-features-server `
             compile-extension:emmet `
             compile-extension:git `
-            compile-extension:github-authentication `
             compile-extension:html-language-features-server `
             compile-extension:ipynb `
             compile-extension:notebook-renderers `
@@ -199,7 +198,6 @@ jobs:
             compile-extension:json-language-features-server `
             compile-extension:markdown-language-features `
             compile-extension-media `
-            compile-extension:microsoft-authentication `
             compile-extension:typescript-language-features `
             compile-extension:vscode-api-tests `
             compile-extension:vscode-colorize-tests `

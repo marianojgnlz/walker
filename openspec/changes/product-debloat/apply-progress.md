@@ -121,13 +121,94 @@ This continuation supersedes the prior checkpoint's pending M1 and test-compilat
 - **Workload / PR boundary:** 83 additions+deletions across source, test and artifacts on the resolved feature-branch-chain. This narrow independently testable seam is below the usual 120-line target; it was not padded with unrelated code/tests. It is below the 400-line ceiling; no size exception or commit.
 - **Review focus:** confirm no default-account lookup remains in extension enablement or Getting Started; preserve the Settings Sync disablement guard, generic Agents banner, general Policy Diagnostics and remaining managed-settings diagnostic ownership.
 
-## Current remaining U01 implementation work
+## U01 continuation — A3 gate/diagnostics and A4/A8 reference disconnection
+
+### Structured status consumed
+
+- Parent-derived authoritative status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; 94 tasks at input (73 remaining, parent 0, errors 0); verify/sync reports missing; sync blocked; archive not ready. Provenance: parent disk scan of `tasks.md` checkboxes using `sdd-status-derivation.md`.
+- Action context: `mode=apply`, workspace `/home/marialez/Work/walker`, branch `product-debloat`, parent checkpoint `a9fbaf24dfa`; approved exact edit surfaces plus the two added HTML paths were observed. No action-context warnings. Parent resolved `feature-branch-chain`, 400 lines per leaf, no size exception. `openspec/config.yaml` says strict TDD false; task RED→GREEN→TRIANGULATE→REFACTOR still followed.
+- Node 24.18.0 was used via the approved mise PATH. No staging or commits.
+
+### Completed bounded work
+
+- **U01.b.017–b.018 — account diagnostics and gate disconnection:** removed account/session/authentication/account-policy-gate diagnostics and GitHub server-managed-settings reporting from `developerActions.ts`; preserved the general Policy Diagnostics action and native/file managed-settings reporting. Removed the policy service's `restrictedValue` force-on-unsatisfied-account-gate branch. Disconnected the workbench gate contribution import and desktop/web/Sessions service registrations, replaced the chat gate key's service import with a false-default local key, and removed account/gate/freshness dependencies from the Sessions blocked overlay. The generic `AgentDisabled` overlay and generic policy/managed-settings service remain. Gate status declarations/computation and gate-only contribution/test files still exist but have no active workbench/Sessions registrations; see parent physical-deletion manifest below.
+- **RED:** a new `accountPolicyService.test.ts` assertion for no account-gate-forced value failed against baseline (`false` versus `undefined`; 1 failing, 34 passing). A Node source-boundary check also failed while the Sessions overlay still consumed account/gate freshness. **GREEN/TRIANGULATE:** removed the forced value and the cross-tree account dependencies; the full account-policy service suite passed 35/35, the authorized cross-tree source assertions passed, and generic native/file diagnostics plus `AgentDisabled` assertions remained true. The paired b.017–b.018 leaf measures 346 additions+deletions including 325 source/test lines and its allocated task/inventory/progress evidence.
+- **U01.A4/A8.001 — approved-path provider/GitHub disconnection:** removed GitHub/Microsoft provider and GitHub integration discovery/compile/native-check/CI/CodeQL/CredScan/linter/test references from the approved build/package/test/consumer files. Removed the full authentication trust-grant list from `build/vite/workbench-vite.html` and `build/rspack/workbench-rspack.html`, preserving the unrelated gallery/Sync/URL product settings. `.vscode-test.js` now asserts removed integration/provider discovery and trust grants stay absent while `git` and `git-base` remain. No provider/GitHub extension source tree was unlinked or edited.
+- At this checkpoint, residual test/debug/linter references outside the then-approved surfaces were recorded in `removal-inventory.md` and `tasks.md`. Parent subsequently authorized exactly those six paths; U01.A4/A8.002 below records their cleanup.
+
+### Verification evidence
+
+- `npm run compile-client` with Node 24.18.0: passed; zero TypeScript compile errors, including current workbench/Sessions sources and retained extension build targets.
+- `npm run typecheck --prefix build`: passed.
+- From `build/`, `node --test lib/test/walkerProduct.test.ts`: 6/6 passed.
+- `./scripts/test.sh --run vs/workbench/services/policies/test/browser/accountPolicyService.test`: RED 1 failing/34 passing before the behavior edit; GREEN 35/35 after.
+- `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test`: 5/5 passed.
+- `./scripts/test.sh --run vs/platform/extensionManagement/test/common/extensionGalleryService.test`: 38/38 passed.
+- `./scripts/test.sh --run vs/workbench/contrib/extensions/test/electron-browser/extensionGalleryAccountUi.test`: 8/8 passed.
+- `node --check .vscode-test.js` and importing the config: passed. Node assertions over approved provider/Git discovery and both HTML trust templates passed; A3 account diagnostics/gate source assertions passed.
+- `git diff --check`: passed after the final code and artifact edits.
+- Git/Git Base integration was not rerun in this pass: its runner is known to download/install extensions outside the approved edit surfaces. The prior historical integration result remains recorded above (Git 60 passing/2 pending; Git Base 14 passing); current `compile-client` included retained Git and Git Base targets. Live Open VSX/package behavior remains U12-owned.
+
+### Leaf workload and PR boundary
+
+- The paired A3 b.017–b.018 leaf measures **346 additions+deletions**: 325 source/test lines plus 21 allocated tasks/inventory/progress lines.
+- The approved A4/A8 cross-tree disconnection leaf measures **215 additions+deletions**: 160 source/config lines plus 55 allocated tasks/inventory/progress lines. Both feature-chain leaves remain below 400; no size exception and no commits.
+- Physical provider/integration and gate-only source deletion is intentionally parent-owned; the corresponding physical-removal checkboxes remain unchecked until deletion is observed.
+
+### Pending physical deletion (parent)
+
+Parent executes `git rm` for the exact paths below between passes; this agent performed no deletion operation:
+
+- `extensions/github-authentication/` (all provider source, tests, resources, manifests and locks).
+- `extensions/microsoft-authentication/` (all provider source, tests, resources, manifests and locks).
+- `extensions/github/` (all integration source, tests, resources, manifests and locks).
+- `src/vs/workbench/services/policies/browser/accountPolicyGate.contribution.ts`.
+- `src/vs/workbench/services/policies/browser/accountPolicyGateContribution.ts`.
+- `src/vs/workbench/services/policies/test/browser/accountPolicyGateContribution.test.ts`.
+
+### Remaining U01 implementation work
 
 - [ ] A3.RED → GREEN: Add account registration/menu/titlebar/settings/badge absence assertions, then remove account-owned code from `workbench/browser/parts/globalCompositeBar.ts`, `parts/titlebar/{titlebarPart,titlebarActions}.ts`, account contributions/settings and default-account consumers discovered by M0. Remove one independently testable location per leaf; retain local profile and other global/title controls. <!-- sdd-owner: implementation -->
 - [ ] A3.TRIANGULATE → REFACTOR: Exercise fresh/copied persisted profiles, keyboard/title/global layout and local profile actions; remove orphan account-only helpers/context/config links. No broad welcome redesign; retain toolchain/personalization. <!-- sdd-owner: implementation -->
-- [ ] A4.RED → GREEN: Assert provider manifests/build discovery/proposal grants are absent; disconnect bundled provider discovery and remove `extensions/github-authentication/` and `extensions/microsoft-authentication/` in measured source/test/resource/manifest/lock batches. Clean `build/npm/dirs.ts`, built-in discovery/build/packaging and retained extension dependencies referencing their IDs. Include tests with each deletion leaf. <!-- sdd-owner: implementation -->
+- [ ] A3.PHYSICAL-REMOVAL (parent): Parent executes `git rm` for the disconnected account-policy gate contribution and its dedicated test listed in the manifest; keep unchecked until deletion is observed. <!-- sdd-owner: implementation -->
+- [x] A4.RESIDUAL-REFERENCES: Remove the GitHub authentication suite from both integration runners and their skill documentation; clear provider source entries from both ESLint allowlists while preserving executable `git`/`git-base` suites and generic GitHub transport. <!-- sdd-owner: implementation -->
+- [ ] A4.PHYSICAL-REMOVAL (parent): Parent executes `git rm` for `extensions/github-authentication/` and `extensions/microsoft-authentication/` after the remaining authorized references are reconciled; keep this checkbox open until deletion is observed. <!-- sdd-owner: implementation -->
 - [ ] A4.TRIANGULATE → REFACTOR: Check extension discovery and Node/browser retained-extension builds, old provider callback URI inactivity, and positive Git helper/SSH prompts. Remove provider-only package/proposal/transitive dependencies only after last consumer evidence. <!-- sdd-owner: implementation -->
-- [ ] A8.RED → GREEN: Assert no `github.publish`, provider/publisher/Octokit registrations or Continue On/GitHub command links are available while plain Git dispatch accepts github.com; disconnect and delete **all `extensions/github/`** source/tests/manifest/resources/locks plus npm/build/proposal/menu references. Do not remove `extensions/git` or `git-base`, or replace removed web enrichments with a new provider. <!-- sdd-owner: implementation -->
+- [x] A8.RESIDUAL-REFERENCES: Remove the GitHub extension debug launch target from `.vscode/launch.json` while retaining the `vscode.git` test launch. <!-- sdd-owner: implementation -->
+- [ ] A8.PHYSICAL-REMOVAL (parent): Parent executes `git rm` for `extensions/github/` after the remaining authorized references are reconciled; keep this checkbox open until deletion is observed. <!-- sdd-owner: implementation -->
 - [ ] A8.TRIANGULATE → REFACTOR: Run retained clone/fetch/pull/push/history/branch/helper/askpass fixtures, GitHub URL dispatch and self-hosted-style cases; eliminate dead external links caused by removed commands. Verify Git-specific generic credential-provider abstraction/terminal env remains meaningful without GitHub OAuth registrants. <!-- sdd-owner: implementation -->
 
-Other unresolved U01 work includes default-account service/registration and account-policy gate wiring/tests, account-owned policy diagnostics, U01.b.016-adjacent consumers not yet audited, A4 provider deletion, A8 GitHub extension deletion, and the full “Verification — U01” set from `tasks.md`. Live Open VSX and package/lifecycle evidence remains U12 work. Keep extensions/git, git-base, OS credentials, arbitrary plain remotes including github.com, local profiles/settings/repos/extensions/secrets, diagnostics, generic SSH and port forwarding intact. Do not change the known environment-specific .NET toolchain flaky test. No commits have been made.
+A3's broader default-account service/consumer removals remain incomplete pending downstream chat/Sessions ownership. U12 live gallery/package verification is still pending. Preserve extensions/git, git-base, OS credentials, plain GitHub remotes, local profiles/repos/secrets, generic policy/diagnostics, SSH and port forwarding. Do not modify the known flaky .NET toolchain test. No commits have been made.
+
+## U01 A4/A8.002 — residual runner, launch, and lint-reference cleanup
+
+### Structured inputs and authorization
+
+- Parent-supplied structured status at this pass: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `nextRecommended=sdd-apply`; 101 tasks, 76 remaining, parent 0, errors 0. Parent provenance: disk scan of `tasks.md` and `sdd-status-derivation.md`.
+- Parent explicitly selected option 1 and authorized only `scripts/test-integration.sh`, `scripts/test-integration.bat`, `.vscode/launch.json`, `.github/skills/integration-tests/SKILL.md`, `.eslint-allowed-javascript-files`, and `.eslint-allowed-bracket-notation-files`, in addition to the earlier approved surfaces. Mode remains apply; workspace `/home/marialez/Work/walker`; branch `product-debloat`; feature-branch-chain; 400-line ceiling; no size exception. Node 24.18.0 via the approved mise PATH.
+- This pass changes only the named residual references and their `.vscode-test.js` regression assertions plus OpenSpec artifacts. No physical deletion, stage, commit, package mutation, or user-state cleanup occurred.
+
+### RED → GREEN → TRIANGULATE
+
+- **RED:** added `.vscode-test.js` assertions for absence of the removed authentication suite in Bash/Windows runner and skill metadata, no GitHub extension launch target, and no provider-owned lint allowlist entries. The initial Node 24 config import failed as expected on the remaining `github-authentication` runner entry.
+- **GREEN:** removed that suite's label/dispatch from both integration runners and its documented suite name; removed the GitHub extension launch configuration; removed the Microsoft provider JavaScript mocks and GitHub/Microsoft provider TypeScript allowlist entries. The generic GitHub transport allowlist entry is retained.
+- **TRIANGULATE:** the config assertions verify `git` and `git-base` are not only named but still have executable suite branches in both runners, that the Git launch target remains, and that `src/vs/platform/github/common/githubTransport.ts` remains allowed. The Git integration suite itself was not edited.
+
+### Verification evidence
+
+- Node 24.18.0 `node --check .vscode-test.js` and importing the config: passed after cleanup; the first import intentionally failed in RED on the stale suite entry.
+- `bash -n scripts/test-integration.sh`: passed.
+- `./scripts/test-integration.sh --help`: passed; advertised list includes `git` and `git-base` and excludes `github-authentication`.
+- Node 24.18.0 `npm run typecheck-client`: passed.
+- Node 24.18.0 `npm run typecheck --prefix build`: passed; pretypecheck DTO preparation ran and left no additional tracked/untracked changes outside the allowed surfaces.
+- Static scans of each of the six authorized paths found no `github-authentication`, no GitHub integration launch target, and no provider allowlist entries. The generic `githubTransport.ts` entry remains. `git diff --check` passed after the final code and artifact edits.
+- The requested `./scripts/test-integration.sh --suite 'git,git-base'` was not rerun: this runner unconditionally creates a temporary profile and executes `rm -rf` on it, which is prohibited by the apply safety boundary. The Windows runner likewise uses `rmdir /s /q`. Earlier historical Git/Git Base suite results remain recorded above (Git 60 passed/2 pending; Git Base 14 passed); these are not represented as fresh verification of this pass.
+- `npm run gulp compile-extensions` was not run: its compile tasks first run `cleanTask`, which calls `util.rimraf(out)` and `fs.rmSync(tsBuildInfoFile)` across extension trees outside the permitted generated-output roots. No destructive or out-of-scope build was substituted.
+
+### Scope, workload, and next review
+
+- This bounded `U01.A4/A8.002` residual-reference leaf measures **138 additions+deletions**: 90 runner/debug/lint and regression-test lines plus 48 allocated task/inventory/progress lines. It is below the 400-line ceiling and includes only cohesive reference cleanup and its preservation checks; no size exception.
+- A4 and A8 reference disconnection and the six residual references are complete; their provider/integration source trees remain physically present pending parent `git rm`. A4/A8 TRIANGULATE stays open until deletion and the retained integration/build verification can be safely completed.
+- G1's RED/GREEN/TRIANGULATE checkboxes were already complete and remain so. A3.b.017–b.018 are checked; broad A3 UI/default-account triangulation and the gate-only file deletion remain open. No broader A3 completion is claimed.
+- **Pending physical deletion (parent):** the complete exact manifest above remains authoritative: `extensions/github-authentication/`, `extensions/microsoft-authentication/`, `extensions/github/`, `src/vs/workbench/services/policies/browser/accountPolicyGate.contribution.ts`, `src/vs/workbench/services/policies/browser/accountPolicyGateContribution.ts`, and `src/vs/workbench/services/policies/test/browser/accountPolicyGateContribution.test.ts`. Parent executes `git rm` between passes; all physical-removal checkboxes remain unchecked until deletion is observed.
+- Review focus: after parent deletion, independently recheck remaining provider/Git integration references and run the retained `git,git-base` suites through a safe approved harness; verify plain github.com remotes continue through OS/Git credentials, with no OAuth or integration activation. Live Open VSX verification remains U12-owned.

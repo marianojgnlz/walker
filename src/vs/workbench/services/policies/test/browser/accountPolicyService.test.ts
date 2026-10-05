@@ -831,6 +831,11 @@ suite('AccountPolicyService', () => {
 		return { policyService: service, managed };
 	}
 
+	test('an account organization policy does not force restricted settings', async () => {
+		const { policyService } = await setupGate({ approvedOrgs: ['ApprovedOrg'], account: null });
+		assert.strictEqual(policyService.getPolicyValue('PolicySettingD'), undefined);
+	});
+
 	test('gate inactive (no approved orgs set): behaves identically to today', async () => {
 		const { policyService } = await setupGate({ account: APPROVED_ORG_ACCOUNT, policyData: { chat_preview_features_enabled: false } });
 		assert.strictEqual(policyService.gateInfo.state, AccountPolicyGateState.Inactive);
@@ -855,17 +860,15 @@ suite('AccountPolicyService', () => {
 			reason: AccountPolicyGateUnsatisfiedReason.ManagedSettingsRefresh,
 			managedSettingsFreshness: freshness,
 		});
-		assert.strictEqual(policyService.getPolicyValueSource('PolicySettingD'), PolicyValueSource.AccountGate);
+		assert.strictEqual(policyService.getPolicyValueSource('PolicySettingD'), undefined);
 	});
 
-	test('gate active, no account signed in: restricted', async () => {
+	test('gate active, no account signed in: no restricted value is forced', async () => {
 		const { policyService } = await setupGate({ approvedOrgs: ['ApprovedOrg'], account: null });
 		assert.strictEqual(policyService.gateInfo.state, AccountPolicyGateState.Restricted);
 		assert.strictEqual(policyService.gateInfo.reason, AccountPolicyGateUnsatisfiedReason.NoAccount);
-		// Restricted values applied to policies that opt into the gate.
-		// PolicySettingD has a `value` callback → falls back to type-default `false`.
-		assert.strictEqual(policyService.getPolicyValue('PolicySettingD'), false);
-		assert.strictEqual(policyService.getPolicyValueSource('PolicySettingD'), PolicyValueSource.AccountGate);
+		assert.strictEqual(policyService.getPolicyValue('PolicySettingD'), undefined);
+		assert.strictEqual(policyService.getPolicyValueSource('PolicySettingD'), undefined);
 		// PolicySettingA does NOT opt in (no `value`, no `restrictedValue`) → unchanged.
 		assert.strictEqual(policyService.getPolicyValue('PolicySettingA'), undefined);
 	});
@@ -934,7 +937,7 @@ suite('AccountPolicyService', () => {
 		assert.strictEqual(service.gateInfo.reason, AccountPolicyGateUnsatisfiedReason.WrongProvider);
 	});
 
-	test('explicit `restrictedValue` is honored when gate is restricted', async () => {
+	test('explicit `restrictedValue` is not forced by an unsatisfied account gate', async () => {
 		const node: IConfigurationNode = {
 			id: 'restrictedValueConfig',
 			order: 2,
@@ -958,7 +961,7 @@ suite('AccountPolicyService', () => {
 		try {
 			const { policyService } = await setupGate({ approvedOrgs: ['ApprovedOrg'], account: null });
 			assert.strictEqual(policyService.gateInfo.state, AccountPolicyGateState.Restricted);
-			assert.strictEqual(policyService.getPolicyValue('PolicySettingRV'), 'locked');
+			assert.strictEqual(policyService.getPolicyValue('PolicySettingRV'), undefined);
 		} finally {
 			Registry.as<IConfigurationRegistry>(Extensions.Configuration).deregisterConfigurations([node]);
 		}
@@ -1037,7 +1040,7 @@ suite('AccountPolicyService', () => {
 		assert.strictEqual(service.gateInfo.reason, AccountPolicyGateUnsatisfiedReason.OrgNotApproved);
 	});
 
-	test('managed policy change re-evaluates the gate and fires onDidChange for a source-only change', async () => {
+	test('managed policy changes do not force account-gate policy values', async () => {
 		const { policyService, managed } = await setupGate({ approvedOrgs: ['ApprovedOrg'], account: APPROVED_ORG_ACCOUNT, policyData: { chat_preview_features_enabled: false } });
 		assert.strictEqual(policyService.gateInfo.state, AccountPolicyGateState.Satisfied);
 		assert.strictEqual(policyService.getPolicyValueSource('PolicySettingD'), PolicyValueSource.Account);
@@ -1045,14 +1048,14 @@ suite('AccountPolicyService', () => {
 		const changes: string[] = [];
 		disposables.add(policyService.onDidChange(names => changes.push(...names)));
 
-		// Change the approved-org list to one the account is NOT in → flip Satisfied → Restricted,
-		// which forces restricted values onto opted-in policies and emits onDidChange.
+		// Change the approved-org list to one the account is NOT in; policy values still
+		// come only from the account data and are not replaced by a gate restriction.
 		managed.setPolicy(APPROVED_ACCOUNT_ORGANIZATIONS_POLICY_NAME, JSON.stringify(['OnlyOtherOrg']));
 		// `_updatePolicyDefinitions` is async — wait one turn for it to resolve.
 		await new Promise(resolve => setTimeout(resolve, 0));
 
 		assert.strictEqual(policyService.gateInfo.state, AccountPolicyGateState.Restricted);
-		assert.strictEqual(policyService.getPolicyValueSource('PolicySettingD'), PolicyValueSource.AccountGate);
-		assert.ok(changes.includes('PolicySettingD'), 'expected onDidChange to fire for the source-only change');
+		assert.strictEqual(policyService.getPolicyValueSource('PolicySettingD'), PolicyValueSource.Account);
+		assert.ok(!changes.includes('PolicySettingD'), 'account gate transitions must not rewrite policy values');
 	});
 });

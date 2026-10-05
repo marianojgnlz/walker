@@ -815,7 +815,7 @@ async function createTunnelFixture(options: IRemoteDevContainerFixtureOptions, r
 	return {
 		name, settings: {},
 		sourceAppRoot,
-		extraArgs: [`--extensionDevelopmentPath=${extension}`, '--disable-extension=vscode.github-authentication'],
+		extraArgs: [`--extensionDevelopmentPath=${extension}`],
 		extraEnv: {
 			...(sourceAppRoot ? { VSCODE_DEV: '1' } : {}),
 			[tunnelTokenEnvironmentKey]: undefined, VSCODE_CLI_ACCESS_TOKEN: undefined, VSCODE_CLI_REFRESH_TOKEN: undefined,

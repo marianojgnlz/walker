@@ -123,7 +123,6 @@
 				"name": "Microsoft"
 			}
 		},
-		"providerExtensionId": "vscode.github-authentication",
 		"providerUriSetting": "github-enterprise.uri",
 		"providerScopes": [
 			[
@@ -161,9 +160,6 @@
 		],
 		"github-enterprise": [
 			"GitHub.copilot-chat"
-		],
-		"microsoft": [
-			"vscode.github-authentication"
 		]
 	},
 	"onboardingKeymaps": [

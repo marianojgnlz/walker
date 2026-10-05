@@ -20,11 +20,6 @@ export class MainThreadMessageService implements MainThreadMessageServiceShape {
 
 	private extensionsListener: IDisposable;
 
-	private static readonly URGENT_NOTIFICATION_SOURCES = [
-		'vscode.github-authentication',
-		'vscode.microsoft-authentication'
-	];
-
 	constructor(
 		extHostContext: IExtHostContext,
 		@INotificationService private readonly _notificationService: INotificationService,
@@ -66,13 +61,11 @@ export class MainThreadMessageService implements MainThreadMessageServiceShape {
 			}));
 
 			let source: string | INotificationSource | undefined;
-			let sourceIsUrgent = false;
 			if (options.source) {
 				source = {
 					label: options.source.label,
 					id: options.source.identifier.value
 				};
-				sourceIsUrgent = MainThreadMessageService.URGENT_NOTIFICATION_SOURCES.includes(source.id);
 			}
 
 			if (!source) {
@@ -95,8 +88,8 @@ export class MainThreadMessageService implements MainThreadMessageServiceShape {
 				message,
 				actions: { primary: primaryActions, secondary: secondaryActions },
 				source,
-				priority: sourceIsUrgent ? NotificationPriority.URGENT : NotificationPriority.DEFAULT,
-				sticky: sourceIsUrgent
+				priority: NotificationPriority.DEFAULT,
+				sticky: false
 			});
 
 			// if promise has not been resolved yet, now is the time to ensure a return value
