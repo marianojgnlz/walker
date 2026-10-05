@@ -7,12 +7,11 @@ import { Disposable, DisposableMap, DisposableStore, toDisposable } from '../../
 import { isWeb } from '../../../../../base/common/platform.js';
 import * as nls from '../../../../../nls.js';
 import { IRemoteAgentHostService, RemoteAgentHostAutoConnectSettingId, RemoteAgentHostConnectionStatus, RemoteAgentHostsEnabledSettingId } from '../../../../../platform/agentHost/common/remoteAgentHostService.js';
-import { isTunnelHosted, ITunnelAgentHostService, TUNNEL_ADDRESS_PREFIX, TUNNEL_MIN_PROTOCOL_VERSION, type ITunnelInfo } from '../../../../../platform/agentHost/common/tunnelAgentHost.js';
+import { ITunnelAgentHostService, TUNNEL_ADDRESS_PREFIX, TUNNEL_MIN_PROTOCOL_VERSION, type ITunnelInfo } from '../../../../../platform/agentHost/common/tunnelAgentHost.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../../platform/log/common/log.js';
 import { INotificationService, Severity } from '../../../../../platform/notification/common/notification.js';
-import { IRemoteTunnelService, TunnelStatus } from '../../../../../platform/remoteTunnel/common/remoteTunnel.js';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IWorkbenchContribution, registerWorkbenchContribution2, WorkbenchPhase } from '../../../../../workbench/common/contributions.js';
 import { AuthenticationSessionsChangeEvent, IAuthenticationService } from '../../../../../workbench/services/authentication/common/authentication.js';
@@ -37,9 +36,6 @@ export class TunnelAgentHostContribution extends Disposable implements IWorkbenc
 	private readonly _providerInstances = new Map<string, RemoteAgentHostSessionsProvider>();
 	private readonly _pendingConnects = new Map<string, Promise<void>>();
 	private _lastStatusCheck = 0;
-	private readonly _hostedTunnelSuppressions = new Set<string>();
-	private _remoteTunnelStatus: TunnelStatus = { type: 'uninitialized' };
-	private _hasReceivedRemoteTunnelStatus = false;
 	/**
 	 * `false` until the first {@link _silentStatusCheck} resolves. Until then
 	 * we keep newly-created providers in the `Connecting` state so the picker
@@ -60,13 +56,11 @@ export class TunnelAgentHostContribution extends Disposable implements IWorkbenc
 		@IAuthenticationService private readonly _authenticationService: IAuthenticationService,
 		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@IHostService private readonly _hostService: IHostService,
-		@IRemoteTunnelService private readonly _remoteTunnelService: IRemoteTunnelService,
 		@IAgentHostFilterService agentHostFilterService: IAgentHostFilterService,
 		@IConnectionDiagnosticsService private readonly _diagnosticsService: IConnectionDiagnosticsService,
 	) {
 		super();
 
-		this._syncHostedTunnelSuppression();
 		// Create providers for cached tunnels
 		this._reconcileProviders();
 
@@ -85,18 +79,7 @@ export class TunnelAgentHostContribution extends Disposable implements IWorkbenc
 		}
 
 		// Reconcile providers when the tunnel cache changes
-		this._register(this._tunnelService.onDidChangeTunnels(() => {
-			this._syncHostedTunnelSuppression();
-			this._reconcileProviders();
-		}));
-
-		this._register(this._remoteTunnelService.onDidChangeTunnelStatus(status => {
-			this._hasReceivedRemoteTunnelStatus = true;
-			this._remoteTunnelStatus = status;
-			this._syncHostedTunnelSuppression();
-			void this._silentStatusCheck();
-		}));
-		void this._loadRemoteTunnelStatus();
+		this._register(this._tunnelService.onDidChangeTunnels(() => this._reconcileProviders()));
 
 		this._register(this._configurationService.onDidChangeConfiguration(e => {
 			if (e.affectsConfiguration(RemoteAgentHostsEnabledSettingId)) {
@@ -165,42 +148,6 @@ export class TunnelAgentHostContribution extends Disposable implements IWorkbenc
 
 	private _getProviderTunnels() {
 		return this._tunnelService.getCachedTunnels().filter(tunnel => !this._tunnelService.isTunnelDismissed(tunnel.tunnelId));
-	}
-
-	private _isHostedTunnel(tunnel: Pick<ITunnelInfo, 'tunnelId' | 'name'>): boolean {
-		return isTunnelHosted(this._remoteTunnelStatus.type === 'connected' ? this._remoteTunnelStatus.info : undefined, tunnel);
-	}
-
-	private async _loadRemoteTunnelStatus(): Promise<void> {
-		const status = await this._remoteTunnelService.getTunnelStatus();
-		if (!this._hasReceivedRemoteTunnelStatus) {
-			this._remoteTunnelStatus = status;
-		}
-		this._syncHostedTunnelSuppression();
-	}
-
-	private _syncHostedTunnelSuppression(): void {
-		const hostedTunnelIds = new Set<string>();
-		for (const tunnel of this._tunnelService.getCachedTunnels()) {
-			if (!this._isHostedTunnel(tunnel)) {
-				continue;
-			}
-			hostedTunnelIds.add(tunnel.tunnelId);
-			if (!this._tunnelService.isAutoConnectSuppressed(tunnel.tunnelId)) {
-				this._hostedTunnelSuppressions.add(tunnel.tunnelId);
-				this._tunnelService.suppressAutoConnect(tunnel.tunnelId);
-			}
-			const address = `${TUNNEL_ADDRESS_PREFIX}${tunnel.tunnelId}`;
-			if (this._remoteAgentHostService.connections.some(connection => connection.address === address && RemoteAgentHostConnectionStatus.isConnected(connection.status))) {
-				void this._tunnelService.disconnect(address);
-			}
-		}
-		for (const tunnelId of this._hostedTunnelSuppressions) {
-			if (!hostedTunnelIds.has(tunnelId)) {
-				this._hostedTunnelSuppressions.delete(tunnelId);
-				this._tunnelService.clearAutoConnectSuppression(tunnelId);
-			}
-		}
 	}
 
 	private _createProvider(address: string, name: string): void {
@@ -320,7 +267,7 @@ export class TunnelAgentHostContribution extends Disposable implements IWorkbenc
 			}, 1000) : undefined;
 
 			try {
-				if (!cached || this._isHostedTunnel(cached)) {
+				if (!cached) {
 					return;
 				}
 				const tunnelInfo: ITunnelInfo = {
@@ -377,7 +324,7 @@ export class TunnelAgentHostContribution extends Disposable implements IWorkbenc
 			return;
 		}
 		for (const tunnel of this._tunnelService.getCachedTunnels()) {
-			if (this._isHostedTunnel(tunnel) || this._tunnelService.isAutoConnectSuppressed(tunnel.tunnelId)) {
+			if (this._tunnelService.isAutoConnectSuppressed(tunnel.tunnelId)) {
 				continue;
 			}
 			const address = `${TUNNEL_ADDRESS_PREFIX}${tunnel.tunnelId}`;

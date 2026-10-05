@@ -8,7 +8,7 @@ This file is the parent-produced grant for `sdd-apply` on change `product-debloa
 activeChange: product-debloat
 artifactStore: openspec
 artifacts: {proposal: done, specs: done, design: done, tasks: done, apply-progress: done, verify-report: missing, sync-report: missing}
-taskAccounting: {total: 101, remaining: 76, parent: 0, errors: 0}
+taskAccounting: {total: 101, remaining: 62, checked: 39, parent: 0, errors: 0}
 gates: {coreArtifactsReady: true, taskArtifactBlocked: false, applyState: ready, verifyState: ready, syncState: blocked, archiveReady: false}
 dependencies: {apply: ready, verify: ready, sync: blocked}
 blockedReasons: []
@@ -47,6 +47,7 @@ build/lib/inlineMeta.ts
 build/lib/test/inlineMeta.test.ts
 build/lib/walkerProduct.ts
 build/lib/test/walkerProduct.test.ts
+build/lib/test/inlineMeta.test.ts
 build/darwin/verify-macho.ts
 build/darwin/create-universal-app.ts
 build/distro/walker/**
@@ -209,6 +210,8 @@ src/vs/workbench/services/environment/browser/environmentService.ts
 src/vs/platform/environment/common/environment.ts
 src/vs/platform/environment/common/environmentService.ts
 src/vs/workbench/services/workspaces/common/workspaceIdentityService.ts
+src/vs/workbench/workbench.desktop.main.ts
+src/vs/sessions/sessions.desktop.main.ts
 src/vs/sessions/sessions.web.main.ts
 src/vs/workbench/contrib/extensions/browser/extensionsList.ts
 src/vs/workbench/contrib/extensions/electron-browser/extensions.contribution.ts
@@ -231,6 +234,47 @@ src/vs/platform/windows/electron-main/windowsMainService.ts
 src/vs/platform/windows/electron-main/windowImpl.ts
 src/vs/workbench/services/workspaces/test/browser/workspaceEditingService.test.ts
 src/vs/editor/standalone/browser/standaloneServices.ts
+
+## Stage U03 — additional authorized surfaces (A7: account tunnels/CLI/cloud-forwarding)
+
+src/vs/workbench/contrib/remoteTunnel/**
+src/vs/platform/remoteTunnel/**
+extensions/tunnel-forwarding/**
+cli/**
+
+### U03 additions (2026-10-05, `authorize-listed-paths`)
+
+src/vs/workbench/contrib/chat/electron-browser/tunnelHost.contribution.ts
+src/vs/workbench/contrib/chat/electron-browser/toggleRemoteConnectionsActionViewItem.ts
+src/vs/workbench/contrib/chat/test/electron-browser/toggleRemoteConnectionsActionViewItem.test.ts
+src/vs/sessions/contrib/tunnelHost/electron-browser/tunnelHost.contribution.ts
+src/vs/sessions/contrib/tunnelHost/test/electron-browser/tunnelHost.contribution.test.ts
+src/vs/sessions/contrib/providers/remoteAgentHost/browser/tunnelAgentHost.contribution.ts
+src/vs/sessions/contrib/providers/remoteAgentHost/browser/remoteAgentHostActions.ts
+src/vs/sessions/contrib/providers/remoteAgentHost/test/browser/tunnelAgentHost.contribution.test.ts
+src/vs/sessions/contrib/providers/remoteAgentHost/test/browser/remoteAgentHostActions.test.ts
+src/vs/workbench/contrib/chat/test/electron-browser/tunnelHost.contribution.test.ts
+src/vs/sessions/contrib/providers/remoteAgentHost/test/browser/connectionDiagnosticsService.test.ts
+src/vs/code/node/cli.ts
+src/vs/platform/environment/test/node/argv.test.ts
+build/linux/dependencies-generator.ts
+build/gulpfile.vscode.win32.ts
+build/win32/code.iss
+build/azure-pipelines/darwin/steps/product-build-darwin-compile.yml
+build/azure-pipelines/linux/steps/product-build-linux-compile.yml
+build/azure-pipelines/win32/steps/product-build-win32-compile.yml
+build/lib/i18n.resources.json
+extensions/terminal-suggest/src/terminalSuggestMain.ts
+extensions/terminal-suggest/src/completions/code-tunnel.ts
+extensions/terminal-suggest/src/completions/code.ts
+extensions/terminal-suggest/src/test/terminalSuggestMain.test.ts
+extensions/terminal-suggest/src/completions/code-tunnel-insiders.ts
+extensions/terminal-suggest/src/test/completions/code.test.ts
+extensions/terminal-suggest/src/test/completions/code-insiders.test.ts
+
+Scope: U03-only disconnection + tests; Sessions Agent Host tunnel edits recorded as U07 prerequisite work (those subtrees die in U06/U07).
+
+Scope limits (binding): remove account-gated Remote Tunnels, the cloud device/token/login/auth flows, and the GitHub-OAuth cloud-forwarding (`forward-internal`) paths. NEVER touch generic platform tunnel/Ports/SSH/server-connection security or non-account port forwarding. Rust CLI: remove account/device/token/login/cloud-tunnel commands with Cargo regression tests (seam c — split by function/module); `agent_*` CLI commands are U07-owned — disconnect them here only as a documented U07 prerequisite leaf if their dependencies require it, and record that. `extensions/tunnel-forwarding`: its account/cloud provider goes; if the extension becomes single-purpose cloud forwarding it goes to the parent-deletion manifest — generic forwarding survives elsewhere. Verification — U03: `./scripts/test.sh --run vs/platform/tunnel/test/common/tunnel.test`, `./scripts/test.sh --run vs/platform/tunnel/test/node/tunnelProxy.test`, owning remote/server boundary files, `cargo check --manifest-path cli/Cargo.toml`, `cargo test --manifest-path cli/Cargo.toml <focused-filter>`, affected retained extension build, `npm run typecheck-client`. Parent follow-up item: `extensions/git/tsconfig.json` retains a dead exclude for the deleted `editSessionIdentityProvider.ts` — clean it in a U03 leaf.
 src/vs/platform/extensionManagement/common/extensionManagement.ts
 src/vs/platform/extensionManagement/node/extensionManagementService.ts
 src/vs/platform/extensionManagement/common/unsupportedExtensionsMigration.ts
@@ -268,10 +312,11 @@ Env/CLI tail authorization (Sync tails only): the five paths above — `--do-not
 activeChange: product-debloat
 artifactStore: openspec
 artifacts: {proposal: done, specs: done, design: done, tasks: done, apply-progress: done, verify-report: done (round 1, U00+U01 PASS), sync-report: missing}
-taskAccounting: {total: 101, remaining: 67, checked: 34, parent: 0, errors: 0}
+taskAccounting: {total: 101, remaining: 62, checked: 39, parent: 0, errors: 0}
 gates: {coreArtifactsReady: true, taskArtifactBlocked: false, applyState: ready, verifyState: ready, syncState: blocked, archiveReady: false}
 nextRecommended: sdd-apply
-actionContext: {mode: apply — assigned slice U02 (A5), workspace: /home/marialez/Work/walker, branch: product-debloat}
+actionContext: {mode: apply — next assigned slice U03 (A7), workspace: /home/marialez/Work/walker, branch: product-debloat}
+statusNote: refreshed 2026-10-05 after U02+A6-prep completion (39 checked / 62 remaining).
 reviewWorkloadGate: RESOLVED — feature-branch-chain split, 400 lines/leaf, size:exception declined.
 ```
 

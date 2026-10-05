@@ -8,9 +8,6 @@
 		],
 		"skipLibCheck": true
 	},
-	"exclude": [
-		"src/editSessionIdentityProvider.ts"
-	],
 	"include": [
 		"src/**/*",
 		"../../src/vscode-dts/vscode.d.ts",

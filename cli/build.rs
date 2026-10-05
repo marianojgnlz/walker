@@ -84,12 +84,6 @@ fn set_env_vars_from_map_keys(prefix: &str, map: impl IntoIterator<Item = (Strin
 
 				value
 			}
-			"tunnelApplicationConfig" => {
-				if let Value::Object(v) = value {
-					set_env_vars_from_map_keys(&format!("{}_{}", prefix, "TUNNEL"), v);
-				}
-				continue;
-			}
 			_ => value,
 		};
 		if key.contains("win32") && key.contains("AppId") {

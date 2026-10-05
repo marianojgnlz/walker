@@ -164,10 +164,6 @@ pub struct StandaloneUpdateArgs {
 #[derive(Subcommand, Debug, Clone)]
 
 pub enum Commands {
-	/// Create a tunnel that's accessible on vscode.dev from anywhere.
-	/// Run `code tunnel --help` for more usage info.
-	Tunnel(TunnelArgs),
-
 	/// Manage editor extensions.
 	#[clap(name = "ext")]
 	Extension(ExtensionArgs),
@@ -295,16 +291,6 @@ pub struct AgentHostArgs {
 	#[clap(long)]
 	pub foreground: bool,
 
-	/// Expose the agent host over a dev tunnel.
-	#[clap(long)]
-	pub tunnel: bool,
-	/// Sets the machine name for the tunnel.
-	#[clap(long)]
-	pub name: Option<String>,
-	/// Randomly name the machine for the tunnel.
-	#[clap(long)]
-	pub random_name: bool,
-
 	/// Automatically terminate this supervisor once no client has been
 	/// connected for this many seconds. The idle timer starts once the
 	/// supervisor is ready, is cancelled/paused for as long as at least
@@ -314,9 +300,6 @@ pub struct AgentHostArgs {
 	#[clap(long)]
 	pub idle_timeout: Option<u64>,
 
-	/// Optional details to connect to an existing tunnel.
-	#[clap(flatten, next_help_heading = Some("ADVANCED TUNNEL OPTIONS"))]
-	pub existing_tunnel: ExistingTunnelArgs,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -386,12 +369,10 @@ pub struct AgentRelayArgs {
 /// `code agent ps|stop|logs`. `--user-data-dir` scopes automatic
 /// discovery to a specific registry (see
 /// [`crate::commands::agent_discovery::discover_live_endpoints`]);
-/// `--address`/`--tunnel` bypass discovery entirely and connect to
-/// exactly one explicit target (see
-/// [`crate::commands::agent::connect_explicit`]). Passing neither
-/// `--address` nor `--tunnel` means "discover automatically", not
-/// "connect nowhere" — every consumer of this struct must branch on that
-/// itself.
+/// `--address` bypasses discovery and connects to exactly one explicit
+/// target (see [`crate::commands::agent::connect_explicit`]). Passing no
+/// `--address` means "discover automatically", not "connect nowhere" —
+/// every consumer of this struct must branch on that itself.
 #[derive(Args, Debug, Clone)]
 pub struct AgentDiscoveryArgs {
 	/// Directory containing the shared agent host registry used for automatic discovery.
@@ -403,9 +384,6 @@ pub struct AgentDiscoveryArgs {
 	#[clap(long)]
 	pub address: Option<String>,
 
-	/// Connect via a named dev tunnel instead of the local address.
-	#[clap(long)]
-	pub tunnel: Option<String>,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -858,91 +836,6 @@ pub enum OutputFormat {
 	Text,
 }
 
-#[derive(Args, Clone, Debug, Default)]
-pub struct ExistingTunnelArgs {
-	/// Name you'd like to assign preexisting tunnel to use to connect the tunnel
-	/// Old option, new code should just use `--name`.
-	#[clap(long, hide = true)]
-	pub tunnel_name: Option<String>,
-
-	/// Token to authenticate and use preexisting tunnel
-	#[clap(long, hide = true)]
-	pub host_token: Option<String>,
-
-	/// ID of preexisting tunnel to use to connect the tunnel
-	#[clap(long, hide = true)]
-	pub tunnel_id: Option<String>,
-
-	/// Cluster of preexisting tunnel to use to connect the tunnel
-	#[clap(long, hide = true)]
-	pub cluster: Option<String>,
-}
-
-#[derive(Args, Debug, Clone, Default)]
-pub struct TunnelServeArgs {
-	#[clap(flatten)]
-	pub server_args: BaseServerArgs,
-
-	/// Optional details to connect to an existing tunnel
-	#[clap(flatten, next_help_heading = Some("ADVANCED OPTIONS"))]
-	pub tunnel: ExistingTunnelArgs,
-
-	/// Randomly name machine for port forwarding service
-	#[clap(long)]
-	pub random_name: bool,
-
-	/// Prevents the machine going to sleep while this command runs.
-	#[clap(long)]
-	pub no_sleep: bool,
-
-	/// Sets the machine name for port forwarding service
-	#[clap(long)]
-	pub name: Option<String>,
-
-	/// Optional parent process id. If provided, the server will be stopped when the process of the given pid no longer exists
-	#[clap(long, hide = true)]
-	pub parent_process_id: Option<String>,
-
-	/// If set, the user accepts the server license terms and the server will be started without a user prompt.
-	#[clap(long)]
-	pub accept_server_license_terms: bool,
-
-	/// Overrides the resolved user data directory used to home the local
-	/// agent-host endpoint registry
-	/// (`<user-data-dir>/agent-host/local-endpoint/entries/`, the directory of
-	/// per-instance entry files editor windows also publish to). Defaults to
-	/// the platform user data directory (honoring `VSCODE_PORTABLE` /
-	/// `VSCODE_APPDATA` when set), matching the editor's own resolution rules.
-	#[clap(long, hide = true)]
-	pub user_data_dir: Option<String>,
-
-	/// Serve only the agent-host tunnel port, without granting remote editor access.
-	#[clap(long, hide = true)]
-	pub agent_host_only: bool,
-
-	/// Emit machine-readable status lines on stdout for a parent process
-	/// (the editor) to consume, in addition to the human-readable banner.
-	#[clap(
-		long,
-		hide = true,
-		env = "VSCODE_CLI_MACHINE_STATUS",
-		action = clap::ArgAction::Set,
-		num_args = 0..=1,
-		default_value = "false",
-		default_missing_value = "true",
-		value_parser = clap::builder::BoolishValueParser::new()
-	)]
-	pub machine_status: bool,
-
-	/// Serve only the editor's own agent host through this tunnel: the
-	/// selection gateway pins every client to the live `editor` endpoint in
-	/// the registry and refuses to start a dedicated agent host. Intended for
-	/// tunnels whose lifetime is bound to the editor that started them, where
-	/// a dedicated agent host would outlive the tunnel and be unreachable.
-	#[clap(long, hide = true)]
-	pub delegate_to_editor: bool,
-}
-
 #[derive(Args, Debug, Clone, Default)]
 pub struct BaseServerArgs {
 	/// Requests that extensions be preloaded and installed on connecting servers.
@@ -981,165 +874,82 @@ impl BaseServerArgs {
 	}
 }
 
-#[derive(Args, Debug, Clone)]
-pub struct TunnelArgs {
-	#[clap(subcommand)]
-	pub subcommand: Option<TunnelSubcommand>,
-
-	#[clap(flatten)]
-	pub serve_args: TunnelServeArgs,
-}
-
-#[derive(Subcommand, Debug, Clone)]
-pub enum TunnelSubcommand {
-	/// Delete all servers which are currently not running.
-	Prune,
-
-	/// Stops any running tunnel on the system.
-	Kill,
-
-	/// Restarts any running tunnel on the system.
-	Restart,
-
-	/// Gets whether there is a tunnel running on the current machine.
-	Status,
-
-	/// Rename the name of this machine associated with port forwarding service.
-	Rename(TunnelRenameArgs),
-
-	/// Remove this machine's association with the port forwarding service.
-	Unregister,
-
-	#[clap(subcommand)]
-	User(TunnelUserSubCommands),
-
-	/// (Preview) Manages the tunnel when installed as a system service,
-	#[clap(subcommand)]
-	Service(TunnelServiceSubCommands),
-
-	/// (Preview) Forwards local port using the dev tunnel
-	#[clap(hide = true)]
-	ForwardInternal(TunnelForwardArgs),
-}
-
-#[derive(Subcommand, Debug, Clone)]
-pub enum TunnelServiceSubCommands {
-	/// Installs or re-installs the tunnel service on the machine.
-	Install(TunnelServiceInstallArgs),
-
-	/// Uninstalls and stops the tunnel service.
-	Uninstall,
-
-	/// Shows logs for the running service.
-	Log,
-
-	/// Internal command for running the service
-	#[clap(hide = true)]
-	InternalRun,
-}
-
-#[derive(Args, Debug, Clone)]
-pub struct TunnelServiceInstallArgs {
-	/// If set, the user accepts the server license terms and the server will be started without a user prompt.
-	#[clap(long)]
-	pub accept_server_license_terms: bool,
-
-	/// Sets the machine name for port forwarding service
-	#[clap(long)]
-	pub name: Option<String>,
-}
-
-#[derive(Args, Debug, Clone)]
-pub struct TunnelRenameArgs {
-	/// The name you'd like to rename your machine to.
-	pub name: String,
-}
-
-#[derive(Args, Debug, Clone)]
-pub struct TunnelForwardArgs {
-	/// One or more ports to forward.
-	pub ports: Vec<u16>,
-
-	/// Login args -- used for convenience so the forwarding call is a single action.
-	#[clap(flatten)]
-	pub login: LoginArgs,
-}
-
-#[derive(Subcommand, Debug, Clone)]
-pub enum TunnelUserSubCommands {
-	/// Log in to port forwarding service
-	Login(LoginArgs),
-
-	/// Log out of port forwarding service
-	Logout,
-
-	/// Show the account that's logged into port forwarding service
-	Show,
-}
-
-#[derive(Args, Debug, Clone)]
-pub struct LoginArgs {
-	/// An access token to store for authentication.
-	#[clap(long, requires = "provider", env = "VSCODE_CLI_ACCESS_TOKEN")]
-	pub access_token: Option<String>,
-
-	/// An access token to store for authentication.
-	#[clap(long, requires = "access_token", env = "VSCODE_CLI_REFRESH_TOKEN")]
-	pub refresh_token: Option<String>,
-
-	/// The auth provider to use. If not provided, a prompt will be shown.
-	#[clap(value_enum, long)]
-	pub provider: Option<AuthProvider>,
-}
-
-#[derive(clap::ValueEnum, Debug, Clone, Copy)]
-pub enum AuthProvider {
-	Microsoft,
-	Github,
-}
-
 #[cfg(test)]
 mod tests {
-	use super::{Commands, IntegratedCli};
-	use clap::Parser;
+	use super::IntegratedCli;
+	use clap::{CommandFactory, Parser};
 
-	const MACHINE_STATUS_ENV: &str = "VSCODE_CLI_MACHINE_STATUS";
+	#[test]
+	fn account_tunnel_commands_are_not_exposed_and_generic_server_options_remain() {
+		let command = IntegratedCli::command();
+		let commands = command.get_subcommands().map(|command| command.get_name()).collect::<Vec<_>>();
+		assert!(!commands.contains(&"tunnel"));
+		assert!(commands.contains(&"serve-web"));
+		assert!(commands.contains(&"command-shell"));
+		assert!(commands.contains(&"agent"));
 
-	fn parse_machine_status(args: &[&str]) -> bool {
-		let cli = IntegratedCli::try_parse_from(args).unwrap();
-		let Some(Commands::Tunnel(tunnel_args)) = cli.core.subcommand else {
-			panic!("expected tunnel arguments");
-		};
+		let serve_web = command.find_subcommand("serve-web").unwrap();
+		for option in ["connection-token", "connection-token-file", "without-connection-token"] {
+			assert!(serve_web.get_arguments().any(|argument| argument.get_long() == Some(option)));
+		}
+		let command_shell = command.find_subcommand("command-shell").unwrap();
+		for option in ["on-socket", "on-port", "require-token"] {
+			assert!(command_shell.get_arguments().any(|argument| argument.get_long() == Some(option)));
+		}
 
-		tunnel_args.serve_args.machine_status
+		let agent = command.find_subcommand("agent").unwrap();
+		for option in ["tunnel", "name", "random-name", "existing-tunnel"] {
+			assert!(!agent.get_arguments().any(|argument| argument.get_long() == Some(option)));
+		}
+		for name in ["host", "ps", "stop", "logs"] {
+			let subcommand = agent.find_subcommand(name).unwrap();
+			assert!(!subcommand.get_arguments().any(|argument| argument.get_long() == Some("tunnel")));
+		}
+
+		let tunnel_path = IntegratedCli::try_parse_from(["code", "tunnel"]).unwrap();
+		assert!(tunnel_path.core.subcommand.is_none());
+		assert_eq!(tunnel_path.core.open_paths, ["tunnel"]);
+		assert!(IntegratedCli::try_parse_from(["code", "agent", "host", "--tunnel"]).is_err());
+		assert!(IntegratedCli::try_parse_from(["code", "agent", "ps", "--tunnel", "name"]).is_err());
+		assert!(IntegratedCli::try_parse_from(["code", "serve-web", "--without-connection-token"]).is_ok());
 	}
 
-	/// Mutates process-global environment, which `cargo test` runs in parallel
-	/// with every other test. This is only safe because no other test reads
-	/// `VSCODE_CLI_MACHINE_STATUS`; if a second env-dependent test is added
-	/// here, serialize them (a shared mutex) rather than letting them race.
 	#[test]
-	fn parses_machine_status_from_flag_and_environment() {
-		let previous_value = std::env::var_os(MACHINE_STATUS_ENV);
-		std::env::remove_var(MACHINE_STATUS_ENV);
+	fn account_tunnel_server_is_not_shipped_and_generic_control_stream_remains() {
+		let source = include_str!("../tunnels/control_server.rs");
+		assert!(!source.contains("pub async fn serve("));
+		assert!(!source.contains("PortForwardingProcessor"));
+		assert!(!source.contains("handle_forward"));
+		assert!(!source.contains("dev_tunnels"));
+		assert!(source.contains("pub async fn serve_stream("));
+		assert!(source.contains("SharedActiveAgentHost"));
 
-		assert!(!parse_machine_status(&["code", "tunnel"]));
+		let tunnel_modules = include_str!("../tunnels.rs");
+		assert!(!tunnel_modules.contains("mod dev_tunnels;"));
+		assert!(!tunnel_modules.contains("mod port_forwarder;"));
+		assert!(!tunnel_modules.contains("mod wsl_detect;"));
+		assert!(tunnel_modules.contains("pub mod agent_host;"));
+		assert!(tunnel_modules.contains("pub mod protocol;"));
+	}
 
-		std::env::set_var(MACHINE_STATUS_ENV, "1");
-		assert!(parse_machine_status(&["code", "tunnel"]));
+	#[test]
+	fn account_tunnel_web_entrypoint_is_not_built_and_generic_server_config_remains() {
+		let build_script = include_str!("../../build.rs");
+		assert!(!build_script.contains("\"tunnelApplicationConfig\""));
+		assert!(build_script.contains("\"serverLicense\""));
+		assert!(build_script.contains("\"tunnelServerQualities\""));
 
-		std::env::set_var(MACHINE_STATUS_ENV, "0");
-		assert!(!parse_machine_status(&["code", "tunnel"]));
+		let constants = include_str!("../constants.rs");
+		assert!(!constants.contains("EDITOR_WEB_URL"));
 
-		std::env::set_var(MACHINE_STATUS_ENV, "false");
-		assert!(!parse_machine_status(&["code", "tunnel"]));
+		let code_server = include_str!("../tunnels/code_server.rs");
+		assert!(!code_server.contains("get_tunnel_web_url"));
+		assert!(!code_server.contains("print_listening"));
+		assert!(code_server.contains("download_cli_into_cache"));
+		assert!(code_server.contains("server_entrypoint"));
 
-		std::env::remove_var(MACHINE_STATUS_ENV);
-		assert!(parse_machine_status(&["code", "tunnel", "--machine-status"]));
-
-		match previous_value {
-			Some(value) => std::env::set_var(MACHINE_STATUS_ENV, value),
-			None => std::env::remove_var(MACHINE_STATUS_ENV),
-		}
+		let machine_status = include_str!("../tunnels/machine_status.rs");
+		assert!(!machine_status.contains("emit_connected"));
+		assert!(machine_status.contains("emit_token_error"));
 	}
 }

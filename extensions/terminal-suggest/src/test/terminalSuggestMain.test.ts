@@ -6,12 +6,12 @@
 import { deepStrictEqual, strictEqual } from 'assert';
 import 'mocha';
 import { basename } from 'path';
-import { asArray, getCompletionItemsFromSpecs, getCurrentCommandAndArgs } from '../terminalSuggestMain';
+import { asArray, availableSpecs, getCompletionItemsFromSpecs, getCurrentCommandAndArgs } from '../terminalSuggestMain';
 import { getTokenType } from '../tokens';
 import { cdTestSuiteSpec as cdTestSuite } from './completions/cd.test';
-import { codeSpecOptionsAndSubcommands, codeTestSuite, codeTunnelTestSuite } from './completions/code.test';
+import { codeSpecOptionsAndSubcommands, codeTestSuite } from './completions/code.test';
 import { testPaths, type ISuiteSpec } from './helpers';
-import { codeInsidersTestSuite, codeTunnelInsidersTestSuite } from './completions/code-insiders.test';
+import { codeInsidersTestSuite } from './completions/code-insiders.test';
 import { lsTestSuiteSpec } from './completions/upstream/ls.test';
 import { echoTestSuiteSpec } from './completions/upstream/echo.test';
 import { mkdirTestSuiteSpec } from './completions/upstream/mkdir.test';
@@ -43,8 +43,6 @@ const testSpecs2: ISuiteSpec[] = [
 	cdTestSuite,
 	codeTestSuite,
 	codeInsidersTestSuite,
-	codeTunnelTestSuite,
-	codeTunnelInsidersTestSuite,
 
 	// completions/upstream/
 	echoTestSuiteSpec,
@@ -77,6 +75,17 @@ if (osIsWindows()) {
 }
 
 suite('Terminal Suggest', () => {
+	test('does not offer account tunnel CLI completions', () => {
+		const commandNames = availableSpecs.map(spec => spec.name);
+		strictEqual(commandNames.includes('code-tunnel'), false);
+		strictEqual(commandNames.includes('code-tunnel-insiders'), false);
+		const codeSpec = typeof codeCompletionSpec === 'function' ? codeCompletionSpec() : codeCompletionSpec;
+		strictEqual('subcommands' in codeSpec, true);
+		if ('subcommands' in codeSpec) {
+			strictEqual(codeSpec.subcommands?.some(command => command.name === 'tunnel'), false);
+		}
+	});
+
 	for (const suiteSpec of testSpecs2) {
 		suite(suiteSpec.name, () => {
 			const completionSpecs = asArray(suiteSpec.completionSpecs);

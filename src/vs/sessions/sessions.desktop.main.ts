@@ -83,7 +83,6 @@ import '../workbench/services/tunnel/electron-browser/tunnelService.js';
 import '../platform/diagnostics/electron-browser/diagnosticsService.js';
 import '../platform/profiling/electron-browser/profilingService.js';
 import '../platform/telemetry/electron-browser/customEndpointTelemetryService.js';
-import '../platform/remoteTunnel/electron-browser/remoteTunnelService.js';
 import '../workbench/services/files/electron-browser/elevatedFileService.js';
 import '../workbench/services/search/electron-browser/searchService.js';
 import '../workbench/services/workingCopy/electron-browser/workingCopyHistoryService.js';
@@ -199,9 +198,6 @@ import '../workbench/contrib/mergeEditor/electron-browser/mergeEditor.contributi
 // Multi Diff Editor
 import '../workbench/contrib/multiDiffEditor/browser/multiDiffEditor.contribution.js';
 
-// Remote Tunnel
-import '../workbench/contrib/remoteTunnel/electron-browser/remoteTunnel.contribution.js';
-
 // Encryption
 import '../workbench/contrib/encryption/electron-browser/encryption.contribution.js';
 
@@ -257,9 +253,6 @@ import './contrib/providers/agentHost/browser/agentMergeActions.js';
 import './contrib/providers/agentHost/browser/agentHostSkillButtons.js';
 import './contrib/providers/agentHost/browser/openSubagentChat.js';
 import './contrib/providers/agentHost/electron-browser/agentHost.contribution.js';
-
-// Tunnel Host (allow remote connections to local agent host)
-import './contrib/tunnelHost/electron-browser/tunnelHost.contribution.js';
 
 // Sessions (desktop only)
 import './contrib/sessions/electron-browser/sessions.contribution.js';

@@ -5,7 +5,7 @@
 
 import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { formatOptions, Option, OptionDescriptions, Subcommand, parseArgs, ErrorReporter } from '../../node/argv.js';
+import { formatOptions, Option, OptionDescriptions, Subcommand, parseArgs, ErrorReporter, NATIVE_CLI_COMMANDS, OPTIONS } from '../../node/argv.js';
 import { addArg } from '../../node/argvHelper.js';
 
 function o(description: string, type: 'boolean' | 'string' | 'string[]' = 'string'): Option<any> {
@@ -86,6 +86,15 @@ suite('formatOptions', () => {
 	});
 
 	ensureNoDisposablesAreLeakedInTestSuite();
+});
+
+suite('native CLI commands', () => {
+	test('removes account tunnels while retaining server and agent commands', () => {
+		assert.deepStrictEqual(NATIVE_CLI_COMMANDS, ['serve-web', 'agent']);
+		assert.ok(!Object.hasOwn(OPTIONS, 'tunnel'));
+		assert.ok(Object.hasOwn(OPTIONS, 'serve-web'));
+		assert.ok(Object.hasOwn(OPTIONS, 'agent'));
+	});
 });
 
 suite('parseArgs', () => {

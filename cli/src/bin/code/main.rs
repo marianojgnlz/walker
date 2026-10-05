@@ -10,7 +10,7 @@ use clap::Parser;
 use cli::{
 	commands::{
 		agent_endpoints, agent_host, agent_kill, agent_logs, agent_ps, agent_relay, agent_stop,
-		args, serve_web, tunnels, update, version, CommandContext,
+		args, command_shell, serve_web, update, version, CommandContext,
 	},
 	constants::get_default_user_agent,
 	desktop, log,
@@ -97,7 +97,7 @@ async fn main() -> Result<(), std::convert::Infallible> {
 			},
 
 			Some(args::Commands::CommandShell(cs_args)) => {
-				tunnels::command_shell(context!(), cs_args).await
+				command_shell::command_shell(context!(), cs_args).await
 			}
 
 			Some(args::Commands::ServeWeb(sw_args)) => {
@@ -129,26 +129,6 @@ async fn main() -> Result<(), std::convert::Infallible> {
 				None => agent_host::agent_host(context!(), agent_args.host_args).await,
 			},
 
-			Some(args::Commands::Tunnel(mut tunnel_args)) => match tunnel_args.subcommand.take() {
-				Some(args::TunnelSubcommand::Prune) => tunnels::prune(context!()).await,
-				Some(args::TunnelSubcommand::Unregister) => tunnels::unregister(context!()).await,
-				Some(args::TunnelSubcommand::Kill) => tunnels::kill(context!()).await,
-				Some(args::TunnelSubcommand::Restart) => tunnels::restart(context!()).await,
-				Some(args::TunnelSubcommand::Status) => tunnels::status(context!()).await,
-				Some(args::TunnelSubcommand::Rename(rename_args)) => {
-					tunnels::rename(context!(), rename_args).await
-				}
-				Some(args::TunnelSubcommand::User(user_command)) => {
-					tunnels::user(context!(), user_command).await
-				}
-				Some(args::TunnelSubcommand::Service(service_args)) => {
-					tunnels::service(context_no_logger(), tunnel_args, service_args).await
-				}
-				Some(args::TunnelSubcommand::ForwardInternal(forward_args)) => {
-					tunnels::forward(context_no_logger(), forward_args).await
-				}
-				None => tunnels::serve(context_no_logger(), tunnel_args.serve_args).await,
-			},
 		},
 	};
 

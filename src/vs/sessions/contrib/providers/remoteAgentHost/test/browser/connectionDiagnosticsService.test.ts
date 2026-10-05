@@ -23,17 +23,10 @@ import { FileService } from '../../../../../../platform/files/common/fileService
 import { InMemoryFileSystemProvider } from '../../../../../../platform/files/common/inMemoryFilesystemProvider.js';
 import { NullLogService } from '../../../../../../platform/log/common/log.js';
 import { IProductService } from '../../../../../../platform/product/common/productService.js';
-import { CommandsRegistry } from '../../../../../../platform/commands/common/commands.js';
-import { IDialogService } from '../../../../../../platform/dialogs/common/dialogs.js';
-import { INotificationService } from '../../../../../../platform/notification/common/notification.js';
-import { IQuickInputService, IQuickPick, IQuickPickItem, QuickInputHideReason } from '../../../../../../platform/quickinput/common/quickInput.js';
-import { IRemoteTunnelService } from '../../../../../../platform/remoteTunnel/common/remoteTunnel.js';
-import { IAuthenticationService } from '../../../../../../workbench/services/authentication/common/authentication.js';
 import { IWorkbenchEnvironmentService } from '../../../../../../workbench/services/environment/common/environmentService.js';
 import { ConnectionDiagnosticsService } from '../../browser/connectionDiagnosticsService.js';
 import { AgentHostFilterConnectionStatus, IAgentHostFilterEntry, IAgentHostFilterService } from '../../../../../services/agentHostFilter/common/agentHostFilter.js';
-import { IConnectionDiagnosticsService, IConnectionDiagnosticsSnapshot } from '../../browser/connectionDiagnostics.js';
-import { RemoteAgentHostCommandIds } from '../../browser/remoteAgentHostActions.js';
+import { IConnectionDiagnosticsSnapshot } from '../../browser/connectionDiagnostics.js';
 
 suite('ConnectionDiagnosticsService', () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
@@ -333,62 +326,6 @@ suite('ConnectionDiagnosticsService', () => {
 			dismissed: 'Yes',
 			suppressed: 'Yes',
 			discovery: 'No discovery observed in this window.',
-		});
-	});
-
-	test('interactive enumeration updates diagnostics after background failure even when picker is cancelled', async () => {
-		const { service, tunnels, instantiation } = createService();
-		await assert.rejects(service.trackDiscovery('startup', async () => { throw new Error('offline'); }));
-		const result = [tunnel];
-		tunnels.list = async () => result;
-		instantiation.stub(IConnectionDiagnosticsService, service);
-		const pickerReady = new DeferredPromise<void>();
-		const hide = store.add(new Emitter<void>());
-		let itemLabels: readonly string[] = [];
-		instantiation.stub(IQuickInputService, {
-			createQuickPick: <T extends IQuickPickItem>() => new class extends mock<IQuickPick<T>>() {
-				override items: readonly T[] = [];
-				override readonly onDidTriggerButton = Event.None;
-				override readonly onDidAccept = Event.None;
-				override readonly onDidTriggerItemButton = Event.None;
-				override readonly onDidHide = Event.map(hide.event, () => ({ reason: QuickInputHideReason.Gesture }));
-				override show(): void { }
-				override hide(): void { hide.fire(); }
-				override dispose(): void { }
-				override set busy(value: boolean) {
-					if (!value) {
-						itemLabels = this.items.map(item => item.label);
-						void pickerReady.complete();
-					}
-				}
-			}(),
-		});
-		instantiation.stub(IRemoteTunnelService, { onDidChangeTunnelStatus: Event.None, getTunnelStatus: async () => ({ type: 'disconnected' }) });
-		instantiation.stub(IAuthenticationService, {
-			getSessions: async () => [{ id: 'session', accessToken: 'test-token', account: { id: 'account', label: 'Account' }, scopes: [] }],
-		});
-		instantiation.stub(INotificationService, new class extends mock<INotificationService>() { }());
-		instantiation.stub(IDialogService, new class extends mock<IDialogService>() { }());
-		const command = CommandsRegistry.getCommand(RemoteAgentHostCommandIds.connectViaTunnel)!;
-		const run = instantiation.invokeFunction(accessor => command.handler(accessor));
-		await pickerReady.p;
-		hide.fire();
-		await run;
-		const snapshot = await service.getSnapshot();
-		assert.deepStrictEqual({
-			itemLabels,
-			trigger: values(snapshot, 'Tunnel discovery').Trigger,
-			result: values(snapshot, 'Tunnel discovery').Result,
-			count: values(snapshot, 'Tunnel discovery')['Hosts in last successful discovery'],
-			host: values(snapshot, 'Mock host').Address,
-			cache: tunnels.cached,
-		}, {
-			itemLabels: ['Mock host'],
-			trigger: 'interactive',
-			result: 'succeeded',
-			count: '1',
-			host: 'tunnel:mock',
-			cache: [],
 		});
 	});
 

@@ -8,6 +8,7 @@ import { Event } from '../../../../../../base/common/event.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { IRemoteAgentHostService, RemoteAgentHostConnectionStatus } from '../../../../../../platform/agentHost/common/remoteAgentHostService.js';
 import { ISSHRemoteAgentHostService, SSHAuthMethod, type ISSHAgentHostConfig } from '../../../../../../platform/agentHost/common/sshRemoteAgentHost.js';
+import { CommandsRegistry } from '../../../../../../platform/commands/common/commands.js';
 import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { INotificationService } from '../../../../../../platform/notification/common/notification.js';
 import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
@@ -16,6 +17,12 @@ import { connectWithProgress } from '../../browser/remoteAgentHostActions.js';
 
 suite('Remote Agent Host actions', () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
+
+	test('does not register account-gated Dev Tunnel actions while retaining SSH and WSL entrypoints', () => {
+		assert.strictEqual(CommandsRegistry.getCommand('workbench.action.sessions.connectViaTunnel'), undefined);
+		assert.ok(CommandsRegistry.getCommand('workbench.action.sessions.connectViaSSH'));
+		assert.ok(CommandsRegistry.getCommand('workbench.action.sessions.connectViaWSL'));
+	});
 
 	test('reuses an existing SSH connection when reopening the folder picker', async () => {
 		const instantiationService = store.add(new TestInstantiationService());

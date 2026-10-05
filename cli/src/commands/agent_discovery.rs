@@ -9,7 +9,7 @@
 //! (editor) each publish a live entry to the shared local agent-host
 //! endpoint registry (schema v2; see
 //! [`crate::tunnels::agent_host_registry`]). When the user doesn't pin a
-//! specific `--address`/`--tunnel`, these commands should consider *every*
+//! specific `--address`, these commands should consider *every*
 //! live entry a candidate host, not just one arbitrarily selected one —
 //! that's what this module coordinates.
 
@@ -178,7 +178,7 @@ async fn probe_host(
 /// no live endpoints at all — the sole source of truth for automatic
 /// discovery.
 ///
-/// Callers with an explicit `--address`/`--tunnel` should call
+/// Callers with an explicit `--address` should call
 /// [`agent::connect_explicit`] directly instead of this helper; this
 /// path is only for auto-discovery.
 pub async fn connect_to_session_host(

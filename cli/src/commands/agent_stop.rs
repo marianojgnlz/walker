@@ -19,11 +19,8 @@ use super::CommandContext;
 /// Cancels the active turn of every in-progress chat in a session on a running
 /// agent host.
 pub async fn agent_stop(ctx: CommandContext, args: AgentStopArgs) -> Result<i32, AnyError> {
-	let client = match (
-		args.discovery.address.as_deref(),
-		args.discovery.tunnel.as_deref(),
-	) {
-		(None, None) => {
+	let client = match args.discovery.address.as_deref() {
+		None => {
 			agent_discovery::connect_to_session_host(
 				&ctx,
 				&args.session,
@@ -31,7 +28,7 @@ pub async fn agent_stop(ctx: CommandContext, args: AgentStopArgs) -> Result<i32,
 			)
 			.await?
 		}
-		(address, tunnel) => agent::connect_explicit(&ctx, address, tunnel).await?,
+		Some(address) => agent::connect_explicit(address).await?,
 	};
 
 	// Subscribe to the session to get its catalog of chats.

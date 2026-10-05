@@ -270,8 +270,8 @@ steps:
         APP_NAME="`ls $APP_ROOT | head -n 1`"
         APP_PATH="$APP_ROOT/$APP_NAME"
         unzip $(Build.ArtifactStagingDirectory)/cli/*.zip -d $(Build.ArtifactStagingDirectory)/cli
-        CLI_APP_NAME=$(node -p "require(\"$APP_PATH/Contents/Resources/app/product.json\").tunnelApplicationName")
         APP_NAME=$(node -p "require(\"$APP_PATH/Contents/Resources/app/product.json\").applicationName")
+        CLI_APP_NAME="${APP_NAME}-cli"
         mv "$(Build.ArtifactStagingDirectory)/cli/$APP_NAME" "$APP_PATH/Contents/Resources/app/bin/$CLI_APP_NAME"
         chmod +x "$APP_PATH/Contents/Resources/app/bin/$CLI_APP_NAME"
       displayName: Make CLI executable

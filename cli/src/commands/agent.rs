@@ -18,44 +18,22 @@ use tokio_tungstenite::{connect_async, WebSocketStream};
 
 use crate::async_pipe::get_socket_rw_stream;
 use crate::auth::{Auth, AuthProvider};
-use crate::constants::AGENT_HOST_PORT;
 use crate::log;
 use crate::tunnels::agent_host_registry::{AgentHostEndpointAddress, AgentHostEndpointMetadata};
-use crate::tunnels::dev_tunnels::DevTunnels;
 use crate::util::errors::{wrap, AnyError};
 
 use super::CommandContext;
 
-/// Connects to an agent host at an explicit `--address` or `--tunnel`
-/// target, initializes the AHP session, and returns the ready-to-use
-/// client. If `address` is given it is used directly; otherwise
-/// `tunnel_name` is looked up via the dev tunnels API.
-///
-/// This is deliberately explicit-target-only: automatic discovery of a
-/// local standalone/editor instance lives in
-/// [`super::agent_discovery`] instead (see
-/// [`super::agent_discovery::discover_live_endpoints`] and
-/// [`super::agent_discovery::connect_to_session_host`]). Every call site
-/// already branches to one of those before falling through here, so
-/// passing neither `address` nor `tunnel_name` is a caller bug, not a
-/// "no target given" case to recover from silently.
+/// Connects to an agent host at an explicit `--address`, initializes the
+/// AHP session, and returns the ready-to-use client. Automatic discovery of
+/// a local standalone/editor instance lives in [`super::agent_discovery`]
+/// instead (see [`super::agent_discovery::discover_live_endpoints`] and
+/// [`super::agent_discovery::connect_to_session_host`]).
 ///
 /// The returned client has been initialized but **not** authenticated.
 /// Use [`request_with_auth`] to issue commands that may require auth.
-pub async fn connect_explicit(
-	ctx: &CommandContext,
-	address: Option<&str>,
-	tunnel_name: Option<&str>,
-) -> Result<Client, AnyError> {
-	let client = match (address, tunnel_name) {
-		(Some(addr), _) => connect_ws(addr).await?,
-		(None, Some(name)) => connect_via_tunnel(ctx, name).await?,
-		(None, None) => unreachable!(
-			"connect_explicit requires --address or --tunnel; callers must route \
-			 the no-target case through agent_discovery instead"
-		),
-	};
-
+pub async fn connect_explicit(address: &str) -> Result<Client, AnyError> {
+	let client = connect_ws(address).await?;
 	initialize_client(&client).await?;
 	Ok(client)
 }
@@ -109,7 +87,7 @@ async fn connect_ws(address: &str) -> Result<Client, AnyError> {
 		.await
 		.map_err(|e| wrap(e, format!("Failed to connect to agent host at {address}")))?;
 
-	let transport = WsTransport::new(ws_stream, ());
+	let transport = WsTransport::new(ws_stream);
 
 	Client::connect(transport, ahp::ClientConfig::default())
 		.await
@@ -118,9 +96,8 @@ async fn connect_ws(address: &str) -> Result<Client, AnyError> {
 
 /// Opens a raw-stream WebSocket connection over a Unix domain socket
 /// (Unix) or named pipe (Windows) using the existing [`async_pipe`]
-/// abstraction, mirroring the tunnel raw-stream handshake in
-/// [`connect_via_tunnel`]. This is how the CLI reaches `editor`-owned
-/// registry endpoints, which are never TCP.
+/// abstraction. This is how the CLI reaches `editor`-owned registry
+/// endpoints, which are never TCP.
 async fn connect_ws_over_socket(path: &str, connection_token: &str) -> Result<Client, AnyError> {
 	let pipe = get_socket_rw_stream(std::path::Path::new(path))
 		.await
@@ -140,7 +117,7 @@ async fn connect_ws_over_socket(path: &str, connection_token: &str) -> Result<Cl
 		.await
 		.map_err(|e| wrap(e, format!("WebSocket handshake over socket {path} failed")))?;
 
-	let transport = WsTransport::new(ws_stream, ());
+	let transport = WsTransport::new(ws_stream);
 
 	Client::connect(transport, ahp::ClientConfig::default())
 		.await
@@ -148,29 +125,19 @@ async fn connect_ws_over_socket(path: &str, connection_token: &str) -> Result<Cl
 }
 
 /// A [`Transport`] backed by a `tokio-tungstenite` WebSocket stream.
-///
-/// `_guard` keeps an auxiliary resource alive for the lifetime of the
-/// transport; the tunnel connection uses it to retain the relay handle so
-/// the underlying SSH session isn't dropped. Use `()` when no such
-/// resource is needed.
-struct WsTransport<S, G = ()> {
+struct WsTransport<S> {
 	inner: WebSocketStream<S>,
-	_guard: G,
 }
 
-impl<S, G> WsTransport<S, G> {
-	fn new(inner: WebSocketStream<S>, guard: G) -> Self {
-		Self {
-			inner,
-			_guard: guard,
-		}
+impl<S> WsTransport<S> {
+	fn new(inner: WebSocketStream<S>) -> Self {
+		Self { inner }
 	}
 }
 
-impl<S, G> Transport for WsTransport<S, G>
+impl<S> Transport for WsTransport<S>
 where
 	S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
-	G: Send + 'static,
 {
 	async fn send(&mut self, msg: TransportMessage) -> Result<(), TransportError> {
 		let frame = match msg {
@@ -211,28 +178,6 @@ where
 			.await
 			.map_err(|e| TransportError::Io(e.to_string()))
 	}
-}
-
-/// Connects to an agent host over a dev tunnel relay. Looks up the tunnel
-/// by name, opens a direct-tcpip channel to the agent host port, performs
-/// a WebSocket handshake over the raw stream, then creates an AHP client.
-async fn connect_via_tunnel(ctx: &CommandContext, name: &str) -> Result<Client, AnyError> {
-	let auth = Auth::new(&ctx.paths, ctx.log.clone());
-	let mut dt = DevTunnels::new_remote_tunnel(&ctx.log, auth, &ctx.paths);
-
-	let (port_conn, relay_handle) = dt.connect_to_tunnel_port(name, AGENT_HOST_PORT).await?;
-
-	let rw = port_conn.into_rw();
-	let (ws_stream, _) = tokio_tungstenite::client_async("ws://localhost/", rw)
-		.await
-		.map_err(|e| wrap(e, "WebSocket handshake over tunnel failed"))?;
-
-	// Keep the relay handle alive so the SSH session isn't dropped.
-	let transport = WsTransport::new(ws_stream, relay_handle);
-
-	Client::connect(transport, ahp::ClientConfig::default())
-		.await
-		.map_err(|e| wrap(e, "Failed to establish AHP session over tunnel").into())
 }
 
 /// Serializes the auth-retry branch of [`request_with_auth`] across

@@ -20,11 +20,8 @@ use super::CommandContext;
 
 /// Subscribes to a session and streams actions/notifications in real time.
 pub async fn agent_logs(ctx: CommandContext, args: AgentLogsArgs) -> Result<i32, AnyError> {
-	let client = match (
-		args.discovery.address.as_deref(),
-		args.discovery.tunnel.as_deref(),
-	) {
-		(None, None) => {
+	let client = match args.discovery.address.as_deref() {
+		None => {
 			agent_discovery::connect_to_session_host(
 				&ctx,
 				&args.session,
@@ -32,7 +29,7 @@ pub async fn agent_logs(ctx: CommandContext, args: AgentLogsArgs) -> Result<i32,
 			)
 			.await?
 		}
-		(address, tunnel) => agent::connect_explicit(&ctx, address, tunnel).await?,
+		Some(address) => agent::connect_explicit(address).await?,
 	};
 
 	let (result, mut sub): (SubscribeResult, _) = {

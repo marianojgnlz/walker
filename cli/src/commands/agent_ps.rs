@@ -35,14 +35,8 @@ use super::CommandContext;
 /// registry has no live entries at all — the sole source of truth for
 /// automatic discovery.
 pub async fn agent_ps(ctx: CommandContext, args: AgentPsArgs) -> Result<i32, AnyError> {
-	if args.discovery.address.is_some() || args.discovery.tunnel.is_some() {
-		return agent_ps_single(
-			&ctx,
-			&args,
-			args.discovery.address.as_deref(),
-			args.discovery.tunnel.as_deref(),
-		)
-		.await;
+	if let Some(address) = args.discovery.address.as_deref() {
+		return agent_ps_single(&ctx, &args, address).await;
 	}
 
 	let endpoints =
@@ -55,14 +49,13 @@ pub async fn agent_ps(ctx: CommandContext, args: AgentPsArgs) -> Result<i32, Any
 	agent_ps_multi(&ctx, &args, endpoints).await
 }
 
-/// Single-host path used for an explicit `--address`/`--tunnel`.
+/// Single-host path used for an explicit `--address`.
 async fn agent_ps_single(
 	ctx: &CommandContext,
 	args: &AgentPsArgs,
-	address: Option<&str>,
-	tunnel: Option<&str>,
+	address: &str,
 ) -> Result<i32, AnyError> {
-	let client = agent::connect_explicit(ctx, address, tunnel).await?;
+	let client = agent::connect_explicit(address).await?;
 
 	let result = list_sessions(ctx, &client).await?;
 

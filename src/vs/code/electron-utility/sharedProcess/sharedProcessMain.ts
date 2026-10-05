@@ -91,13 +91,10 @@ import { IPolicyService, NullPolicyService } from '../../../platform/policy/comm
 import { UserDataProfilesService } from '../../../platform/userDataProfile/common/userDataProfileIpc.js';
 import { OneDataSystemAppender } from '../../../platform/telemetry/node/1dsAppender.js';
 import { UserDataProfilesCleaner } from './contrib/userDataProfilesCleaner.js';
-import { IRemoteTunnelService } from '../../../platform/remoteTunnel/common/remoteTunnel.js';
 import { ExtensionsContributions } from './contrib/extensions.js';
 import { localize } from '../../../nls.js';
 import { LogService } from '../../../platform/log/common/logService.js';
 import { ISharedProcessLifecycleService, SharedProcessLifecycleService } from '../../../platform/lifecycle/node/sharedProcessLifecycleService.js';
-import { RemoteTunnelService } from '../../../platform/remoteTunnel/node/remoteTunnelService.js';
-import { ITunnelProcessCoordinator, TunnelProcessCoordinator } from '../../../platform/remoteTunnel/node/tunnelProcessCoordinator.js';
 import { ExtensionsProfileScannerService } from '../../../platform/extensionManagement/node/extensionsProfileScannerService.js';
 import { ExtensionRecommendationNotificationServiceChannelClient } from '../../../platform/extensionRecommendations/common/extensionRecommendationsIpc.js';
 import { INativeHostService } from '../../../platform/native/common/native.js';
@@ -384,10 +381,6 @@ class SharedProcessMain extends Disposable implements IClientConnectionFilter {
 		services.set(ISharedTunnelsService, new SyncDescriptor(SharedTunnelsService));
 		services.set(ISharedProcessTunnelService, new SyncDescriptor(SharedProcessTunnelService));
 
-		// Remote Tunnel
-		services.set(ITunnelProcessCoordinator, new SyncDescriptor(TunnelProcessCoordinator, [undefined], true));
-		services.set(IRemoteTunnelService, new SyncDescriptor(RemoteTunnelService));
-
 		// Web Content Extractor
 		services.set(ISharedWebContentExtractorService, new SyncDescriptor(SharedWebContentExtractorService));
 
@@ -446,10 +439,6 @@ class SharedProcessMain extends Disposable implements IClientConnectionFilter {
 		// Tunnel
 		const sharedProcessTunnelChannel = ProxyChannel.fromService(accessor.get(ISharedProcessTunnelService), this._store);
 		this.server.registerChannel(ipcSharedProcessTunnelChannelName, sharedProcessTunnelChannel);
-
-		// Remote Tunnel
-		const remoteTunnelChannel = ProxyChannel.fromService(accessor.get(IRemoteTunnelService), this._store);
-		this.server.registerChannel('remoteTunnel', remoteTunnelChannel);
 
 		// Web Content Extractor
 		const webContentExtractorChannel = ProxyChannel.fromService(accessor.get(ISharedWebContentExtractorService), this._store);

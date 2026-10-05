@@ -24,4 +24,3 @@ mod download_cache;
 mod json_rpc;
 mod msgpack_rpc;
 mod rpc;
-mod singleton;

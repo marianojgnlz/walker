@@ -4,9 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 use super::paths::{InstalledServer, ServerPaths};
 use crate::async_pipe::get_socket_name;
-use crate::constants::{
-	APPLICATION_NAME, EDITOR_WEB_URL, QUALITYLESS_PRODUCT_NAME, QUALITYLESS_SERVER_NAME,
-};
+use crate::constants::{APPLICATION_NAME, QUALITYLESS_PRODUCT_NAME, QUALITYLESS_SERVER_NAME};
 use crate::download_cache::DownloadCache;
 use crate::log;
 use crate::options::{Quality, TelemetryLevel};
@@ -857,74 +855,6 @@ fn parse_port_from(text: &str) -> Option<u16> {
 		cap.get(1)
 			.and_then(|path| path.as_str().parse::<u16>().ok())
 	})
-}
-
-pub fn get_tunnel_web_url(tunnel_name: &str) -> Option<url::Url> {
-	let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from(""));
-	let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(""));
-
-	let dir = if home_dir == current_dir {
-		PathBuf::from("")
-	} else {
-		current_dir
-	};
-
-	let base_web_url = EDITOR_WEB_URL?;
-
-	let mut addr = url::Url::parse(base_web_url).unwrap();
-	{
-		let mut ps = addr.path_segments_mut().unwrap();
-		ps.push("tunnel");
-		ps.push(tunnel_name);
-		for segment in &dir {
-			let as_str = segment.to_string_lossy();
-			if !(as_str.len() == 1 && as_str.starts_with(std::path::MAIN_SEPARATOR)) {
-				ps.push(as_str.as_ref());
-			}
-		}
-	}
-
-	Some(addr)
-}
-
-/// Prints the tunnel's ready banner. `show_editor_link` must be `false` for a
-/// tunnel that does not serve the control port (`--agent-host-only`): the
-/// editor URL would 404, since nothing is listening behind it.
-pub fn print_listening(log: &log::Logger, tunnel_name: &str, show_editor_link: bool) {
-	use crate::commands::output;
-	use console::style;
-
-	debug!(
-		log,
-		"{} is listening for incoming connections", QUALITYLESS_SERVER_NAME
-	);
-
-	let addr = match get_tunnel_web_url(tunnel_name) {
-		Some(addr) => addr,
-		None => return,
-	};
-
-	let arrow = style(output::banner_marker()).green().bold();
-	let product = QUALITYLESS_PRODUCT_NAME;
-	let version = crate::constants::VSCODE_CLI_VERSION.unwrap_or("dev");
-
-	println!();
-	println!(
-		"  {} {}",
-		style(format!("{product} Tunnel")).cyan().bold(),
-		style(format!("v{version}")).dim(),
-	);
-	println!();
-	output::print_banner_line("Tunnel", tunnel_name);
-	if show_editor_link {
-		println!(
-			"  {}  {}  {}",
-			arrow,
-			style("Open:").bold(),
-			style(&addr).cyan(),
-		);
-	}
-	output::print_banner_footer();
 }
 
 pub async fn download_cli_into_cache(

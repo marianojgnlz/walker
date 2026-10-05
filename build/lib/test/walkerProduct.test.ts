@@ -94,6 +94,85 @@ suite('Walker packaged product composition', () => {
 		assert.deepStrictEqual(remoteProduct.agentSdks, { test: { version: '4.5.6' } });
 	});
 
+	test('product metadata and entrypoints do not expose account tunnel infrastructure', () => {
+		const rootProduct = readRootProduct();
+		assert.strictEqual(rootProduct.applicationName, 'walker');
+		assert.ok(!('cliApplicationName' in rootProduct));
+		assert.ok(!('tunnelApplicationName' in rootProduct));
+		assert.ok(!('win32TunnelMutex' in rootProduct));
+		assert.ok(!('win32TunnelServiceMutex' in rootProduct));
+
+		const entrypoints = [
+			'src/vs/workbench/workbench.desktop.main.ts',
+		];
+
+		for (const entrypoint of entrypoints) {
+			const source = readFileSync(resolve(import.meta.dirname, '../../../', entrypoint), 'utf8');
+			assert.ok(!source.includes('remoteTunnel'), `${entrypoint} wires account tunnel services`);
+			assert.ok(!source.includes('tunnelAgentHost'), `${entrypoint} wires the account tunnel agent host`);
+		}
+
+		const remoteTunnelEntrypoints = [
+			'src/vs/sessions/sessions.desktop.main.ts',
+			'src/vs/sessions/sessions.web.main.ts',
+			'src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts',
+		];
+		for (const entrypoint of remoteTunnelEntrypoints) {
+			const source = readFileSync(resolve(import.meta.dirname, '../../../', entrypoint), 'utf8');
+			assert.ok(!source.includes('remoteTunnel'), `${entrypoint} wires RemoteTunnel services or IPC`);
+			if (entrypoint.endsWith('sharedProcessMain.ts')) {
+				assert.ok(source.includes('ISharedTunnelsService'), 'shared process retains generic tunnel forwarding');
+				assert.ok(source.includes('ISharedProcessTunnelService'), 'shared process retains its generic tunnel channel');
+			}
+			if (entrypoint.endsWith('sessions.desktop.main.ts')) {
+				assert.ok(source.includes('sshAgentHost.contribution.js'), 'Sessions retains key-based SSH Agent Host connections');
+			}
+		}
+
+		const cliEntrypoints = [
+			'src/vs/code/node/cli.ts',
+			'src/vs/platform/environment/common/argv.ts',
+			'src/vs/platform/environment/node/argv.ts',
+		];
+		for (const entrypoint of cliEntrypoints) {
+			const source = readFileSync(resolve(import.meta.dirname, '../../../', entrypoint), 'utf8');
+			assert.ok(!source.includes("'tunnel'"), `${entrypoint} exposes the account tunnel command`);
+		}
+
+		const packagingFiles = [
+			'build/azure-pipelines/darwin/steps/product-build-darwin-compile.yml',
+			'build/azure-pipelines/linux/steps/product-build-linux-compile.yml',
+			'build/azure-pipelines/win32/steps/product-build-win32-compile.yml',
+			'build/gulpfile.vscode.win32.ts',
+			'build/linux/dependencies-generator.ts',
+			'build/win32/code.iss',
+		];
+		for (const packagingFile of packagingFiles) {
+			const source = readFileSync(resolve(import.meta.dirname, '../../../', packagingFile), 'utf8');
+			assert.ok(!source.includes('tunnelApplicationName'), `${packagingFile} packages a tunnel CLI`);
+			assert.ok(!source.includes('TunnelApplicationName'), `${packagingFile} packages a tunnel CLI`);
+		}
+
+		const genericCliEntrypoints = [
+			['src/vs/code/node/cli.ts', 'product.applicationName}-cli'],
+			['build/azure-pipelines/darwin/steps/product-build-darwin-compile.yml', '${APP_NAME}-cli'],
+			['build/azure-pipelines/linux/steps/product-build-linux-compile.yml', '${APP_NAME}-cli'],
+			['build/azure-pipelines/win32/steps/product-build-win32-compile.yml', '$AppName-cli'],
+			['build/gulpfile.vscode.win32.ts', 'CliApplicationName: `${product.applicationName}-cli`'],
+			['build/linux/dependencies-generator.ts', '`${product.applicationName}-cli`'],
+			['build/win32/code.iss', 'CliApplicationName'],
+		] as const;
+		for (const [entrypoint, marker] of genericCliEntrypoints) {
+			const source = readFileSync(resolve(import.meta.dirname, '../../../', entrypoint), 'utf8');
+			assert.ok(source.includes(marker), `${entrypoint} does not preserve the generic CLI name`);
+		}
+
+		for (const discoveryFile of ['build/npm/dirs.ts', 'build/gulpfile.extensions.ts', 'build/lib/extensions.ts']) {
+			const source = readFileSync(resolve(import.meta.dirname, '../../../', discoveryFile), 'utf8');
+			assert.ok(!source.includes('extensions/tunnel-forwarding'), `${discoveryFile} discovers cloud forwarding`);
+		}
+	});
+
 	test('desktop entrypoints do not import the inert gallery account contribution', () => {
 		const entrypoints = [
 			'src/vs/workbench/workbench.desktop.main.ts',

@@ -3,15 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 use crate::async_pipe::get_socket_rw_stream;
-use crate::commands::agent_host::{ensure_supervisor_running, ActiveAgentHost};
-use crate::constants::{AGENT_HOST_PORT, CONTROL_PORT, PRODUCT_NAME_LONG};
+use crate::commands::agent_host::ActiveAgentHost;
+use crate::constants::PRODUCT_NAME_LONG;
 use crate::log;
 use crate::msgpack_rpc::{new_msgpack_rpc, start_msgpack_rpc, MsgPackCodec, MsgPackSerializer};
-use crate::options::Quality;
 use crate::rpc::{MaybeSync, RpcBuilder, RpcCaller, RpcDispatcher};
 use crate::self_update::SelfUpdate;
 use crate::state::LauncherPaths;
-use crate::tunnels::protocol::{HttpRequestParams, PortPrivacy, METHOD_CHALLENGE_ISSUE};
+use crate::tunnels::protocol::{HttpRequestParams, METHOD_CHALLENGE_ISSUE};
 use crate::tunnels::socket_signal::CloseReason;
 use crate::update_service::{Platform, Release, TargetKind, UpdateService};
 use crate::util::command::new_tokio_command;
@@ -43,23 +42,19 @@ use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader, DuplexStream};
 use tokio::sync::{mpsc, Mutex};
 
-use super::agent_host::serve_agent_host_tunnel_connection;
 use super::challenge::{create_challenge, sign_challenge, verify_challenge};
 use super::code_server::{
 	download_cli_into_cache, AnyCodeServer, CodeServerArgs, ServerBuilder, ServerParamsRaw,
 	SocketCodeServer,
 };
-use super::dev_tunnels::ActiveTunnel;
-use super::machine_status;
 use super::paths::prune_stopped_servers;
-use super::port_forwarder::{PortForwarding, PortForwardingProcessor};
 use super::protocol::{
 	AcquireCliParams, CallServerHttpParams, CallServerHttpResult, ChallengeIssueParams,
-	ChallengeIssueResponse, ChallengeVerifyParams, ClientRequestMethod, EmptyObject, ForwardParams,
-	ForwardResult, FsReadDirEntry, FsReadDirResponse, FsRenameRequest, FsSinglePathRequest,
-	FsStatResponse, GetEnvResponse, GetHostnameResponse, HttpBodyParams, HttpHeadersParams,
-	NetConnectRequest, ServeParams, ServerLog, ServerMessageParams, SpawnParams, SpawnResult,
-	SysKillRequest, SysKillResponse, ToClientRequest, UnforwardParams, UpdateParams, UpdateResult,
+	ChallengeIssueResponse, ChallengeVerifyParams, ClientRequestMethod, EmptyObject,
+	FsReadDirEntry, FsReadDirResponse, FsRenameRequest, FsSinglePathRequest, FsStatResponse,
+	GetEnvResponse, GetHostnameResponse, HttpBodyParams, HttpHeadersParams, NetConnectRequest,
+	ServeParams, ServerLog, ServerMessageParams, SpawnParams, SpawnResult, SysKillRequest,
+	SysKillResponse, ToClientRequest, UpdateParams, UpdateResult,
 	VersionResponse, METHOD_CHALLENGE_VERIFY,
 };
 use super::server_bridge::ServerBridge;
@@ -73,22 +68,14 @@ type HttpRequestsMap = Arc<std::sync::Mutex<HashMap<u32, DelegatedHttpRequest>>>
 type CodeServerCell = Arc<Mutex<Option<SocketCodeServer>>>;
 
 /// Shared, cloneable future that resolves once the agent host supervisor
-/// is up. We kick it off from `serve()` so the tunnel can start accepting
-/// connections immediately and only block on the supervisor in places
-/// that actually need it (currently `handle_serve` and the agent-host
-/// port forwarder).
+/// is up. The local command-shell server only awaits it when a spawned
+/// server needs the Agent Host bridge.
 pub type SharedActiveAgentHost =
 	Shared<BoxFuture<'static, Result<Arc<ActiveAgentHost>, Arc<AnyError>>>>;
 
 /// Wraps an already-known [`ActiveAgentHost`] into a [`SharedActiveAgentHost`]
-/// that resolves immediately, for callers that already *are* (or already
-/// know) the running supervisor and must not drive
-/// `ensure_supervisor_running`'s registry lookup/spawn path -- e.g. `code
-/// agent host --tunnel` routing its own tunneled `/agent-host` port back to
-/// itself (see [`super::agent_host::AgentHostSidecar::active_agent_host`]).
-/// Unlike the lazy future built in [`serve`] (which only resolves once a
-/// consumer actually awaits it), this is eagerly ready, since the caller
-/// already has every field it needs.
+/// that resolves immediately, so callers with an existing supervisor can
+/// hand it to the server bridge without another registry lookup.
 pub fn ready_active_agent_host(active: ActiveAgentHost) -> SharedActiveAgentHost {
 	futures::future::ready(Ok(Arc::new(active)))
 		.boxed()
@@ -112,18 +99,14 @@ struct HandlerContext {
 	server_bridges: ServerMultiplexer,
 	// the cli arguments used to start the code server
 	code_server_args: CodeServerArgs,
-	/// port forwarding functionality
-	port_forwarding: Option<PortForwarding>,
 	/// install platform for the VS Code server
 	platform: Platform,
 	/// http client to make download/update requests
 	http: Arc<FallbackSimpleHttp>,
 	/// requests being served by the client
 	http_requests: HttpRequestsMap,
-	/// Shared handle to the background `ensure_supervisor_running` task,
-	/// awaited in `handle_serve` to mix the bridge info into the spawned
-	/// server's args. `None` for callers (e.g. `command-shell`) that
-	/// already applied the bridge eagerly.
+	/// Shared handle to the local Agent Host supervisor, awaited only when
+	/// the server bridge is requested.
 	active_agent_host: Option<SharedActiveAgentHost>,
 }
 
@@ -160,227 +143,6 @@ enum ServerSignal {
 	Respawn,
 }
 
-pub enum Next {
-	/// Whether the server should be respawned in a new binary (see ServerSignal.Respawn).
-	Respawn,
-	/// Whether the tunnel should be restarted
-	Restart,
-	/// Whether the process should exit
-	Exit,
-}
-
-pub struct ServerTermination {
-	pub next: Next,
-	pub tunnel: ActiveTunnel,
-}
-
-async fn preload_extensions(
-	log: &log::Logger,
-	platform: Platform,
-	mut args: CodeServerArgs,
-	launcher_paths: LauncherPaths,
-) -> Result<(), AnyError> {
-	args.start_server = false;
-
-	let params_raw = ServerParamsRaw {
-		commit_id: None,
-		quality: Quality::Stable,
-		code_server_args: args.clone(),
-		headless: true,
-		platform,
-	};
-
-	// cannot use delegated HTTP here since there's no remote connection yet
-	let http = Arc::new(ReqwestSimpleHttp::new());
-	let resolved = params_raw.resolve(log, http.clone()).await?;
-	let sb = ServerBuilder::new(log, &resolved, &launcher_paths, http.clone());
-
-	sb.setup().await?;
-	sb.install_extensions().await
-}
-
-/// Options controlling how a tunnel serves the agent host, all supplied by the
-/// editor that started the tunnel.
-#[derive(Clone, Debug, Default)]
-pub struct AgentHostServeOptions {
-	/// Overrides the user data directory whose agent-host endpoint registry the
-	/// selection gateway reads. `None` uses the platform default.
-	pub user_data_dir: Option<String>,
-	/// Serves only the agent-host port, without the control port.
-	pub agent_host_only: bool,
-	/// Pins the selection gateway to the live editor agent host.
-	pub delegate_to_editor: bool,
-}
-
-// Runs the launcher server. Exits on a ctrl+c or when requested by a user.
-// Note that client connections may not be closed when this returns; use
-// `close_all_clients()` on the ServerTermination to make this happen.
-pub async fn serve(
-	log: &log::Logger,
-	mut tunnel: ActiveTunnel,
-	launcher_paths: &LauncherPaths,
-	code_server_args: &CodeServerArgs,
-	platform: Platform,
-	agent_host_options: AgentHostServeOptions,
-	mut shutdown_rx: Barrier<ShutdownSignal>,
-) -> Result<ServerTermination, AnyError> {
-	let AgentHostServeOptions {
-		user_data_dir,
-		agent_host_only,
-		delegate_to_editor,
-	} = agent_host_options;
-	let mut port = if agent_host_only {
-		None
-	} else {
-		Some(tunnel.add_port_direct(CONTROL_PORT).await?)
-	};
-	let mut agent_host_port = tunnel.add_port_direct(AGENT_HOST_PORT).await?;
-	let mut forwarding = PortForwardingProcessor::new();
-	let (tx, mut rx) = mpsc::channel::<ServerSignal>(4);
-	let (exit_barrier, signal_exit) = new_barrier();
-
-	// The supervisor is the only process that binds the user-facing TCP
-	// listener and publishes the canonical registry entry; we never spawn
-	// an in-process sidecar here. This future is genuinely lazy: nothing
-	// drives it until a consumer that actually needs the legacy (v5)
-	// single-supervisor endpoint awaits a clone of it — currently
-	// `handle_serve`'s `agentHostProxy` bridge, and the root/default route
-	// of the `agent-host` port forwarder below. A tunnel that nobody
-	// connects to must not spawn a standalone supervisor by itself; the
-	// protocol-v6 selection route (also below) consults the registry
-	// directly instead and never touches this future.
-	let active_agent_host: SharedActiveAgentHost = {
-		let launcher_paths = launcher_paths.clone();
-		let log = log.clone();
-		async move {
-			ensure_supervisor_running(&launcher_paths, &log)
-				.await
-				.map(Arc::new)
-				.map_err(Arc::new)
-		}
-		.boxed()
-		.shared()
-	};
-	// Resolve once and pass the result to every agent-host connection so the
-	// selection gateway consults the same registry as the editor.
-	let agent_host_user_data_path =
-		super::user_data_path::resolve_user_data_path(user_data_dir.as_deref());
-
-	let code_server_args = code_server_args.clone();
-
-	if !code_server_args.install_extensions.is_empty() {
-		info!(
-			log,
-			"Preloading extensions using stable server: {:?}", code_server_args.install_extensions
-		);
-		let log = log.clone();
-		let code_server_args = code_server_args.clone();
-		let launcher_paths = launcher_paths.clone();
-		// This is run async to the primary tunnel setup to be speedy.
-		tokio::spawn(async move {
-			if let Err(e) =
-				preload_extensions(&log, platform, code_server_args, launcher_paths).await
-			{
-				warning!(log, "Failed to preload extensions: {:?}", e);
-			} else {
-				info!(log, "Extension install complete");
-			}
-		});
-	}
-
-	machine_status::emit_connected(&tunnel.name, Some(&tunnel.id), false, !agent_host_only);
-
-	loop {
-		tokio::select! {
-			Ok(reason) = shutdown_rx.wait() => {
-				info!(log, "Shutting down: {}", reason);
-				drop(signal_exit);
-				return Ok(ServerTermination {
-					next: match reason {
-						ShutdownSignal::RpcRestartRequested => Next::Restart,
-						_ => Next::Exit,
-					},
-					tunnel,
-				});
-			},
-			c = rx.recv() => {
-				if let Some(ServerSignal::Respawn) = c {
-					drop(signal_exit);
-					return Ok(ServerTermination {
-						next: Next::Respawn,
-						tunnel,
-					});
-				}
-			},
-			Some(w) = forwarding.recv() => {
-				forwarding.process(w, &mut tunnel).await;
-			},
-			Some(socket) = agent_host_port.recv() => {
-				let log = log.clone();
-				let active_agent_host = active_agent_host.clone();
-				let launcher_paths = launcher_paths.clone();
-				let user_data_path = agent_host_user_data_path.clone();
-				tokio::spawn(async move {
-					serve_agent_host_tunnel_connection(
-						log,
-						socket.into_rw(),
-						active_agent_host,
-						launcher_paths,
-						user_data_path,
-						delegate_to_editor,
-					)
-					.await;
-				});
-			},
-			// `select!` builds every branch's future up front and only the
-			// polling is gated by the `if` guard, so this must not touch
-			// `port` eagerly: in agent-host-only mode there is no control
-			// port and doing so would panic. Resolving to `Pending` forever
-			// keeps the branch inert without depending on the guard.
-			l = async {
-				match port.as_mut() {
-					Some(p) => p.recv().await,
-					None => std::future::pending().await,
-				}
-			} => {
-				let socket = match l {
-					Some(p) => p,
-					None => {
-						warning!(log, "ssh tunnel disposed, tearing down");
-						return Ok(ServerTermination {
-							next: Next::Restart,
-							tunnel,
-						});
-					}
-				};
-
-				let own_log = log.prefixed(&log::new_rpc_prefix());
-				let own_tx = tx.clone();
-				let own_paths = launcher_paths.clone();
-				let own_exit = exit_barrier.clone();
-				let own_code_server_args = code_server_args.clone();
-				let own_forwarding = forwarding.handle();
-				let own_active_agent_host = active_agent_host.clone();
-
-				tokio::spawn(async move {
-					debug!(own_log, "Serving new connection");
-
-					let (writehalf, readhalf) = socket.into_split();
-					let _stats = process_socket(readhalf, writehalf, own_tx, Some(own_forwarding), ServeStreamParams {
-						log: own_log,
-						launcher_paths: own_paths,
-						code_server_args: own_code_server_args,
-						platform,
-						exit_barrier: own_exit,
-						requires_auth: AuthRequired::None,
-						active_agent_host: Some(own_active_agent_host),
-					}).await;
-				});
-			}
-		}
-	}
-}
-
 #[derive(Clone)]
 pub enum AuthRequired {
 	None,
@@ -409,7 +171,7 @@ pub async fn serve_stream(
 	let (server_rx, server_tx) = mpsc::channel(1);
 	drop(server_tx);
 
-	process_socket(readhalf, writehalf, server_rx, None, params).await
+	process_socket(readhalf, writehalf, server_rx, params).await
 }
 
 pub struct SocketStats {
@@ -424,7 +186,6 @@ fn make_socket_rpc(
 	http_delegated: DelegatedSimpleHttp,
 	launcher_paths: LauncherPaths,
 	code_server_args: CodeServerArgs,
-	port_forwarding: Option<PortForwarding>,
 	requires_auth: AuthRequired,
 	platform: Platform,
 	http_requests: HttpRequestsMap,
@@ -444,7 +205,6 @@ fn make_socket_rpc(
 		code_server_args,
 		code_server: Arc::new(Mutex::new(None)),
 		server_bridges,
-		port_forwarding,
 		platform,
 		http: Arc::new(FallbackSimpleHttp::new(
 			ReqwestSimpleHttp::new(),
@@ -546,14 +306,6 @@ fn make_socket_rpc(
 		let code_server = c.code_server.lock().await.clone();
 		handle_call_server_http(code_server, p).await
 	});
-	rpc.register_async("forward", |p: ForwardParams, c| async move {
-		ensure_auth(&c.auth_state)?;
-		handle_forward(&c.log, &c.port_forwarding, p).await
-	});
-	rpc.register_async("unforward", |p: UnforwardParams, c| async move {
-		ensure_auth(&c.auth_state)?;
-		handle_unforward(&c.log, &c.port_forwarding, p).await
-	});
 	rpc.register_async("acquire_cli", |p: AcquireCliParams, c| async move {
 		ensure_auth(&c.auth_state)?;
 		handle_acquire_cli(&c.launcher_paths, &c.http, &c.log, p).await
@@ -629,7 +381,6 @@ async fn process_socket(
 	readhalf: impl AsyncRead + Send + Unpin + 'static,
 	mut writehalf: impl AsyncWrite + Unpin,
 	server_tx: mpsc::Sender<ServerSignal>,
-	port_forwarding: Option<PortForwarding>,
 	params: ServeStreamParams,
 ) -> SocketStats {
 	let ServeStreamParams {
@@ -654,7 +405,6 @@ async fn process_socket(
 		http_delegated,
 		launcher_paths,
 		code_server_args,
-		port_forwarding,
 		requires_auth,
 		platform,
 		http_requests.clone(),
@@ -843,11 +593,9 @@ async fn handle_serve(
 	csa.connection_token = params.connection_token.or(csa.connection_token);
 	csa.install_extensions.extend(params.extensions);
 
-	// Mix in the agent-host bridge info now that we actually need to spawn
-	// the VS Code server. `active_agent_host` is genuinely lazy (see the
-	// comment in `serve()`), so awaiting it here is what first drives the
-	// supervisor to start. If it failed we still serve — the renderer
-	// just won't see `agentHostProxy`.
+	// Mix in the agent-host bridge info when a local command-shell server
+	// needs to spawn. If supervisor startup failed, the renderer still works
+	// without the `agentHostProxy` bridge.
 	if let Some(ah_fut) = c.active_agent_host.clone() {
 		match ah_fut.await {
 			Ok(a) => a.apply_to_bridge(&mut csa),
@@ -1218,40 +966,6 @@ fn handle_challenge_verify(
 			}
 		},
 	}
-}
-
-async fn handle_forward(
-	log: &log::Logger,
-	port_forwarding: &Option<PortForwarding>,
-	params: ForwardParams,
-) -> Result<ForwardResult, AnyError> {
-	let port_forwarding = port_forwarding
-		.as_ref()
-		.ok_or(CodeError::PortForwardingNotAvailable)?;
-	info!(
-		log,
-		"Forwarding port {} (public={})", params.port, params.public
-	);
-	let privacy = match params.public {
-		true => PortPrivacy::Public,
-		false => PortPrivacy::Private,
-	};
-
-	let uri = port_forwarding.forward(params.port, privacy).await?;
-	Ok(ForwardResult { uri })
-}
-
-async fn handle_unforward(
-	log: &log::Logger,
-	port_forwarding: &Option<PortForwarding>,
-	params: UnforwardParams,
-) -> Result<EmptyObject, AnyError> {
-	let port_forwarding = port_forwarding
-		.as_ref()
-		.ok_or(CodeError::PortForwardingNotAvailable)?;
-	info!(log, "Unforwarding port {}", params.port);
-	port_forwarding.unforward(params.port).await?;
-	Ok(EmptyObject {})
 }
 
 async fn handle_call_server_http(

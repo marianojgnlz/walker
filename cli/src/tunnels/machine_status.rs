@@ -10,12 +10,10 @@ use std::sync::{
 
 use serde::{Deserialize, Serialize};
 
-use super::code_server::get_tunnel_web_url;
-
 const STATUS_PREFIX: &str = "__VSCODE_CLI_STATUS__";
 
-/// A machine-readable tunnel lifecycle event that can be relayed to attached
-/// singleton clients without parsing the human-readable log stream.
+/// A machine-readable CLI status event that can be relayed to attached
+/// clients without parsing the human-readable log stream.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(
 	tag = "type",
@@ -23,16 +21,6 @@ const STATUS_PREFIX: &str = "__VSCODE_CLI_STATUS__";
 	rename_all_fields = "camelCase"
 )]
 pub(crate) enum MachineStatus {
-	Connected {
-		tunnel_name: String,
-		#[serde(skip_serializing_if = "Option::is_none")]
-		tunnel_id: Option<String>,
-		is_attached: bool,
-		#[serde(skip_serializing_if = "Option::is_none")]
-		link: Option<String>,
-		#[serde(skip_serializing_if = "Option::is_none")]
-		domain: Option<String>,
-	},
 	TokenError {
 		message: String,
 	},
@@ -96,33 +84,6 @@ fn emit_to_stdout(status: &MachineStatus) {
 	println!("{}", status_line(status));
 }
 
-pub fn emit_connected(
-	tunnel_name: &str,
-	tunnel_id: Option<&str>,
-	is_attached: bool,
-	has_editor_link: bool,
-) {
-	let (link, domain) = if has_editor_link {
-		match get_tunnel_web_url(tunnel_name) {
-			Some(link) => (
-				Some(link.to_string()),
-				link.host_str().map(ToString::to_string),
-			),
-			None => (None, None),
-		}
-	} else {
-		(None, None)
-	};
-
-	emit(MachineStatus::Connected {
-		tunnel_name: tunnel_name.to_string(),
-		tunnel_id: tunnel_id.map(ToString::to_string),
-		is_attached,
-		link,
-		domain,
-	});
-}
-
 pub fn emit_token_error(message: String) {
 	emit(MachineStatus::TokenError { message });
 }
@@ -151,34 +112,6 @@ mod tests {
 			*test_stdout_sink().write().unwrap() = None;
 			STDOUT_ENABLED.store(false, Ordering::Relaxed);
 		}
-	}
-
-	#[test]
-	fn serializes_connected_with_link_for_new_tunnel() {
-		assert_eq!(
-			status_line(&MachineStatus::Connected {
-				tunnel_name: "desktop-oss".to_string(),
-				tunnel_id: Some("tunnel-id".to_string()),
-				is_attached: false,
-				link: Some("https://insiders.vscode.dev/tunnel/desktop-oss/c:/some/dir".to_string()),
-				domain: Some("insiders.vscode.dev".to_string()),
-			}),
-			"__VSCODE_CLI_STATUS__{\"type\":\"connected\",\"tunnelName\":\"desktop-oss\",\"tunnelId\":\"tunnel-id\",\"isAttached\":false,\"link\":\"https://insiders.vscode.dev/tunnel/desktop-oss/c:/some/dir\",\"domain\":\"insiders.vscode.dev\"}"
-		);
-	}
-
-	#[test]
-	fn serializes_connected_without_link_for_attached_tunnel() {
-		assert_eq!(
-			status_line(&MachineStatus::Connected {
-				tunnel_name: "desktop-oss".to_string(),
-				tunnel_id: None,
-				is_attached: true,
-				link: None,
-				domain: None,
-			}),
-			"__VSCODE_CLI_STATUS__{\"type\":\"connected\",\"tunnelName\":\"desktop-oss\",\"isAttached\":true}"
-		);
 	}
 
 	#[test]
