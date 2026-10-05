@@ -16,6 +16,7 @@ import { TextEditorCursorStyle } from '../../../editor/common/config/editorOptio
 import { score, targetsNotebooks } from '../../../editor/common/languageSelector.js';
 import * as languageConfiguration from '../../../editor/common/languages/languageConfiguration.js';
 import { OverviewRulerLane } from '../../../editor/common/model.js';
+import { localize } from '../../../nls.js';
 import { ExtensionError, ExtensionIdentifierSet, IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
 import * as files from '../../../platform/files/common/files.js';
 import { ServicesAccessor } from '../../../platform/instantiation/common/instantiation.js';
@@ -142,6 +143,49 @@ export function getTerminalInternalOptions(extension: IExtensionDescription, opt
 		return { isRemoteResolverTerminal: true };
 	}
 	return undefined;
+}
+
+function createUnsupportedAuthenticationError(): Error & { code: string } {
+	const error = new Error(localize('authenticationUnsupported', "Authentication is not supported in Walker.")) as Error & { code: string };
+	error.name = 'AuthenticationUnsupported';
+	error.code = 'WALKER_AUTHENTICATION_UNSUPPORTED';
+	return error;
+}
+
+export function createAuthenticationApiFacade(extension: IExtensionDescription): typeof vscode.authentication {
+	return {
+		getSession: (async (_providerId: string, _scopesOrChallenge: readonly string[] | vscode.AuthenticationWwwAuthenticateRequest, options?: vscode.AuthenticationGetSessionOptions): Promise<vscode.AuthenticationSession | undefined> => {
+			if (
+				(typeof options?.forceNewSession === 'object' && options.forceNewSession.learnMore) ||
+				(typeof options?.createIfNone === 'object' && options.createIfNone.learnMore)
+			) {
+				checkProposedApiEnabled(extension, 'authLearnMore');
+			}
+			if (options?.authorizationServer) {
+				checkProposedApiEnabled(extension, 'authIssuers');
+			}
+			if (options?.createIfNone || options?.forceNewSession) {
+				throw createUnsupportedAuthenticationError();
+			}
+			return undefined;
+		}) as typeof vscode.authentication.getSession,
+		async getAccounts(_providerId) {
+			return [];
+		},
+		async hasSession(_providerId, _scopes) {
+			checkProposedApiEnabled(extension, 'authSession');
+			return false;
+		},
+		get onDidChangeSessions() {
+			return Event.None;
+		},
+		registerAuthenticationProvider(_id, _label, _provider, options) {
+			if (options?.supportedAuthorizationServers) {
+				checkProposedApiEnabled(extension, 'authIssuers');
+			}
+			throw createUnsupportedAuthenticationError();
+		}
+	};
 }
 
 /**
@@ -335,39 +379,7 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 			};
 		})();
 
-		const authentication: typeof vscode.authentication = {
-			getSession(providerId: string, scopesOrChallenge: readonly string[] | vscode.AuthenticationWwwAuthenticateRequest, options?: vscode.AuthenticationGetSessionOptions) {
-				if (
-					(typeof options?.forceNewSession === 'object' && options.forceNewSession.learnMore) ||
-					(typeof options?.createIfNone === 'object' && options.createIfNone.learnMore)
-				) {
-					checkProposedApiEnabled(extension, 'authLearnMore');
-				}
-				if (options?.authorizationServer) {
-					checkProposedApiEnabled(extension, 'authIssuers');
-				}
-				// eslint-disable-next-line local/code-no-any-casts
-				return extHostAuthentication.getSession(extension, providerId, scopesOrChallenge, options as any);
-			},
-			getAccounts(providerId: string) {
-				return extHostAuthentication.getAccounts(providerId);
-			},
-			// TODO: remove this after GHPR and Codespaces move off of it
-			async hasSession(providerId: string, scopes: readonly string[]) {
-				checkProposedApiEnabled(extension, 'authSession');
-				// eslint-disable-next-line local/code-no-any-casts
-				return !!(await extHostAuthentication.getSession(extension, providerId, scopes, { silent: true } as any));
-			},
-			get onDidChangeSessions(): vscode.Event<vscode.AuthenticationSessionsChangeEvent> {
-				return _asExtensionEvent(extHostAuthentication.getExtensionScopedSessionsEvent(extension.identifier.value));
-			},
-			registerAuthenticationProvider(id: string, label: string, provider: vscode.AuthenticationProvider, options?: vscode.AuthenticationProviderOptions): vscode.Disposable {
-				if (options?.supportedAuthorizationServers) {
-					checkProposedApiEnabled(extension, 'authIssuers');
-				}
-				return extHostAuthentication.registerAuthenticationProvider(id, label, provider, options);
-			}
-		};
+		const authentication = createAuthenticationApiFacade(extension);
 
 		// namespace: commands
 		const commands: typeof vscode.commands = {

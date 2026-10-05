@@ -14,6 +14,7 @@ import { ICommandService } from '../../../../../platform/commands/common/command
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { TestConfigurationService } from '../../../../../platform/configuration/test/common/testConfigurationService.js';
 import { IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
+import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
 import { MockContextKeyService } from '../../../../../platform/keybinding/test/common/mockKeybindingService.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { ILogService, NullLogService } from '../../../../../platform/log/common/log.js';
@@ -23,6 +24,7 @@ import { IProductService } from '../../../../../platform/product/common/productS
 import { IRequestService } from '../../../../../platform/request/common/request.js';
 import { InMemoryStorageService, IStorageService } from '../../../../../platform/storage/common/storage.js';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
+import { IUpdateService } from '../../../../../platform/update/common/update.js';
 import { NullTelemetryService } from '../../../../../platform/telemetry/common/telemetryUtils.js';
 import { AuthenticationSession, AuthenticationSessionsChangeEvent, IAuthenticationExtensionsService, IAuthenticationService } from '../../../authentication/common/authentication.js';
 import { IWorkbenchEnvironmentService } from '../../../environment/common/environmentService.js';
@@ -31,6 +33,7 @@ import { IHostService } from '../../../host/browser/host.js';
 import { DefaultAccountProvider, DefaultAccountService } from '../../browser/defaultAccount.js';
 import { TestProductService } from '../../../../test/common/workbenchTestServices.js';
 import { AccountPolicyGateState, AccountPolicyService } from '../../../policies/common/accountPolicyService.js';
+import { DefaultAccountUpdateContribution } from '../../../../contrib/update/browser/update.js';
 
 suite('DefaultAccountProvider', () => {
 
@@ -42,6 +45,47 @@ suite('DefaultAccountProvider', () => {
 		account: { id: accountId, label: 'octocat' },
 		scopes: ['user:email'],
 	}];
+
+	test('update contribution has no default-account dependency', () => {
+		assert.strictEqual(DefaultAccountUpdateContribution.length, 0);
+		assert.strictEqual(Reflect.get(DefaultAccountUpdateContribution.prototype, 'doRefresh'), undefined);
+	});
+
+	test('update contribution leaves legacy account state and update service untouched', async () => {
+		const accountServiceProperties: string[] = [];
+		const storageOperations: string[] = [];
+		const internalOrganizations: (string | undefined)[] = [];
+		const instantiationService = disposables.add(new TestInstantiationService());
+		instantiationService.stub(IDefaultAccountService, new Proxy({}, {
+			get: (_target, property) => {
+				accountServiceProperties.push(String(property));
+				return property === 'onDidChangeDefaultAccount'
+					? Event.None
+					: () => Promise.resolve(null);
+			}
+		}) as IDefaultAccountService);
+		instantiationService.stub(IStorageService, new Proxy({}, {
+			get: (_target, property) => (...args: unknown[]) => {
+				storageOperations.push(`${String(property)}:${String(args[0])}`);
+				return property === 'get' ? 'previous-account-org' : undefined;
+			}
+		}) as IStorageService);
+		instantiationService.stub(IUpdateService, {
+			setInternalOrg: (organization: string | undefined) => {
+				internalOrganizations.push(organization);
+				return Promise.resolve();
+			}
+		} as unknown as IUpdateService);
+		disposables.add(instantiationService.createInstance(DefaultAccountUpdateContribution));
+
+		await timeout(250);
+
+		assert.deepStrictEqual({ accountServiceProperties, storageOperations, internalOrganizations }, {
+			accountServiceProperties: [],
+			storageOperations: [],
+			internalOrganizations: [],
+		});
+	});
 
 	test('cached settings perform one startup compatibility fetch', async () => {
 		const requestService = new TestRequestService(async () => jsonResponse({

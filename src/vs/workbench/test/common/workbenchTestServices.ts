@@ -325,9 +325,6 @@ export class TestActivityService implements IActivityService {
 	showViewActivity(viewId: string, badge: IActivity): IDisposable {
 		return this;
 	}
-	showAccountsActivity(activity: IActivity): IDisposable {
-		return this;
-	}
 	showGlobalActivity(activity: IActivity): IDisposable {
 		return this;
 	}

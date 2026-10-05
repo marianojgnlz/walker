@@ -4,21 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { IDefaultAccount } from '../../../../../base/common/defaultAccount.js';
-import { Emitter, Event } from '../../../../../base/common/event.js';
+import { Event } from '../../../../../base/common/event.js';
 import { IDisposable, toDisposable } from '../../../../../base/common/lifecycle.js';
 import { observableValue } from '../../../../../base/common/observable.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { mock } from '../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { ILinkPresentationProvider, ILinkPresentationProviderRegistration, ILinkPresentationService } from '../../../../../platform/dataChannel/common/dataChannel.js';
-import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
 import { IGitHubService } from '../../../../../platform/github/common/githubService.js';
 import { GitHubIssue, GitHubRepository } from '../../../../../platform/github/common/githubQueryService.js';
 import { FragmentState, PullRequestCore, PullRequestSnapshot } from '../../../../../platform/github/common/githubPullRequestService.js';
 import { GitHubRequestError } from '../../../../../platform/github/common/githubTransport.js';
 import { NullLogService } from '../../../../../platform/log/common/log.js';
-import { INotificationService, NeverShowAgainScope, NoOpNotification, Severity } from '../../../../../platform/notification/common/notification.js';
 import { GitHubLinkPresentationContribution } from '../../browser/githubLinkPresentation.contribution.js';
 
 suite('GitHub link presentations', () => {
@@ -30,14 +27,7 @@ suite('GitHub link presentations', () => {
 		store.add(new GitHubLinkPresentationContribution(
 			createGitHubService(resources => hydrationBatches.push(resources.map(resource => resource.kind))),
 			linkPresentationService,
-			new class extends mock<IDefaultAccountService>() {
-				override readonly onDidChangeDefaultAccount = Event.None;
-				override resolveGitHubUrl(path: string): string {
-					return `https://github.com/${path}`;
-				}
-			}(),
 			new NullLogService(),
-			new TestNotificationService(),
 		));
 
 		const resources = [
@@ -81,95 +71,39 @@ suite('GitHub link presentations', () => {
 		});
 	});
 
-	test('re-registers providers when the default account changes', () => {
+	test('registers link presentations for the public GitHub host only', () => {
 		const linkPresentationService = new TestLinkPresentationService();
-		const onDidChangeDefaultAccount = store.add(new Emitter<IDefaultAccount | null>());
-		let authority = 'github.com';
 		store.add(new GitHubLinkPresentationContribution(
 			createGitHubService(() => { }),
 			linkPresentationService,
-			new class extends mock<IDefaultAccountService>() {
-				override readonly onDidChangeDefaultAccount = onDidChangeDefaultAccount.event;
-				override resolveGitHubUrl(path: string): string {
-					return `https://${authority}/${path}`;
-				}
-			}(),
 			new NullLogService(),
-			new TestNotificationService(),
 		));
 
-		const before = linkPresentationService.hasProvider(URI.parse('https://github.com/microsoft/vscode/issues/1'));
-		authority = 'github.example.com';
-		onDidChangeDefaultAccount.fire(null);
-
 		assert.deepStrictEqual({
-			before,
-			oldAuthority: linkPresentationService.hasProvider(URI.parse('https://github.com/microsoft/vscode/issues/1')),
-			newAuthority: linkPresentationService.hasProvider(URI.parse('https://github.example.com/microsoft/vscode/issues/1')),
-		}, {
-			before: true,
-			oldAuthority: false,
-			newAuthority: true,
-		});
+			public: linkPresentationService.hasProvider(URI.parse('https://github.com/microsoft/vscode/issues/1')),
+			enterprise: linkPresentationService.hasProvider(URI.parse('https://github.example.com/microsoft/vscode/issues/1')),
+		}, { public: true, enterprise: false });
 	});
 
-	test('prompts once to sign in when authentication is required', async () => {
+	test('renders authentication failure without a sign-in action', async () => {
 		const linkPresentationService = new TestLinkPresentationService();
-		const notificationService = new TestNotificationService();
-		let signInOptions: Parameters<IDefaultAccountService['signIn']>[0];
 		store.add(new GitHubLinkPresentationContribution(
 			createGitHubService(
 				() => { },
 				async () => { throw new GitHubRequestError('GitHub authentication is required', 'authentication'); },
 			),
 			linkPresentationService,
-			new class extends mock<IDefaultAccountService>() {
-				override readonly onDidChangeDefaultAccount = Event.None;
-				override resolveGitHubUrl(path: string): string {
-					return `https://github.com/${path}`;
-				}
-				override async signIn(options?: Parameters<IDefaultAccountService['signIn']>[0]): Promise<IDefaultAccount | null> {
-					signInOptions = options;
-					return null;
-				}
-			}(),
 			new NullLogService(),
-			notificationService,
 		));
 
-		store.add(linkPresentationService.createWatcher(URI.parse('https://github.com/microsoft/vscode/issues/7')));
-		store.add(linkPresentationService.createWatcher(URI.parse('https://github.com/microsoft/vscode/pull/8')));
+		const watcher = store.add(linkPresentationService.createWatcher(URI.parse('https://github.com/microsoft/vscode/issues/7')));
 		await Promise.resolve();
-		await notificationService.prompts[0].choices[0].run();
 
-		assert.deepStrictEqual({
-			prompts: notificationService.prompts.map(prompt => ({
-				severity: prompt.severity,
-				message: prompt.message,
-				labels: prompt.choices.map(choice => choice.label),
-				sticky: prompt.options?.sticky,
-				neverShowAgain: prompt.options?.neverShowAgain,
-			})),
-			signInOptions,
-		}, {
-			prompts: [{
-				severity: Severity.Info,
-				message: 'Sign in to GitHub to load pull request status and other GitHub link details.',
-				labels: ['Sign In'],
-				sticky: true,
-				neverShowAgain: {
-					id: 'github.linkPresentation.authenticationRequired',
-					isSecondary: true,
-					scope: NeverShowAgainScope.PROFILE,
-				},
-			}],
-			signInOptions: { additionalScopes: ['repo'] },
-		});
+		assert.deepStrictEqual(watcher.presentation.get()?.status, { kind: 'error', label: 'Authentication required' });
 	});
 
-	test('prompts to sign in when a pull request subscription reports an authentication error', async () => {
+	test('renders pull-request authentication failures without account prompts', async () => {
 		const linkPresentationService = new TestLinkPresentationService();
-		const notificationService = new TestNotificationService();
 		store.add(new GitHubLinkPresentationContribution(
 			createGitHubService(
 				() => { },
@@ -177,39 +111,15 @@ suite('GitHub link presentations', () => {
 				{ status: 'error', complete: false, error: { message: 'GitHub authentication is required', kind: 'authentication' } },
 			),
 			linkPresentationService,
-			new class extends mock<IDefaultAccountService>() {
-				override readonly onDidChangeDefaultAccount = Event.None;
-				override resolveGitHubUrl(path: string): string {
-					return `https://github.com/${path}`;
-				}
-			}(),
 			new NullLogService(),
-			notificationService,
 		));
 
-		store.add(linkPresentationService.createWatcher(URI.parse('https://github.com/microsoft/vscode/pull/8')));
+		const watcher = store.add(linkPresentationService.createWatcher(URI.parse('https://github.com/microsoft/vscode/pull/8')));
 		await Promise.resolve();
 
-		assert.deepStrictEqual(notificationService.prompts.map(prompt => prompt.message), [
-			'Sign in to GitHub to load pull request status and other GitHub link details.',
-		]);
+		assert.deepStrictEqual(watcher.presentation.get()?.status, { kind: 'error', label: 'Authentication required' });
 	});
 });
-
-class TestNotificationService extends mock<INotificationService>() {
-
-	readonly prompts: {
-		readonly severity: Severity;
-		readonly message: string;
-		readonly choices: Parameters<INotificationService['prompt']>[2];
-		readonly options: Parameters<INotificationService['prompt']>[3];
-	}[] = [];
-
-	override prompt(...[severity, message, choices, options]: Parameters<INotificationService['prompt']>): NoOpNotification {
-		this.prompts.push({ severity, message, choices, options });
-		return new NoOpNotification();
-	}
-}
 
 class TestLinkPresentationService extends mock<ILinkPresentationService>() {
 

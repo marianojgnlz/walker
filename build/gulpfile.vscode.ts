@@ -14,6 +14,7 @@ import { getVersion } from './lib/getVersion.ts';
 import { readISODate, writeISODate } from './lib/date.ts';
 import * as task from './lib/gulp/task.ts';
 import { inlineMeta } from './lib/inlineMeta.ts';
+import { composeWalkerProduct } from './lib/walkerProduct.ts';
 import { computeNLSMetadataHash } from './lib/nlsMetadata.ts';
 import packageJson from '../package.json' with { type: 'json' };
 import product from '../product.json' with { type: 'json' };
@@ -221,7 +222,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 				if (dictationRuntime) {
 					json.dictationRuntime = dictationRuntime;
 				}
-				return json;
+				return composeWalkerProduct(json);
 			}))
 			.pipe(es.through(function (file) {
 				productJsonContents = file.contents.toString();

@@ -4,49 +4,47 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
-import { URI } from '../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { IDefaultAccount } from '../../../../base/common/defaultAccount.js';
-import { AccountsActivityActionViewItem, GlobalCompositeBar } from '../../../browser/parts/globalCompositeBar.js';
-import { AuthenticationSession, AuthenticationSessionAccount } from '../../../services/authentication/common/authentication.js';
+import { GlobalCompositeBar } from '../../../browser/parts/globalCompositeBar.js';
+import * as GlobalCompositeBarModule from '../../../browser/parts/globalCompositeBar.js';
 import { ActionBar } from '../../../../base/browser/ui/actionbar/actionbar.js';
 import { Action } from '../../../../base/common/actions.js';
-import { Emitter } from '../../../../base/common/event.js';
-import { ACCOUNTS_ACTIVITY_ID, GLOBAL_ACTIVITY_ID } from '../../../common/activity.js';
+import { GLOBAL_ACTIVITY_ID } from '../../../common/activity.js';
+import { ActivityService } from '../../../services/activity/browser/activityService.js';
+import * as ManageAccountPreferencesForExtensionActionModule from '../../../contrib/authentication/browser/actions/manageAccountPreferencesForExtensionAction.js';
+import * as ManageAccountPreferencesForMcpServerActionModule from '../../../contrib/authentication/browser/actions/manageAccountPreferencesForMcpServerAction.js';
+import * as ManageAccountsActionModule from '../../../contrib/authentication/browser/actions/manageAccountsAction.js';
+import * as ManageDynamicAuthenticationProvidersActionModule from '../../../contrib/authentication/browser/actions/manageDynamicAuthenticationProvidersAction.js';
+import * as ManageTrustedExtensionsForAccountActionModule from '../../../contrib/authentication/browser/actions/manageTrustedExtensionsForAccountAction.js';
+import * as ManageTrustedMcpServersForAccountActionModule from '../../../contrib/authentication/browser/actions/manageTrustedMcpServersForAccountAction.js';
+import * as SignOutOfAccountActionModule from '../../../contrib/authentication/browser/actions/signOutOfAccountAction.js';
 
 interface IGlobalCompositeBarTestHarness {
 	globalActivityActionBar: ActionBar;
-	accountAction: Action;
-	accountsVisibilityPreference: boolean;
-	_onDidChange: Emitter<void>;
 	getHeight: typeof GlobalCompositeBar.prototype.getHeight;
-	toggleAccountsActivity(): void;
+	getContextMenuActions: typeof GlobalCompositeBar.prototype.getContextMenuActions;
 }
 
-const toggleAccountsActivity = Reflect.get(GlobalCompositeBar.prototype, 'toggleAccountsActivity') as (this: IGlobalCompositeBarTestHarness) => void;
+const getGlobalContextMenuActions = Reflect.get(GlobalCompositeBar.prototype, 'getContextMenuActions') as (this: IGlobalCompositeBarTestHarness) => ReturnType<typeof GlobalCompositeBar.prototype.getContextMenuActions>;
 
 suite('GlobalCompositeBar', () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
-	function createGlobalBar(accountsVisible: boolean): IGlobalCompositeBarTestHarness {
+	function createGlobalBar(additionalActions = 0): IGlobalCompositeBarTestHarness {
 		const globalActivityActionBar = store.add(new ActionBar(document.createElement('div')));
-		const accountAction = store.add(new Action(ACCOUNTS_ACTIVITY_ID));
-		if (accountsVisible) {
-			globalActivityActionBar.push(accountAction);
+		for (let index = 0; index < additionalActions; index++) {
+			globalActivityActionBar.push(store.add(new Action(`test.activity.${index}`)));
 		}
 		globalActivityActionBar.push(store.add(new Action(GLOBAL_ACTIVITY_ID)));
 		return {
 			globalActivityActionBar,
-			accountAction,
-			accountsVisibilityPreference: accountsVisible,
-			_onDidChange: store.add(new Emitter<void>()),
 			getHeight: GlobalCompositeBar.prototype.getHeight,
-			toggleAccountsActivity,
+			getContextMenuActions: getGlobalContextMenuActions,
 		};
 	}
 
 	test('counts only gaps between rendered actions', () => {
-		const bar = createGlobalBar(true);
+		const bar = createGlobalBar(1);
 		const twoActions = bar.getHeight(36, 8);
 		bar.globalActivityActionBar.pull(0);
 		const oneAction = bar.getHeight(36, 8);
@@ -56,146 +54,48 @@ suite('GlobalCompositeBar', () => {
 		assert.deepStrictEqual({ twoActions, oneAction, empty }, { twoActions: 80, oneAction: 36, empty: 0 });
 	});
 
-	test('reports size changes when Accounts is toggled, without duplicating actions', () => {
-		const bar = createGlobalBar(true);
-		const heights = [bar.getHeight(36, 8)];
-		store.add(bar._onDidChange.event(() => heights.push(bar.getHeight(36, 8))));
+	test('does not expose an Accounts visibility toggle in the global-bar context menu', () => {
+		const bar = createGlobalBar();
 
-		bar.toggleAccountsActivity();
-		bar.accountsVisibilityPreference = false;
-		bar.toggleAccountsActivity();
-		bar.toggleAccountsActivity();
-		bar.accountsVisibilityPreference = true;
-		bar.toggleAccountsActivity();
-		bar.toggleAccountsActivity();
-
-		assert.deepStrictEqual({ heights, actions: bar.globalActivityActionBar.length() }, { heights: [80, 36, 80], actions: 2 });
+		assert.deepStrictEqual(bar.getContextMenuActions(), []);
 	});
 
-	test('keeps a hidden Accounts action hidden when its preference is unchanged', () => {
-		const bar = createGlobalBar(false);
-		const heights: number[] = [];
-		store.add(bar._onDidChange.event(() => heights.push(bar.getHeight(28, 0))));
-
-		bar.toggleAccountsActivity();
-
-		assert.deepStrictEqual({ heights, height: bar.getHeight(28, 0), actions: bar.globalActivityActionBar.length() }, { heights: [], height: 28, actions: 1 });
-	});
-});
-
-interface IUpdateAvatarTestHarness {
-	avatarImg: HTMLImageElement;
-	label: HTMLElement;
-	configurationService: { getValue(): boolean };
-	groupedAccounts: Map<string, (AuthenticationSessionAccount & { canSignOut: boolean })[]>;
-	defaultAccountService: { currentDefaultAccount: IDefaultAccount | null };
-	getDefaultAccountAvatarIcon(): URI | undefined;
-}
-
-interface IAddOrUpdateAccountTestHarness {
-	groupedAccounts: Map<string, (AuthenticationSessionAccount & { canSignOut: boolean })[]>;
-	sessionFromEmbedder: { value: Promise<undefined> };
-	authenticationService: { getSessions(): Promise<readonly AuthenticationSession[]> };
-}
-
-const updateAvatar = Reflect.get(AccountsActivityActionViewItem.prototype, 'updateAvatar') as (this: IUpdateAvatarTestHarness) => void;
-const getDefaultAccountAvatarIcon = Reflect.get(AccountsActivityActionViewItem.prototype, 'getDefaultAccountAvatarIcon') as (this: IUpdateAvatarTestHarness) => URI | undefined;
-const addOrUpdateAccount = Reflect.get(AccountsActivityActionViewItem.prototype, 'addOrUpdateAccount') as (this: IAddOrUpdateAccountTestHarness, providerId: string, account: AuthenticationSessionAccount) => Promise<void>;
-
-function createDefaultAccount(providerId: string, accountName: string): IDefaultAccount {
-	return {
-		authenticationProvider: { id: providerId, name: providerId, enterprise: false },
-		accountName,
-		sessionId: 'test-session',
-		enterprise: false,
-	};
-}
-
-function createHarness(groupedAccounts: Map<string, (AuthenticationSessionAccount & { canSignOut: boolean })[]>, currentDefaultAccount: IDefaultAccount | null): IUpdateAvatarTestHarness {
-	return {
-		avatarImg: document.createElement('img'),
-		label: document.createElement('div'),
-		configurationService: { getValue: () => true },
-		groupedAccounts,
-		defaultAccountService: { currentDefaultAccount },
-		getDefaultAccountAvatarIcon,
-	};
-}
-
-suite('AccountsActivityActionViewItem - updateAvatar', () => {
-
-	ensureNoDisposablesAreLeakedInTestSuite();
-
-	const firstIcon = URI.parse('https://example.com/first.png');
-	const defaultIcon = URI.parse('https://example.com/default.png');
-
-	function createGroupedAccounts(): Map<string, (AuthenticationSessionAccount & { canSignOut: boolean })[]> {
-		const groupedAccounts = new Map<string, (AuthenticationSessionAccount & { canSignOut: boolean })[]>();
-		groupedAccounts.set('github', [{ id: 'first-id', label: 'first-account', icon: firstIcon, canSignOut: true }]);
-		groupedAccounts.set('microsoft', [{ id: 'default-id', label: 'default-account', icon: defaultIcon, canSignOut: true }]);
-		return groupedAccounts;
-	}
-
-	test('prefers the current default account avatar over the first account with an icon', () => {
-		const harness = createHarness(createGroupedAccounts(), createDefaultAccount('microsoft', 'default-account'));
-
-		updateAvatar.call(harness);
-
-		assert.deepStrictEqual(
-			{ src: harness.avatarImg.src, hasAvatarClass: harness.label.classList.contains('has-avatar') },
-			{ src: defaultIcon.toString(true), hasAvatarClass: true }
-		);
+	test('does not export an Accounts visibility preference helper', () => {
+		assert.strictEqual(Object.prototype.hasOwnProperty.call(GlobalCompositeBarModule, 'isAccountsActionVisible'), false);
 	});
 
-	test('falls back to the first account with an icon when there is no default account', () => {
-		const harness = createHarness(createGroupedAccounts(), null);
-
-		updateAvatar.call(harness);
-
-		assert.deepStrictEqual(
-			{ src: harness.avatarImg.src, hasAvatarClass: harness.label.classList.contains('has-avatar') },
-			{ src: firstIcon.toString(true), hasAvatarClass: true }
-		);
+	test('does not export Accounts activity action view items', () => {
+		assert.strictEqual(Object.prototype.hasOwnProperty.call(GlobalCompositeBarModule, 'AccountsActivityActionViewItem'), false);
+		assert.strictEqual(Object.prototype.hasOwnProperty.call(GlobalCompositeBarModule, 'SimpleAccountActivityActionViewItem'), false);
 	});
 
-	test('falls back to the first account with an icon when the matching default account has no icon', () => {
-		const groupedAccounts = createGroupedAccounts();
-		groupedAccounts.set('microsoft', [{ id: 'default-id', label: 'default-account', icon: undefined, canSignOut: true }]);
-		const harness = createHarness(groupedAccounts, createDefaultAccount('microsoft', 'default-account'));
-
-		updateAvatar.call(harness);
-
-		assert.deepStrictEqual(
-			{ src: harness.avatarImg.src, hasAvatarClass: harness.label.classList.contains('has-avatar') },
-			{ src: firstIcon.toString(true), hasAvatarClass: true }
-		);
+	test('activity service exposes generic but not account badge activity', () => {
+		assert.strictEqual(typeof Reflect.get(ActivityService.prototype, 'showGlobalActivity'), 'function');
+		assert.strictEqual(Reflect.get(ActivityService.prototype, 'showAccountsActivity'), undefined);
 	});
-});
 
-suite('AccountsActivityActionViewItem - addOrUpdateAccount', () => {
+	test('does not export basic account management actions', () => {
+		assert.strictEqual(Object.hasOwn(ManageAccountsActionModule, 'ManageAccountsAction'), false);
+		assert.strictEqual(Object.hasOwn(SignOutOfAccountActionModule, 'SignOutOfAccountAction'), false);
+	});
 
-	ensureNoDisposablesAreLeakedInTestSuite();
+	test('does not export extension account preference action', () => {
+		assert.strictEqual(Object.hasOwn(ManageAccountPreferencesForExtensionActionModule, 'ManageAccountPreferencesForExtensionAction'), false);
+	});
 
-	function createAddOrUpdateHarness(accounts: (AuthenticationSessionAccount & { canSignOut: boolean })[]): IAddOrUpdateAccountTestHarness {
-		return {
-			groupedAccounts: new Map([['github', accounts]]),
-			sessionFromEmbedder: { value: Promise.resolve(undefined) },
-			authenticationService: { getSessions: async () => [] },
-		};
-	}
+	test('does not export MCP account preference action', () => {
+		assert.strictEqual(Object.hasOwn(ManageAccountPreferencesForMcpServerActionModule, 'ManageAccountPreferencesForMcpServerAction'), false);
+	});
 
-	test('updates the icon of an existing account, including clearing a stale one', async () => {
-		const harness = createAddOrUpdateHarness([{ id: 'account-id', label: 'account', icon: URI.parse('https://example.com/stale.png'), canSignOut: true }]);
+	test('does not export trusted extension account action', () => {
+		assert.strictEqual(Object.hasOwn(ManageTrustedExtensionsForAccountActionModule, 'ManageTrustedExtensionsForAccountAction'), false);
+	});
 
-		await addOrUpdateAccount.call(harness, 'github', { id: 'account-id', label: 'account', icon: URI.parse('https://example.com/fresh.png') });
-		const updated = harness.groupedAccounts.get('github')?.[0].icon;
+	test('does not export trusted MCP account action', () => {
+		assert.strictEqual(Object.hasOwn(ManageTrustedMcpServersForAccountActionModule, 'ManageTrustedMcpServersForAccountAction'), false);
+	});
 
-		await addOrUpdateAccount.call(harness, 'github', { id: 'account-id', label: 'account' });
-		const cleared = harness.groupedAccounts.get('github')?.[0].icon;
-
-		assert.deepStrictEqual(
-			[updated, cleared],
-			[URI.parse('https://example.com/fresh.png'), undefined]
-		);
+	test('does not export dynamic authentication provider management', () => {
+		assert.strictEqual(Object.hasOwn(ManageDynamicAuthenticationProvidersActionModule, 'RemoveDynamicAuthenticationProvidersAction'), false);
 	});
 });

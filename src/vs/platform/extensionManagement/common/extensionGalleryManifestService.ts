@@ -68,10 +68,6 @@ export class ExtensionGalleryManifestService extends Disposable implements IExte
 				id: `${extensionsGallery.itemUrl}?itemName={publisher}.{name}`,
 				type: ExtensionGalleryResourceType.ExtensionDetailsViewUri
 			});
-			resources.push({
-				id: `${extensionsGallery.itemUrl}?itemName={publisher}.{name}&ssr=false#review-details`,
-				type: ExtensionGalleryResourceType.ExtensionRatingViewUri
-			});
 		}
 
 		if (extensionsGallery.resourceUrlTemplate) {

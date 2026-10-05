@@ -10,6 +10,7 @@ import * as util from './lib/util.ts';
 import { getVersion } from './lib/getVersion.ts';
 import * as task from './lib/gulp/task.ts';
 import { inlineMeta } from './lib/inlineMeta.ts';
+import { composeWalkerProduct } from './lib/walkerProduct.ts';
 import { computeNLSMetadataHash } from './lib/nlsMetadata.ts';
 import product from '../product.json' with { type: 'json' };
 import { getProductionDependencies } from './lib/dependencies.ts';
@@ -341,7 +342,7 @@ function packageTask(type: string, platform: string, arch: string, sourceFolderN
 						json.agentSdks = agentSdks;
 					}
 				}
-				return json;
+				return composeWalkerProduct(json);
 			}))
 			.pipe(es.through(function (file) {
 				productJsonContents = file.contents.toString();

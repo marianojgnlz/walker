@@ -44,11 +44,6 @@ export interface IActivityService {
 	showViewActivity(viewId: string, badge: IActivity): IDisposable;
 
 	/**
-	 * Show accounts activity
-	 */
-	showAccountsActivity(activity: IActivity): IDisposable;
-
-	/**
 	 * Show global activity
 	 */
 	showGlobalActivity(activity: IActivity): IDisposable;

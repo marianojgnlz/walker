@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableStore, MutableDisposable } from '../../../../base/common/lifecycle.js';
+import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions, IWorkbenchContribution } from '../../../common/contributions.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { ILifecycleService, LifecyclePhase, ShutdownReason } from '../../../services/lifecycle/common/lifecycle.js';
@@ -54,7 +54,6 @@ import { EditSessionIdentityMatch, IEditSessionIdentityService } from '../../../
 import { ThemeIcon } from '../../../../base/common/themables.js';
 import { IOutputService } from '../../../services/output/common/output.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IActivityService, NumberBadge } from '../../../services/activity/common/activity.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { ILocalizedString } from '../../../../platform/action/common/action.js';
 import { Codicon } from '../../../../base/common/codicons.js';
@@ -121,7 +120,6 @@ export class EditSessionsContribution extends Disposable implements IWorkbenchCo
 	private readonly pendingEditSessionsContext: IContextKey<boolean>;
 
 	private static APPLICATION_LAUNCHED_VIA_CONTINUE_ON_STORAGE_KEY = 'applicationLaunchedViaContinueOn';
-	private readonly accountsMenuBadgeDisposable = this._register(new MutableDisposable());
 
 	private registeredCommands = new Set<string>();
 
@@ -150,7 +148,6 @@ export class EditSessionsContribution extends Disposable implements IWorkbenchCo
 		@IFileDialogService private readonly fileDialogService: IFileDialogService,
 		@ILifecycleService private readonly lifecycleService: ILifecycleService,
 		@IStorageService private readonly storageService: IStorageService,
-		@IActivityService private readonly activityService: IActivityService,
 		@IEditorService private readonly editorService: IEditorService,
 		@IRemoteAgentService private readonly remoteAgentService: IRemoteAgentService,
 		@IExtensionService private readonly extensionService: IExtensionService,
@@ -185,8 +182,6 @@ export class EditSessionsContribution extends Disposable implements IWorkbenchCo
 				e.join(this.autoStoreEditSession(), { id: 'autoStoreWorkingChanges', label: localize('autoStoreWorkingChanges', 'Storing current working changes...') });
 			}
 		}));
-		this._register(this.editSessionsStorageService.onDidSignIn(() => this.updateAccountsMenuBadge()));
-		this._register(this.editSessionsStorageService.onDidSignOut(() => this.updateAccountsMenuBadge()));
 	}
 
 	private async autoResumeEditSession() {
@@ -207,14 +202,13 @@ export class EditSessionsContribution extends Disposable implements IWorkbenchCo
 			this.logService.info(`Prompting to enable cloud changes, has application previously launched from Continue On flow: ${hasApplicationLaunchedFromContinueOnFlow}`);
 
 			const handlePendingEditSessions = () => {
-				// display a badge in the accounts menu but do not prompt the user to sign in again
-				this.logService.info('Showing badge to enable cloud changes in accounts menu...');
-				this.updateAccountsMenuBadge();
+				// Track pending cloud changes without exposing an account-menu prompt.
+				this.logService.info('Marking pending cloud changes in workbench state...');
 				this.pendingEditSessionsContext.set(true);
 				// attempt a resume if we are in a pending state and the user just signed in
 				const disposable = this.editSessionsStorageService.onDidSignIn(async () => {
 					disposable.dispose();
-					this.logService.info('Showing badge to enable cloud changes in accounts menu succeeded, resuming cloud changes...');
+					this.logService.info('Cloud changes are enabled; resuming pending changes...');
 					await this.progressService.withProgress(resumeProgressOptions, async (progress) => await this.resumeEditSession(undefined, true, undefined, undefined, progress));
 					this.storageService.remove(EditSessionsContribution.APPLICATION_LAUNCHED_VIA_CONTINUE_ON_STORAGE_KEY, StorageScope.APPLICATION);
 					this.environmentService.continueOn = undefined;
@@ -245,15 +239,6 @@ export class EditSessionsContribution extends Disposable implements IWorkbenchCo
 		} else {
 			this.logService.debug('Auto resuming cloud changes disabled.');
 		}
-	}
-
-	private updateAccountsMenuBadge() {
-		if (this.editSessionsStorageService.isSignedIn) {
-			return this.accountsMenuBadgeDisposable.clear();
-		}
-
-		const badge = new NumberBadge(1, () => localize('check for pending cloud changes', 'Check for pending cloud changes'));
-		this.accountsMenuBadgeDisposable.value = this.activityService.showAccountsActivity({ badge });
 	}
 
 	private async autoStoreEditSession() {

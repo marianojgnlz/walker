@@ -47,7 +47,6 @@ import { CommandsRegistry, ICommandService } from '../../../platform/commands/co
 import { IEnvironmentService } from '../../../platform/environment/common/environment.js';
 import { IProductService } from '../../../platform/product/common/productService.js';
 import { IDefaultAccountService } from '../../../platform/defaultAccount/common/defaultAccount.js';
-import { isManagedSettingsFreshnessBlocking } from '../../../platform/policy/common/managedSettingsFreshness.js';
 import { IAuthenticationService } from '../../services/authentication/common/authentication.js';
 import { IAuthenticationAccessService } from '../../services/authentication/browser/authenticationAccessService.js';
 import { IPolicyService, PolicyValueSource } from '../../../platform/policy/common/policy.js';
@@ -1373,41 +1372,6 @@ class PolicyDiagnosticsAction extends Action2 {
 	}
 }
 
-class SyncAccountPolicyAction extends Action2 {
-
-	constructor() {
-		super({
-			id: 'workbench.action.syncAccountPolicy',
-			title: localize2('syncAccountPolicy', 'Sync Account Policy'),
-			category: Categories.Developer,
-			f1: true
-		});
-	}
-
-	async run(accessor: ServicesAccessor): Promise<void> {
-		const defaultAccountService = accessor.get(IDefaultAccountService);
-		const dialogService = accessor.get(IDialogService);
-		const logService = accessor.get(ILogService);
-
-		try {
-			logService.info('[DefaultAccount] Manually syncing account policy');
-			await defaultAccountService.refresh({ forceRefresh: true, retryManagedSettings: true });
-			if (isManagedSettingsFreshnessBlocking(defaultAccountService.managedSettingsFreshness)) {
-				logService.warn('[DefaultAccount] Account policy sync completed without satisfying managed settings freshness');
-				await dialogService.error(localize('syncAccountPolicy.blocked', "Failed to sync account policy."), localize('syncAccountPolicy.blocked.detail', "The required managed settings could not be refreshed."));
-				return;
-			}
-			await dialogService.info(localize('syncAccountPolicy.success', "Account policy has been synced."));
-		} catch (error) {
-			logService.error('[DefaultAccount] Failed to sync account policy', error);
-			await dialogService.error(
-				localize('syncAccountPolicy.error', "Failed to sync account policy."),
-				error instanceof Error ? error.message : String(error)
-			);
-		}
-	}
-}
-
 // --- Actions Registration
 registerAction2(InspectContextKeysAction);
 registerAction2(ToggleScreencastModeAction);
@@ -1415,7 +1379,6 @@ registerAction2(LogStorageAction);
 registerAction2(LogWorkingCopiesAction);
 registerAction2(RemoveLargeStorageEntriesAction);
 registerAction2(PolicyDiagnosticsAction);
-registerAction2(SyncAccountPolicyAction);
 if (!product.commit) {
 	registerAction2(StartTrackDisposables);
 	registerAction2(SnapshotTrackedDisposables);

@@ -330,10 +330,6 @@ export class Extension implements IExtension {
 		return this.gallery ? this.gallery.ratingCount : undefined;
 	}
 
-	get ratingUrl(): string | undefined {
-		return this.gallery?.ratingLink;
-	}
-
 	get outdated(): boolean {
 		try {
 			if (!this.gallery || !this.local) {

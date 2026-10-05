@@ -12,6 +12,8 @@ import { IContextMenuService } from '../../../../../platform/contextview/browser
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
 import { TestColorTheme, TestThemeService } from '../../../../../platform/theme/test/common/testThemeService.js';
 import { BrowserTitlebarPart } from '../../../../browser/parts/titlebar/titlebarPart.js';
+import * as titlebarActions from '../../../../browser/parts/titlebar/titlebarActions.js';
+import { GLOBAL_ACTIVITY_ID } from '../../../../common/activity.js';
 import { WindowTitle } from '../../../../browser/parts/titlebar/windowTitle.js';
 import { MODERN_UI_INACTIVE_SHELL_BACKGROUND, MODERN_UI_SHELL_BACKGROUND, TITLE_BAR_ACTIVE_BACKGROUND, TITLE_BAR_INACTIVE_BACKGROUND } from '../../../../common/theme.js';
 import { IEditorGroupsContainer } from '../../../../services/editor/common/editorGroupsService.js';
@@ -28,6 +30,11 @@ suite('TitlebarPart colors', () => {
 			return parent;
 		}
 	}
+
+	test('does not expose an Accounts titlebar action', () => {
+		assert.strictEqual('ACCOUNTS_ACTIVITY_TILE_ACTION' in titlebarActions, false);
+		assert.strictEqual(titlebarActions.GLOBAL_ACTIVITY_TITLE_ACTION.id, GLOBAL_ACTIVITY_ID);
+	});
 
 	test('resolves shell and title colors from the target window focus', () => {
 		let focused = false;

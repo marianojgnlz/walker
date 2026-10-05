@@ -6,8 +6,8 @@
 import assert from 'assert';
 import type { ExperimentationService as TASClient } from 'tas-client';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { cleanData, NullTelemetryService } from '../../../../../platform/telemetry/common/telemetryUtils.js';
-import { resolveScopedTreatment, resolveTreatmentWithAssignment, toExperimentTelemetryData, WorkbenchAssignmentService } from '../../common/assignmentService.js';
+import { NullTelemetryService } from '../../../../../platform/telemetry/common/telemetryUtils.js';
+import { resolveTreatmentWithAssignment, WorkbenchAssignmentService } from '../../common/assignmentService.js';
 import { DeferredPromise } from '../../../../../base/common/async.js';
 import { isCancellationError } from '../../../../../base/common/errors.js';
 import { mock } from '../../../../../base/test/common/mock.js';
@@ -18,41 +18,48 @@ import { IProductService } from '../../../../../platform/product/common/productS
 import { InMemoryStorageService, IStorageService } from '../../../../../platform/storage/common/storage.js';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IWorkbenchEnvironmentService } from '../../../environment/common/environmentService.js';
+import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
+import { Event } from '../../../../../base/common/event.js';
 
-suite('resolveScopedTreatment', () => {
+suite('WorkbenchAssignmentService account boundary', () => {
 
-	ensureNoDisposablesAreLeakedInTestSuite();
+	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
 
-	const BARE = 'config.chat.agentHost.copilot.multiTurnContextRouting.enabled';
-	const SCOPED = `/vscode/${BARE}`;
+	test('starts ordinary assignments without querying the default account', async () => {
+		const accountReads: string[] = [];
+		const instantiationService = disposables.add(new TestInstantiationService());
+		const configuration = new TestConfigurationService();
+		disposables.add(configuration.onDidChangeConfigurationEmitter);
+		await configuration.setUserConfiguration('telemetry.telemetryLevel', 'all');
+		await configuration.setUserConfiguration('workbench.enableExperiments', true);
+		instantiationService.stub(IConfigurationService, configuration);
+		instantiationService.stub(IStorageService, disposables.add(new InMemoryStorageService()));
+		instantiationService.stub(ITelemetryService, NullTelemetryService);
+		instantiationService.stub(IProductService, {
+			quality: 'insider', version: '1.0.0', nameLong: 'Walker', date: '2026-01-01',
+			tasConfig: { endpoint: 'https://example.invalid', assignmentContextTelemetryPropertyName: 'context', telemetryEventName: 'event' },
+		});
+		instantiationService.stub(IWorkbenchEnvironmentService, {});
+		instantiationService.stub(IDefaultAccountService, new class extends mock<IDefaultAccountService>() {
+			override get onDidChangeDefaultAccount() { accountReads.push('account-event'); return Event.None; }
+			override get currentDefaultAccount() { accountReads.push('current-account'); return null; }
+			override getDefaultAccount() {
+				accountReads.push('get-account');
+				return new Promise<null>(() => { });
+			}
+		}());
 
-	function readFrom(values: Record<string, string | number | boolean>): (name: string) => string | number | boolean | undefined {
-		return name => values[name];
-	}
+		const prototype = WorkbenchAssignmentService.prototype as unknown as { setupTASClient: () => Promise<TASClient> };
+		const originalSetup = prototype.setupTASClient;
+		prototype.setupTASClient = async () => new class extends mock<TASClient>() { override dispose() { } }();
+		try {
+			disposables.add(instantiationService.createInstance(WorkbenchAssignmentService));
+		} finally {
+			prototype.setupTASClient = originalSetup;
+		}
 
-	test('prefers the /vscode/ scoped value (new endpoint) over the bare value on collision', () => {
-		const read = readFrom({ [BARE]: 'legacy', [SCOPED]: 'new' });
-		assert.strictEqual(resolveScopedTreatment(read, BARE), 'new');
-	});
-
-	test('falls back to the bare value when only the legacy endpoint assigns it', () => {
-		const read = readFrom({ [BARE]: 'legacy' });
-		assert.strictEqual(resolveScopedTreatment(read, BARE), 'legacy');
-	});
-
-	test('uses the scoped value when only the new endpoint assigns it', () => {
-		const read = readFrom({ [SCOPED]: 'new' });
-		assert.strictEqual(resolveScopedTreatment(read, BARE), 'new');
-	});
-
-	test('returns undefined when neither endpoint assigns it', () => {
-		const read = readFrom({});
-		assert.strictEqual(resolveScopedTreatment(read, BARE), undefined);
-	});
-
-	test('preserves a defined falsy scoped value instead of falling back to bare', () => {
-		const read = readFrom({ [BARE]: true, [SCOPED]: false });
-		assert.strictEqual(resolveScopedTreatment(read, BARE), false);
+		await Promise.resolve();
+		assert.deepStrictEqual(accountReads, []);
 	});
 });
 
@@ -134,6 +141,25 @@ suite('resolveTreatmentWithAssignment', () => {
 			});
 		}
 
+		test('uses the bare feature name for legacy TAS lookups', async () => {
+			const service = createService();
+			const queriedFeatures: string[] = [];
+			const client = new class extends mock<TASClient>() {
+				override async getTreatmentVariableAsync<T extends string | number | boolean>(_extensionName: string, featureName: string): Promise<T | undefined> {
+					queriedFeatures.push(featureName);
+					return undefined;
+				}
+				override getTreatmentVariable<T extends string | number | boolean>(_extensionName: string, featureName: string): T | undefined {
+					queriedFeatures.push(featureName);
+					return 'treatment' as T;
+				}
+			}();
+			service['tasClient'] = Promise.resolve(client);
+
+			assert.strictEqual(await service.getTreatment('test'), 'treatment');
+			assert.deepStrictEqual(queriedFeatures, ['test', 'test']);
+		});
+
 		test('retries a replaced client once without reading its stale treatment', async () => {
 			const service = createService();
 			const current = createClient('current', async () => { });
@@ -169,20 +195,5 @@ suite('resolveTreatmentWithAssignment', () => {
 		const result = await resolveTreatmentWithAssignment('override', async () => { throw error; });
 		await assert.rejects(result.hasAssignment, error);
 		await assert.rejects(resolveTreatmentWithAssignment(undefined, async () => { throw error; }), error);
-	});
-});
-
-suite('toExperimentTelemetryData', () => {
-
-	ensureNoDisposablesAreLeakedInTestSuite();
-
-	test('marks the queried feature name trusted so a /vscode/-scoped key survives telemetry cleaning', () => {
-		const scoped = '/vscode/config.chat.agentHost.copilot.multiTurnContextRouting.enabled';
-		const data = toExperimentTelemetryData(new Map([['ABExp.queriedFeature', scoped]]));
-
-		// The trusted feature name survives cleaning, whereas the same value left unmarked would be
-		// redacted by the file-path heuristic - guarding against a regression back to that behavior.
-		assert.strictEqual(cleanData(data, [])['ABExp.queriedFeature'], scoped);
-		assert.strictEqual(cleanData({ 'ABExp.queriedFeature': scoped }, [])['ABExp.queriedFeature'], '<REDACTED: user-file-path>');
 	});
 });

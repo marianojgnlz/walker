@@ -1441,6 +1441,10 @@ export abstract class AbstractExtensionGalleryService implements IExtensionGalle
 				callSite: 'extensionGalleryService.queryRawGalleryExtensions'
 			}, token);
 
+			if (context.res.statusCode === 401 || context.res.statusCode === 403) {
+				throw new ExtensionGalleryError(`Extension gallery access denied (${context.res.statusCode}).`, ExtensionGalleryErrorCode.ClientError);
+			}
+
 			if (context.res.statusCode && context.res.statusCode >= 400 && context.res.statusCode < 500) {
 				return { galleryExtensions: [], total };
 			}
@@ -1463,6 +1467,10 @@ export abstract class AbstractExtensionGalleryService implements IExtensionGalle
 			return { galleryExtensions: [], total };
 
 		} catch (e) {
+			if (e instanceof ExtensionGalleryError) {
+				errorCode = e.code;
+				throw e;
+			}
 			if (isCancellationError(e)) {
 				errorCode = ExtensionGalleryErrorCode.Cancelled;
 				throw e;

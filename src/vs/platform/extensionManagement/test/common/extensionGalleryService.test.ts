@@ -10,7 +10,7 @@ import { Event } from '../../../../base/common/event.js';
 import { joinPath } from '../../../../base/common/resources.js';
 import { URI } from '../../../../base/common/uri.js';
 import { isUUID } from '../../../../base/common/uuid.js';
-import { IRequestContext, IRequestOptions } from '../../../../base/parts/request/common/request.js';
+import { IRequestContext, IRequestOptions, OfflineError } from '../../../../base/parts/request/common/request.js';
 import { mock } from '../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
 import { IConfigurationService } from '../../../configuration/common/configuration.js';
@@ -30,6 +30,7 @@ import { TelemetryConfiguration, TELEMETRY_SETTING_ID } from '../../../telemetry
 import { NullTelemetryService } from '../../../telemetry/common/telemetryUtils.js';
 import { AllowedExtensionsService } from '../../common/allowedExtensionsService.js';
 import { ExtensionGalleryManifestStatus, ExtensionGalleryResourceType, IExtensionGalleryManifest, IExtensionGalleryManifestService } from '../../common/extensionGalleryManifest.js';
+import { ExtensionGalleryError, ExtensionGalleryErrorCode, IGalleryExtension, InstallOperation } from '../../common/extensionManagement.js';
 import { ExtensionGalleryServiceWithNoStorageService, IRawGalleryExtensionVersion, filterLatestExtensionVersionsForTargetPlatform, sortExtensionVersions } from '../../common/extensionGalleryService.js';
 
 class EnvironmentServiceMock extends mock<IEnvironmentService>() {
@@ -121,6 +122,25 @@ function rawLatestExtension() {
 	};
 }
 
+function galleryExtensionWithDownloadAssets(): IGalleryExtension {
+	return <IGalleryExtension>Object.create({
+		name: 'extension',
+		publisher: 'publisher',
+		publisherId: 'publisher-id',
+		publisherDisplayName: 'Publisher',
+		version: '1.0.0',
+		identifier: { id: 'publisher.extension', uuid: 'extension-uuid' },
+		assets: {
+			download: {
+				uri: 'https://marketplace.test/assets/publisher/extension/1.0.0',
+				fallbackUri: 'https://marketplace.test/fallback/publisher/extension/1.0.0'
+			}
+		},
+		properties: { dependencies: [] },
+		telemetryData: {}
+	});
+}
+
 function createExtensionGalleryManifestService(): IExtensionGalleryManifestService {
 	const extensionGalleryManifest: IExtensionGalleryManifest = {
 		version: '1.0.0',
@@ -192,6 +212,62 @@ suite('Extension Gallery Service', () => {
 		assert.deepStrictEqual({ requests: requestService.requests.length, authorizationHeaders: requestService.authorizationHeaders }, {
 			requests: 1,
 			authorizationHeaders: [undefined]
+		});
+	});
+
+	test('reports access-denied gallery responses without an account fallback', async () => {
+		const requestService = new RecordingRequestService(() => requestContext(403, {}));
+		const galleryService = createExtensionGalleryService(requestService);
+
+		await assert.rejects(
+			galleryService.getExtensions([{ id: 'publisher.extension' }], CancellationToken.None),
+			error => error instanceof ExtensionGalleryError && error.code === ExtensionGalleryErrorCode.ClientError
+		);
+		assert.deepStrictEqual({ requests: requestService.requests, authorizationHeaders: requestService.authorizationHeaders }, {
+			requests: [{ type: 'POST', url: queryServiceUri }],
+			authorizationHeaders: [undefined]
+		});
+	});
+
+	test('preserves offline gallery failures without retrying through an account', async () => {
+		const requestService = new RecordingRequestService(() => { throw new OfflineError(); });
+		const galleryService = createExtensionGalleryService(requestService);
+
+		await assert.rejects(
+			galleryService.getExtensions([{ id: 'publisher.extension' }], CancellationToken.None),
+			error => error instanceof ExtensionGalleryError && error.code === ExtensionGalleryErrorCode.Offline
+		);
+		assert.deepStrictEqual({ requests: requestService.requests, authorizationHeaders: requestService.authorizationHeaders }, {
+			requests: [{ type: 'POST', url: queryServiceUri }],
+			authorizationHeaders: [undefined]
+		});
+	});
+
+	test('keeps an ordinary not-found gallery query as an empty result', async () => {
+		const requestService = new RecordingRequestService(() => requestContext(404, {}));
+		const galleryService = createExtensionGalleryService(requestService);
+
+		assert.deepStrictEqual(await galleryService.getExtensions([{ id: 'publisher.extension' }], CancellationToken.None), []);
+		assert.deepStrictEqual(requestService.authorizationHeaders, [undefined]);
+	});
+
+	test('downloads VSIX assets and CDN fallback without account authorization', async () => {
+		const requestService = new RecordingRequestService(options => options.url?.includes('/assets/')
+			? requestContext(503, {})
+			: requestContext(200, { payload: 'vsix' }));
+		const galleryService = createExtensionGalleryService(requestService);
+		const location = joinPath(URI.file('tests').with({ scheme: 'vscode-tests' }), 'extension.vsix');
+
+		await galleryService.download(galleryExtensionWithDownloadAssets(), location, InstallOperation.Install);
+		const downloaded = await fileService.readFile(location);
+
+		assert.deepStrictEqual({ requests: requestService.requests, authorizationHeaders: requestService.authorizationHeaders, content: downloaded.value.toString() }, {
+			requests: [
+				{ type: 'GET', url: 'https://marketplace.test/assets/publisher/extension/1.0.0?install=true' },
+				{ type: 'GET', url: 'https://marketplace.test/fallback/publisher/extension/1.0.0?install=true' }
+			],
+			authorizationHeaders: [undefined, undefined],
+			content: JSON.stringify({ payload: 'vsix' })
 		});
 	});
 

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Disposable, DisposableStore, dispose, IDisposable, MutableDisposable } from '../../../../base/common/lifecycle.js';
+import { Disposable, DisposableStore, dispose, IDisposable } from '../../../../base/common/lifecycle.js';
 import { scopesMatch } from '../../../../base/common/oauth.js';
 import * as nls from '../../../../nls.js';
 import { MenuId, MenuRegistry } from '../../../../platform/actions/common/actions.js';
@@ -13,7 +13,6 @@ import { InstantiationType, registerSingleton } from '../../../../platform/insta
 import { Severity } from '../../../../platform/notification/common/notification.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { IActivityService, NumberBadge } from '../../activity/common/activity.js';
 import { IAuthenticationAccessService } from './authenticationAccessService.js';
 import { IAuthenticationUsageService } from './authenticationUsageService.js';
 import { AuthenticationSession, IAuthenticationProvider, IAuthenticationService, IAuthenticationExtensionsService, AuthenticationSessionAccount, IAuthenticationWwwAuthenticateRequest, isAuthenticationWwwAuthenticateRequest } from '../common/authentication.js';
@@ -38,8 +37,6 @@ export class AuthenticationExtensionsService extends Disposable implements IAuth
 	declare readonly _serviceBrand: undefined;
 	private _signInRequestItems = new Map<string, SessionRequestInfo>();
 	private _sessionAccessRequestItems = new Map<string, { [extensionId: string]: { disposables: IDisposable[]; possibleSessions: AuthenticationSession[] } }>();
-	private readonly _accountBadgeDisposable = this._register(new MutableDisposable());
-
 	private _onDidAccountPreferenceChange: Emitter<{ providerId: string; extensionIds: string[] }> = this._register(new Emitter<{ providerId: string; extensionIds: string[] }>());
 	readonly onDidChangeAccountPreference = this._onDidAccountPreferenceChange.event;
 
@@ -47,7 +44,6 @@ export class AuthenticationExtensionsService extends Disposable implements IAuth
 	private _inheritAuthAccountPreferenceChildToParent: { [extensionId: string]: string };
 
 	constructor(
-		@IActivityService private readonly activityService: IActivityService,
 		@IStorageService private readonly storageService: IStorageService,
 		@IDialogService private readonly dialogService: IDialogService,
 		@IQuickInputService private readonly quickInputService: IQuickInputService,
@@ -106,7 +102,6 @@ export class AuthenticationExtensionsService extends Disposable implements IAuth
 				} else {
 					this._signInRequestItems.set(providerId, existingRequestsForProvider);
 				}
-				this.updateBadgeCount();
 			}
 		});
 	}
@@ -129,32 +124,11 @@ export class AuthenticationExtensionsService extends Disposable implements IAuth
 		}
 	}
 
-	private updateBadgeCount(): void {
-		this._accountBadgeDisposable.clear();
-
-		let numberOfRequests = 0;
-		this._signInRequestItems.forEach(providerRequests => {
-			Object.keys(providerRequests).forEach(request => {
-				numberOfRequests += providerRequests[request].requestingExtensionIds.length;
-			});
-		});
-
-		this._sessionAccessRequestItems.forEach(accessRequest => {
-			numberOfRequests += Object.keys(accessRequest).length;
-		});
-
-		if (numberOfRequests > 0) {
-			const badge = new NumberBadge(numberOfRequests, () => nls.localize('sign in', "Sign in requested"));
-			this._accountBadgeDisposable.value = this.activityService.showAccountsActivity({ badge });
-		}
-	}
-
 	private removeAccessRequest(providerId: string, extensionId: string): void {
 		const providerRequests = this._sessionAccessRequestItems.get(providerId) || {};
 		if (providerRequests[extensionId]) {
 			dispose(providerRequests[extensionId].disposables);
 			delete providerRequests[extensionId];
-			this.updateBadgeCount();
 		}
 	}
 
@@ -421,7 +395,6 @@ export class AuthenticationExtensionsService extends Disposable implements IAuth
 
 		providerRequests[extensionId] = { possibleSessions, disposables: [menuItem, accessCommand] };
 		this._sessionAccessRequestItems.set(providerId, providerRequests);
-		this.updateBadgeCount();
 	}
 
 	async requestNewSession(providerId: string, scopeListOrRequest: ReadonlyArray<string> | IAuthenticationWwwAuthenticateRequest, extensionId: string, extensionName: string): Promise<void> {
@@ -502,8 +475,6 @@ export class AuthenticationExtensionsService extends Disposable implements IAuth
 				}
 			});
 		}
-
-		this.updateBadgeCount();
 	}
 }
 

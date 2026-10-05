@@ -223,13 +223,11 @@ export class InstallCountWidget extends ExtensionWidget {
 export class RatingsWidget extends ExtensionWidget {
 
 	private containerHover: IManagedHover | undefined;
-	private readonly disposables = this._register(new DisposableStore());
 
 	constructor(
 		readonly container: HTMLElement,
 		private small: boolean,
 		@IHoverService private readonly hoverService: IHoverService,
-		@IOpenerService private readonly openerService: IOpenerService,
 	) {
 		super();
 		container.classList.add('extension-ratings');
@@ -244,7 +242,6 @@ export class RatingsWidget extends ExtensionWidget {
 
 	private clear(): void {
 		this.container.innerText = '';
-		this.disposables.clear();
 	}
 
 	render(): void {
@@ -277,7 +274,7 @@ export class RatingsWidget extends ExtensionWidget {
 			const count = append(this.container, $('span.count'));
 			count.textContent = String(rating);
 		} else {
-			const element = append(this.container, $('span.rating.clickable', { tabIndex: 0 }));
+			const element = append(this.container, $('span.rating'));
 			for (let i = 1; i <= 5; i++) {
 				if (rating >= i) {
 					append(element, $('span' + ThemeIcon.asCSSSelector(starFullIcon)));
@@ -294,10 +291,7 @@ export class RatingsWidget extends ExtensionWidget {
 
 			this.containerHover = this._register(this.hoverService.setupManagedHover(getDefaultHoverDelegate('mouse'), element, ''));
 			this.containerHover.update(localize('ratedLabel', "Average rating: {0} out of 5", rating));
-			element.setAttribute('role', 'link');
-			if (this.extension.ratingUrl) {
-				this.disposables.add(onClick(element, () => this.openerService.open(URI.parse(this.extension!.ratingUrl!))));
-			}
+
 		}
 	}
 
@@ -877,7 +871,7 @@ export class ExtensionHoverWidget extends ExtensionWidget {
 					markdown.appendText(`  |  `);
 				}
 				const rating = Math.round(this.extension.rating * 2) / 2;
-				markdown.appendMarkdown(`$(${starFullIcon.id}) [${rating}](${this.extension.url}&ssr=false#review-details)`);
+				markdown.appendMarkdown(`$(${starFullIcon.id}) ${rating}`);
 				addSeparator = true;
 			}
 			if (this.extension.publisherSponsorLink) {

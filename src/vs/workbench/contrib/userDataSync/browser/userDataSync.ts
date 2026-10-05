@@ -89,7 +89,6 @@ export class UserDataSyncWorkbenchContribution extends Disposable implements IWo
 	private readonly turningOnSyncContext: IContextKey<boolean>;
 
 	private readonly globalActivityBadgeDisposable = this._register(new MutableDisposable());
-	private readonly accountBadgeDisposable = this._register(new MutableDisposable());
 
 	constructor(
 		@IUserDataSyncEnablementService private readonly userDataSyncEnablementService: IUserDataSyncEnablementService,
@@ -123,18 +122,13 @@ export class UserDataSyncWorkbenchContribution extends Disposable implements IWo
 		if (userDataSyncWorkbenchService.enabled) {
 			registerConfiguration();
 
-			this.updateAccountBadge();
 			this.updateGlobalActivityBadge();
 			this.onDidChangeConflicts(this.userDataSyncService.conflicts);
 
 			this._register(Event.any(
 				Event.debounce(userDataSyncService.onDidChangeStatus, () => undefined, 500),
-				this.userDataSyncEnablementService.onDidChangeEnablement,
-				this.userDataSyncWorkbenchService.onDidChangeAccountStatus
-			)(() => {
-				this.updateAccountBadge();
-				this.updateGlobalActivityBadge();
-			}));
+				this.userDataSyncEnablementService.onDidChangeEnablement
+			)(() => this.updateGlobalActivityBadge()));
 			this._register(userDataSyncService.onDidChangeConflicts(() => this.onDidChangeConflicts(this.userDataSyncService.conflicts)));
 			this._register(userDataSyncEnablementService.onDidChangeEnablement(() => this.onDidChangeConflicts(this.userDataSyncService.conflicts)));
 			this._register(userDataSyncService.onSyncErrors(errors => this.onSynchronizerErrors(errors)));
@@ -466,20 +460,6 @@ export class UserDataSyncWorkbenchContribution extends Disposable implements IWo
 
 		if (badge) {
 			this.globalActivityBadgeDisposable.value = this.activityService.showGlobalActivity({ badge });
-		}
-	}
-
-	private async updateAccountBadge(): Promise<void> {
-		this.accountBadgeDisposable.clear();
-
-		let badge: IBadge | undefined = undefined;
-
-		if (this.userDataSyncService.status !== SyncStatus.Uninitialized && this.userDataSyncEnablementService.isEnabled() && this.userDataSyncWorkbenchService.accountStatus === AccountStatus.Unavailable) {
-			badge = new NumberBadge(1, () => localize('sign in to sync', "Sign in to Sync Settings"));
-		}
-
-		if (badge) {
-			this.accountBadgeDisposable.value = this.activityService.showAccountsActivity({ badge });
 		}
 	}
 

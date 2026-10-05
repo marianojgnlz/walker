@@ -5,123 +5,97 @@
 
 import assert from 'assert';
 import { Event } from '../../../../base/common/event.js';
-import { mock } from '../../../../base/test/common/mock.js';
+import { URI } from '../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { NullLogService, NullLoggerService } from '../../../../platform/log/common/log.js';
-import { ExtensionIdentifier } from '../../../../platform/extensions/common/extensions.js';
-import { IExtHostInitDataService } from '../../common/extHostInitDataService.js';
-import { IExtHostProgress } from '../../common/extHostProgress.js';
-import { IExtHostRpcService } from '../../common/extHostRpcService.js';
-import { IExtHostUrlsService } from '../../common/extHostUrls.js';
-import { IExtHostWindow } from '../../common/extHostWindow.js';
-import { ExtHostAuthentication } from '../../common/extHostAuthentication.js';
-import { MainContext, MainThreadAuthenticationShape } from '../../common/extHost.protocol.js';
 import { nullExtensionDescription } from '../../../services/extensions/common/extensions.js';
-import { ProxyIdentifier, Proxied } from '../../../services/extensions/common/proxyIdentifier.js';
+import { createAuthenticationApiFacade } from '../../common/extHost.api.impl.js';
 import type * as vscode from 'vscode';
 
-class RecordingAuthenticationProxy extends mock<Proxied<MainThreadAuthenticationShape>>() {
-	readonly calls: string[] = [];
+const unsupportedError = (error: unknown): boolean => {
+	assert.ok(error instanceof Error);
+	assert.strictEqual(error.name, 'AuthenticationUnsupported');
+	assert.strictEqual((error as Error & { code?: string }).code, 'WALKER_AUTHENTICATION_UNSUPPORTED');
+	assert.ok(error.message.length > 0);
+	return true;
+};
 
-	override $ensureProvider = async (providerId: string): Promise<void> => {
-		this.calls.push(`ensure:${providerId}`);
-	};
-
-	override $getSession = async (): Promise<vscode.AuthenticationSession> => {
-		this.calls.push('getSession');
-		return {
-			id: 'fixture-old-session',
-			scopes: ['fixture.scope'],
-			accessToken: 'fixture-only-not-a-credential',
-			account: { id: 'fixture-old-account', label: 'Fixture Account' }
-		};
-	};
-
-	override $getAccounts = async (): Promise<readonly vscode.AuthenticationSessionAccountInformation[]> => {
-		this.calls.push('getAccounts');
-		return [{ id: 'fixture-old-account', label: 'Fixture Account' }];
-	};
-
-	override $registerAuthenticationProvider = async (): Promise<void> => {
-		this.calls.push('registerProvider');
-	};
+function createAuthenticationApi(): typeof vscode.authentication {
+	return createAuthenticationApiFacade({
+		...nullExtensionDescription,
+		enabledApiProposals: ['authSession', 'authIssuers', 'authLearnMore']
+	});
 }
 
-function createAuthentication(proxy: RecordingAuthenticationProxy): ExtHostAuthentication {
-	const rpc = new class extends mock<IExtHostRpcService>() {
-		override getProxy<T>(identifier: ProxyIdentifier<T>): Proxied<T> {
-			assert.strictEqual(identifier, MainContext.MainThreadAuthentication);
-			return proxy as unknown as Proxied<T>;
-		}
-	}();
-
-	return new ExtHostAuthentication(
-		rpc,
-		new class extends mock<IExtHostInitDataService>() { }(),
-		new class extends mock<IExtHostWindow>() { }(),
-		new class extends mock<IExtHostUrlsService>() { }(),
-		new class extends mock<IExtHostProgress>() { }(),
-		new NullLoggerService(),
-		new NullLogService()
-	);
-}
-
-suite('Account-free API baseline', () => {
+suite('Account-free authentication API', () => {
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('legacy passive session and account inspection has no provider or state side effects', async () => {
-		const proxy = new RecordingAuthenticationProxy();
-		const authentication = createAuthentication(proxy);
+	test('passive, challenge, issuer and account inspection stays empty', async () => {
+		const authentication = createAuthenticationApi();
+		const challenge: vscode.AuthenticationWwwAuthenticateRequest = {
+			wwwAuthenticate: 'Bearer realm="fixture"',
+			fallbackScopes: ['fixture.scope']
+		};
+		const passive = await authentication.getSession('fixture-provider', ['fixture.scope'], { silent: true });
+		const challenged = await authentication.getSession('fixture-provider', challenge, { silent: true });
+		const issuer = await authentication.getSession('fixture-provider', ['fixture.scope'], {
+			silent: true,
+			authorizationServer: URI.parse('https://issuer.invalid')
+		});
 
-		const session = await authentication.getSession(nullExtensionDescription, 'fixture-provider', ['fixture.scope'], { silent: true });
-		const accounts = await authentication.getAccounts('fixture-provider');
-
-		assert.deepStrictEqual({ session, accounts, calls: proxy.calls }, {
-			session: undefined,
+		assert.deepStrictEqual({ passive, challenged, issuer, accounts: await authentication.getAccounts('fixture-provider'), hasSession: await authentication.hasSession('fixture-provider', ['fixture.scope']) }, {
+			passive: undefined,
+			challenged: undefined,
+			issuer: undefined,
 			accounts: [],
-			calls: []
+			hasSession: false
 		});
 	});
 
-	test('provider registration does not subscribe to or register an extension provider', async () => {
-		const proxy = new RecordingAuthenticationProxy();
-		const authentication = createAuthentication(proxy);
+	test('create and force requests reject with the stable unsupported error', async () => {
+		const authentication = createAuthenticationApi();
+
+		await assert.rejects(Promise.resolve(authentication.getSession('fixture-provider', ['fixture.scope'], {
+			createIfNone: { detail: 'Fixture request', learnMore: URI.parse('https://example.invalid') }
+		})), unsupportedError);
+		await assert.rejects(Promise.resolve(authentication.getSession('fixture-provider', ['fixture.scope'], {
+			forceNewSession: { detail: 'Fixture refresh' }
+		})), unsupportedError);
+	});
+
+	test('proposal guards remain active for issuer and hasSession APIs', async () => {
+		const authentication = createAuthenticationApiFacade(nullExtensionDescription);
+
+		await assert.rejects(Promise.resolve(authentication.hasSession('fixture-provider', ['fixture.scope'])), /CANNOT use API proposal: authSession/);
+		await assert.rejects(Promise.resolve(authentication.getSession('fixture-provider', ['fixture.scope'], {
+			authorizationServer: URI.parse('https://issuer.invalid')
+		})), /CANNOT use API proposal: authIssuers/);
+	});
+
+	test('provider registration and session events are inert', () => {
+		const authentication = createAuthenticationApi();
 		let subscriptions = 0;
 		let providerCalls = 0;
+		let sessionEvents = 0;
 		const provider: vscode.AuthenticationProvider = {
 			onDidChangeSessions: listener => {
 				subscriptions++;
 				return Event.None(listener);
 			},
-			getSessions: async () => [],
+			getSessions: async () => {
+				providerCalls++;
+				return [];
+			},
 			createSession: async () => {
 				providerCalls++;
 				throw new Error('fixture provider must stay inert');
 			},
-			removeSession: async () => { }
+			removeSession: async () => { providerCalls++; }
 		};
+		const subscription = authentication.onDidChangeSessions(() => sessionEvents++);
 
-		authentication.registerAuthenticationProvider('fixture-provider', 'Fixture Provider', provider);
-		await new Promise<void>(resolve => setTimeout(resolve, 0));
-
-		assert.deepStrictEqual({ subscriptions, providerCalls, proxyCalls: proxy.calls }, {
-			subscriptions: 0,
-			providerCalls: 0,
-			proxyCalls: []
-		});
-	});
-
-	test('fixture identifiers and old session state contain no real account data', () => {
-		assert.deepStrictEqual([
-			new ExtensionIdentifier('fixture.publisher').value,
-			'fixture-old-session',
-			'fixture-old-account',
-			'fixture-only-not-a-credential'
-		], [
-			'fixture.publisher',
-			'fixture-old-session',
-			'fixture-old-account',
-			'fixture-only-not-a-credential'
-		]);
+		assert.throws(() => authentication.registerAuthenticationProvider('fixture-provider', 'Fixture Provider', provider), unsupportedError);
+		assert.throws(() => authentication.registerAuthenticationProvider('fixture-provider', 'Fixture Provider', provider), unsupportedError);
+		subscription.dispose();
+		assert.deepStrictEqual({ subscriptions, providerCalls, sessionEvents }, { subscriptions: 0, providerCalls: 0, sessionEvents: 0 });
 	});
 });
