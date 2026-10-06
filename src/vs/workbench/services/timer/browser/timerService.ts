@@ -11,81 +11,21 @@ import { IUpdateService } from '../../../../platform/update/common/update.js';
 import { ILifecycleService, LifecyclePhase } from '../../lifecycle/common/lifecycle.js';
 import { IEditorService } from '../../editor/common/editorService.js';
 import { IAccessibilityService } from '../../../../platform/accessibility/common/accessibility.js';
-import { ITelemetryData, ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { Barrier, timeout } from '../../../../base/common/async.js';
 import { IWorkbenchLayoutService } from '../../layout/browser/layoutService.js';
 import { IPaneCompositePartService } from '../../panecomposite/browser/panecomposite.js';
 import { ViewContainerLocation } from '../../../common/views.js';
-import { TelemetryTrustedValue } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { isWeb } from '../../../../base/common/platform.js';
 import { createBlobWorker } from '../../../../platform/webWorker/browser/webWorkerServiceImpl.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { ITerminalBackendRegistry, TerminalExtensions } from '../../../../platform/terminal/common/terminal.js';
 
-/* __GDPR__FRAGMENT__
-	"IMemoryInfo" : {
-		"workingSetSize" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"privateBytes": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"sharedBytes": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true }
-	}
-*/
 export interface IMemoryInfo {
 	readonly workingSetSize: number;
 	readonly privateBytes: number;
 	readonly sharedBytes: number;
 }
 
-/* __GDPR__FRAGMENT__
-	"IStartupMetrics" : {
-		"ellapsed" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"isLatestVersion": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"didUseCachedData": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"windowKind": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"windowCount": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"viewletId": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"panelId": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"editorIds": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"timers.ellapsedAppReady" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedNlsGeneration" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedLoadMainBundle" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedRunMainBundle" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedCrashReporter" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedMainServer" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedWindowCreate" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedWindowLoad" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedWindowLoadToRequire" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedWaitForWindowConfig" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedStorageInit" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedWorkspaceServiceInit" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedSharedProcesConnected" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedRequiredUserDataInit" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedOtherUserDataInit" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedRequire" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedExtensions" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedExtensionsReady" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedViewletRestore" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedAuxiliaryViewletRestore" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedPanelRestore" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedEditorRestore" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedWorkbenchContributions" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"timers.ellapsedWorkbench" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"platform" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"release" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"arch" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"totalmem" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"freemem" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"meminfo" : { "${inline}": [ "${IMemoryInfo}" ] },
-		"cpus.count" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"cpus.speed" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"cpus.model" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"initialStartup" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"hasAccessibilitySupport" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"isVMLikelyhood" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"emptyWorkbench" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-		"loadavg" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-		"isARM64Emulated" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true }
-	}
-*/
 export interface IStartupMetrics {
 
 	/**
@@ -524,7 +464,6 @@ export abstract class AbstractTimerService implements ITimerService {
 
 	private readonly _barrier = new Barrier();
 	private readonly _marks = new PerfMarks();
-	private readonly _rndValueShouldSendTelemetry = Math.random() < .03; // 3% of users
 
 	private _startupMetrics?: IStartupMetrics;
 
@@ -538,7 +477,6 @@ export abstract class AbstractTimerService implements ITimerService {
 		@IPaneCompositePartService private readonly _paneCompositeService: IPaneCompositePartService,
 		@IEditorService private readonly _editorService: IEditorService,
 		@IAccessibilityService private readonly _accessibilityService: IAccessibilityService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService
 	) {
 		Promise.all([
@@ -552,7 +490,6 @@ export abstract class AbstractTimerService implements ITimerService {
 			return this._computeStartupMetrics();
 		}).then(metrics => {
 			this._startupMetrics = metrics;
-			this._reportStartupTimes(metrics);
 			this._barrier.open();
 		});
 
@@ -619,7 +556,6 @@ export abstract class AbstractTimerService implements ITimerService {
 		// and because of that we only accept marks that start with 'code/'
 		const codeMarks = marks.filter(mark => mark.name.startsWith('code/'));
 		this._marks.setMarks(source, codeMarks);
-		this._reportPerformanceMarks(source, codeMarks);
 	}
 
 	getPerformanceMarks(): [source: string, marks: readonly perf.PerformanceMark[]][] {
@@ -632,54 +568,6 @@ export abstract class AbstractTimerService implements ITimerService {
 
 	getStartTime(mark: string): number {
 		return this._marks.getStartTime(mark);
-	}
-
-	private _reportStartupTimes(metrics: IStartupMetrics): void {
-		// report IStartupMetrics as telemetry
-		/* __GDPR__
-			"startupTimeVaried" : {
-				"owner": "jrieken",
-				"${include}": [
-					"${IStartupMetrics}"
-				]
-			}
-		*/
-		this._telemetryService.publicLog('startupTimeVaried', metrics as unknown as ITelemetryData);
-	}
-
-	protected _shouldReportPerfMarks(): boolean {
-		return this._rndValueShouldSendTelemetry;
-	}
-
-	private _reportPerformanceMarks(source: string, marks: perf.PerformanceMark[]) {
-
-		if (!this._shouldReportPerfMarks()) {
-			// the `startup.timer.mark` event is send very often. In order to save resources
-			// we let some of our instances/sessions send this event
-			return;
-		}
-
-		// report raw timers as telemetry. each mark is send a separate telemetry
-		// event and it is "normalized" to a relative timestamp where the first mark
-		// defines the start
-
-		type Mark = { source: string; name: TelemetryTrustedValue<string>; startTime: number };
-		type MarkClassification = {
-			owner: 'jrieken';
-			comment: 'Information about a performance marker';
-			source: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Where this marker was generated, e.g main, renderer, extension host' };
-			name: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The name of this marker (as defined in source code)' };
-			startTime: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The absolute timestamp (unix time)' };
-		};
-
-		for (const mark of marks) {
-			this._telemetryService.publicLog2<Mark, MarkClassification>('startup.timer.mark', {
-				source,
-				name: new TelemetryTrustedValue(mark.name),
-				startTime: mark.startTime
-			});
-		}
-
 	}
 
 	private async _computeStartupMetrics(): Promise<IStartupMetrics> {

@@ -11,11 +11,10 @@ import { INotificationViewItem, isNotificationViewItem, NotificationsModel, Noti
 import { Action2, MenuRegistry, MenuId, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { localize, localize2 } from '../../../../nls.js';
 import { IListService, WorkbenchList } from '../../../../platform/list/browser/listService.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { NotificationFocusedContext, NotificationsCenterVisibleContext, NotificationsToastsVisibleContext } from '../../../common/contextkeys.js';
 import { INotificationService, INotificationSourceFilter, NotificationsFilter } from '../../../../platform/notification/common/notification.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
-import { ActionRunner, IAction, WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification } from '../../../../base/common/actions.js';
+import { ActionRunner, IAction } from '../../../../base/common/actions.js';
 import { IQuickInputService, IQuickPickItem } from '../../../../platform/quickinput/common/quickInput.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { AccessibilitySignal, IAccessibilitySignalService } from '../../../../platform/accessibilitySignal/browser/accessibilitySignalService.js';
@@ -400,15 +399,12 @@ registerAction2(class SetNotificationsPositionTopRight extends Action2 {
 export class NotificationActionRunner extends ActionRunner {
 
 	constructor(
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@INotificationService private readonly notificationService: INotificationService
 	) {
 		super();
 	}
 
 	protected override async runAction(action: IAction, context: unknown): Promise<void> {
-		this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: action.id, from: 'message' });
-
 		// Run and make sure to notify on any error again
 		try {
 			await super.runAction(action, context);

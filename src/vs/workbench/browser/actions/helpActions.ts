@@ -6,7 +6,6 @@
 import { localize, localize2 } from '../../../nls.js';
 import product from '../../../platform/product/common/product.js';
 import { isMacintosh, isLinux, language, isWeb } from '../../../base/common/platform.js';
-import { ITelemetryService } from '../../../platform/telemetry/common/telemetry.js';
 import { IOpenerService } from '../../../platform/opener/common/opener.js';
 import { URI } from '../../../base/common/uri.js';
 import { MenuId, Action2, registerAction2, MenuRegistry } from '../../../platform/actions/common/actions.js';
@@ -171,8 +170,9 @@ class OpenNewsletterSignupUrlAction extends Action2 {
 	run(accessor: ServicesAccessor) {
 		const productService = accessor.get(IProductService);
 		const openerService = accessor.get(IOpenerService);
-		const telemetryService = accessor.get(ITelemetryService);
-		openerService.open(URI.parse(`${productService.newsletterSignupUrl}?machineId=${encodeURIComponent(telemetryService.machineId)}`));
+		if (productService.newsletterSignupUrl) {
+			openerService.open(URI.parse(productService.newsletterSignupUrl));
+		}
 	}
 }
 

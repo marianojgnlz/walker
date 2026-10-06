@@ -14,7 +14,6 @@ import { InstantiationType, registerSingleton } from '../../../platform/instanti
 import { createDecorator, ServicesAccessor } from '../../../platform/instantiation/common/instantiation.js';
 import { IQuickInputService, IQuickPickItem } from '../../../platform/quickinput/common/quickInput.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../platform/telemetry/common/telemetry.js';
 
 export const IInlineCompletionsService = createDecorator<IInlineCompletionsService>('IInlineCompletionsService');
 
@@ -49,10 +48,6 @@ export interface IInlineCompletionsService {
 	*/
 	cancelSnooze(): void;
 
-	/**
-	 * Report an inline completion.
-	 */
-	reportNewCompletion(requestUuid: string): void;
 }
 
 const InlineCompletionsSnoozing = new RawContextKey<boolean>('inlineCompletions.snoozed', false, localize('inlineCompletions.snoozed', "Whether inline completions are currently snoozed"));
@@ -77,7 +72,6 @@ export class InlineCompletionsService extends Disposable implements IInlineCompl
 
 	constructor(
 		@IContextKeyService private _contextKeyService: IContextKeyService,
-		@ITelemetryService private _telemetryService: ITelemetryService,
 	) {
 		super();
 
@@ -101,7 +95,6 @@ export class InlineCompletionsService extends Disposable implements IInlineCompl
 		}
 
 		const wasSnoozing = this.isSnoozing();
-		const timeLeft = this.snoozeTimeLeft;
 
 		this._snoozeTimeEnd = Date.now() + durationMs;
 
@@ -119,8 +112,6 @@ export class InlineCompletionsService extends Disposable implements IInlineCompl
 			},
 			this.snoozeTimeLeft + 1,
 		);
-
-		this._reportSnooze(durationMs - timeLeft, durationMs);
 	}
 
 	isSnoozing(): boolean {
@@ -129,48 +120,12 @@ export class InlineCompletionsService extends Disposable implements IInlineCompl
 
 	cancelSnooze(): void {
 		if (this.isSnoozing()) {
-			this._reportSnooze(-this.snoozeTimeLeft, 0);
 			this._snoozeTimeEnd = undefined;
 			this._timer.cancel();
 			this._onDidChangeIsSnoozing.fire(false);
 		}
 	}
 
-	private _lastCompletionId: string | undefined;
-	private _recentCompletionIds: string[] = [];
-	reportNewCompletion(requestUuid: string): void {
-		this._lastCompletionId = requestUuid;
-
-		this._recentCompletionIds.unshift(requestUuid);
-		if (this._recentCompletionIds.length > 5) {
-			this._recentCompletionIds.pop();
-		}
-	}
-
-	private _reportSnooze(deltaMs: number, totalMs: number): void {
-		const deltaSeconds = Math.round(deltaMs / 1000);
-		const totalSeconds = Math.round(totalMs / 1000);
-		type WorkspaceStatsClassification = {
-			owner: 'benibenj';
-			comment: 'Snooze duration for inline completions';
-			deltaSeconds: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The duration by which the snooze has changed, in seconds.' };
-			totalSeconds: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The total duration for which inline completions are snoozed, in seconds.' };
-			lastCompletionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The ID of the last completion.' };
-			recentCompletionIds: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The IDs of the recent completions.' };
-		};
-		type WorkspaceStatsEvent = {
-			deltaSeconds: number;
-			totalSeconds: number;
-			lastCompletionId: string | undefined;
-			recentCompletionIds: string[];
-		};
-		this._telemetryService.publicLog2<WorkspaceStatsEvent, WorkspaceStatsClassification>('inlineCompletions.snooze', {
-			deltaSeconds,
-			totalSeconds,
-			lastCompletionId: this._lastCompletionId,
-			recentCompletionIds: this._recentCompletionIds,
-		});
-	}
 }
 
 registerSingleton(IInlineCompletionsService, InlineCompletionsService, InstantiationType.Delayed);

@@ -12,7 +12,6 @@ import { ILifecycleService } from '../../lifecycle/common/lifecycle.js';
 import { IEditorService } from '../../editor/common/editorService.js';
 import { IAccessibilityService } from '../../../../platform/accessibility/common/accessibility.js';
 import { IStartupMetrics, AbstractTimerService, Writeable, ITimerService } from '../browser/timerService.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { process } from '../../../../base/parts/sandbox/electron-browser/globals.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { IWorkbenchLayoutService } from '../../layout/browser/layoutService.js';
@@ -32,12 +31,11 @@ export class TimerService extends AbstractTimerService {
 		@IPaneCompositePartService paneCompositeService: IPaneCompositePartService,
 		@IEditorService editorService: IEditorService,
 		@IAccessibilityService accessibilityService: IAccessibilityService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService,
 		@IProductService private readonly _productService: IProductService,
 		@IStorageService private readonly _storageService: IStorageService
 	) {
-		super(lifecycleService, contextService, extensionService, updateService, paneCompositeService, editorService, accessibilityService, telemetryService, layoutService);
+		super(lifecycleService, contextService, extensionService, updateService, paneCompositeService, editorService, accessibilityService, layoutService);
 		this.setPerformanceMarks('main', _environmentService.window.perfMarks);
 	}
 
@@ -86,10 +84,6 @@ export class TimerService extends AbstractTimerService {
 		}
 	}
 
-	protected override _shouldReportPerfMarks(): boolean {
-		// always send when running with the prof-append-timers flag
-		return super._shouldReportPerfMarks() || Boolean(this._environmentService.args['prof-append-timers']);
-	}
 }
 
 registerSingleton(ITimerService, TimerService, InstantiationType.Delayed);

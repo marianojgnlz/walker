@@ -7,9 +7,7 @@ import { toErrorMessage } from '../../../../base/common/errorMessage.js';
 import { Disposable, MutableDisposable } from '../../../../base/common/lifecycle.js';
 import { SimpleIconLabel } from '../../../../base/browser/ui/iconLabel/simpleIconLabel.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IStatusbarEntry, isTooltipWithCommands, ShowTooltipCommand, StatusbarEntryKinds, ToggleTooltipCommand, TooltipContent } from '../../../services/statusbar/browser/statusbar.js';
-import { WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification } from '../../../../base/common/actions.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { ThemeColor } from '../../../../base/common/themables.js';
 import { isThemeColor } from '../../../../editor/common/editorCommon.js';
@@ -61,7 +59,6 @@ export class StatusbarEntryItem extends Disposable {
 		@ICommandService private readonly commandService: ICommandService,
 		@IHoverService private readonly hoverService: IHoverService,
 		@INotificationService private readonly notificationService: INotificationService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IThemeService private readonly themeService: IThemeService
 	) {
 		super();
@@ -262,7 +259,6 @@ export class StatusbarEntryItem extends Disposable {
 			const id = typeof command === 'string' ? command : command.id;
 			const args = typeof command === 'string' ? [] : command.arguments ?? [];
 
-			this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id, from: 'status bar' });
 			try {
 				await this.commandService.executeCommand(id, ...args);
 			} catch (error) {

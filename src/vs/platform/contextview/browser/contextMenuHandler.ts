@@ -7,13 +7,12 @@ import { IContextMenuDelegate } from '../../../base/browser/contextmenu.js';
 import { $, addDisposableListener, EventType, getActiveElement, getWindow, isAncestor, isHTMLElement } from '../../../base/browser/dom.js';
 import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
 import { Menu } from '../../../base/browser/ui/menu/menu.js';
-import { ActionRunner, IRunEvent, WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../base/common/actions.js';
+import { ActionRunner, IRunEvent } from '../../../base/common/actions.js';
 import { isCancellationError } from '../../../base/common/errors.js';
 import { combinedDisposable, DisposableStore, IDisposable } from '../../../base/common/lifecycle.js';
 import { IContextViewService } from './contextView.js';
 import { IKeybindingService } from '../../keybinding/common/keybinding.js';
 import { INotificationService } from '../../notification/common/notification.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { defaultMenuStyles } from '../../theme/browser/defaultStyles.js';
 
 
@@ -30,7 +29,6 @@ export class ContextMenuHandler {
 
 	constructor(
 		private contextViewService: IContextViewService,
-		private telemetryService: ITelemetryService,
 		private notificationService: INotificationService,
 		private keybindingService: IKeybindingService,
 	) { }
@@ -83,7 +81,7 @@ export class ContextMenuHandler {
 				const menuDisposables = new DisposableStore();
 
 				const actionRunner = delegate.actionRunner || menuDisposables.add(new ActionRunner());
-				actionRunner.onWillRun(evt => this.onActionRun(evt, !delegate.skipTelemetry), this, menuDisposables);
+				actionRunner.onWillRun(evt => this.onActionRun(evt), this, menuDisposables);
 				actionRunner.onDidRun(this.onDidActionRun, this, menuDisposables);
 				menu = new Menu(container, actions, {
 					actionViewItemProvider: delegate.getActionViewItem,
@@ -149,11 +147,7 @@ export class ContextMenuHandler {
 		}, shadowRootElement, !!shadowRootElement, delegate.useWindowContainerForShadowRoot);
 	}
 
-	private onActionRun(e: IRunEvent, logTelemetry: boolean): void {
-		if (logTelemetry) {
-			this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: e.action.id, from: 'contextMenu' });
-		}
-
+	private onActionRun(e: IRunEvent): void {
 		this.contextViewService.hideContextView(false);
 	}
 

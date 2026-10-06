@@ -49,7 +49,6 @@ import { INotificationService } from '../../../../platform/notification/common/n
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IProgressService } from '../../../../platform/progress/common/progress.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { isDark } from '../../../../platform/theme/common/theme.js';
 import { FileThemeIcon, FolderThemeIcon, IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
@@ -67,7 +66,6 @@ import { toExternalVSDataTransfer } from '../../../../editor/browser/dataTransfe
 import { CheckboxStateHandler, TreeItemCheckbox } from './checkbox.js';
 import { setTimeout0 } from '../../../../base/common/platform.js';
 import { AriaRole } from '../../../../base/browser/ui/aria/aria.js';
-import { TelemetryTrustedValue } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { ITreeViewsDnDService } from '../../../../editor/common/services/treeViewsDndService.js';
 import { DraggedTreeItemsIdentifier } from '../../../../editor/common/services/treeViewsDnd.js';
 import { IMarkdownRendererService } from '../../../../platform/markdown/browser/markdownRenderer.js';
@@ -1852,7 +1850,6 @@ export class CustomTreeView extends AbstractTreeView {
 	constructor(
 		id: string,
 		title: string,
-		private readonly extensionId: string,
 		@IThemeService themeService: IThemeService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@ICommandService commandService: ICommandService,
@@ -1866,7 +1863,6 @@ export class CustomTreeView extends AbstractTreeView {
 		@IHoverService hoverService: IHoverService,
 		@IExtensionService private readonly extensionService: IExtensionService,
 		@IActivityService activityService: IActivityService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@ILogService logService: ILogService,
 		@IOpenerService openerService: IOpenerService,
 		@IMarkdownRendererService markdownRendererService: IMarkdownRendererService,
@@ -1876,20 +1872,6 @@ export class CustomTreeView extends AbstractTreeView {
 
 	protected activate() {
 		if (!this.activated) {
-			type ExtensionViewTelemetry = {
-				extensionId: TelemetryTrustedValue<string>;
-				id: string;
-			};
-			type ExtensionViewTelemetryMeta = {
-				extensionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Id of the extension' };
-				id: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Id of the view' };
-				owner: 'digitarald';
-				comment: 'Helps to gain insights on what extension contributed views are most popular';
-			};
-			this.telemetryService.publicLog2<ExtensionViewTelemetry, ExtensionViewTelemetryMeta>('Extension:ViewActivate', {
-				extensionId: new TelemetryTrustedValue(this.extensionId),
-				id: this.id,
-			});
 			this.createTree();
 			this.progressService.withProgress({ location: this.id }, () => this.extensionService.activateByEvent(`onView:${this.id}`))
 				.then(() => timeout(2000))

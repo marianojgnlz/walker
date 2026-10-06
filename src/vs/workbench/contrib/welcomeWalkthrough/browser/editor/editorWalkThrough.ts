@@ -25,8 +25,7 @@ const inputOptions: WalkThroughInputOptions = {
 		.with({
 			scheme: Schemas.walkThrough,
 			query: JSON.stringify({ moduleId: 'vs/workbench/contrib/welcomeWalkthrough/browser/editor/vs_code_editor_walkthrough' })
-		}),
-	telemetryFrom: 'walkThrough'
+		})
 };
 
 export class EditorWalkThroughAction extends Action2 {

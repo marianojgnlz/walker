@@ -13,7 +13,6 @@ import { ViewPaneContainer, ViewPaneContainerAction, ViewsSubMenu } from '../../
 import { SyncDescriptor } from '../../../../platform/instantiation/common/descriptors.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { Event, Emitter } from '../../../../base/common/event.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { getViewsStateStorageId, ViewContainerModel } from '../common/viewContainerModel.js';
@@ -77,7 +76,6 @@ export class ViewDescriptorService extends Disposable implements IViewDescriptor
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@IStorageService private readonly storageService: IStorageService,
 		@IExtensionService private readonly extensionService: IExtensionService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@ILoggerService loggerService: ILoggerService,
 		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
 	) {
@@ -399,9 +397,6 @@ export class ViewDescriptorService extends Disposable implements IViewDescriptor
 
 			// Save new locations
 			this.saveViewCustomizations();
-
-			// Log to telemetry
-			this.reportMovedViews(views, from, to);
 		}
 	}
 
@@ -443,48 +438,6 @@ export class ViewDescriptorService extends Disposable implements IViewDescriptor
 		if (viewsToMove.length) {
 			this.moveViewsWithoutSaving(viewsToMove, from, to);
 		}
-	}
-
-	private reportMovedViews(views: IViewDescriptor[], from: ViewContainer, to: ViewContainer): void {
-		const containerToString = (container: ViewContainer): string => {
-			if (container.id.startsWith(ViewDescriptorService.COMMON_CONTAINER_ID_PREFIX)) {
-				return 'custom';
-			}
-
-			if (!container.extensionId) {
-				return container.id;
-			}
-
-			return 'extension';
-		};
-
-		const oldLocation = this.getViewContainerLocation(from);
-		const newLocation = this.getViewContainerLocation(to);
-		const viewCount = views.length;
-		const fromContainer = containerToString(from);
-		const toContainer = containerToString(to);
-		const fromLocation = oldLocation === ViewContainerLocation.Panel ? 'panel' : 'sidebar';
-		const toLocation = newLocation === ViewContainerLocation.Panel ? 'panel' : 'sidebar';
-
-		interface ViewDescriptorServiceMoveViewsEvent {
-			viewCount: number;
-			fromContainer: string;
-			toContainer: string;
-			fromLocation: string;
-			toLocation: string;
-		}
-
-		type ViewDescriptorServiceMoveViewsClassification = {
-			owner: 'benibenj';
-			comment: 'Logged when views are moved from one view container to another';
-			viewCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The number of views moved' };
-			fromContainer: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The starting view container of the moved views' };
-			toContainer: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The destination view container of the moved views' };
-			fromLocation: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The location of the starting view container. e.g. Primary Side Bar' };
-			toLocation: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The location of the destination view container. e.g. Panel' };
-		};
-
-		this.telemetryService.publicLog2<ViewDescriptorServiceMoveViewsEvent, ViewDescriptorServiceMoveViewsClassification>('viewDescriptorService.moveViews', { viewCount, fromContainer, toContainer, fromLocation, toLocation });
 	}
 
 	private moveViewsWithoutSaving(views: IViewDescriptor[], from: ViewContainer, to: ViewContainer, visibilityState: ViewVisibilityState = ViewVisibilityState.Expand): void {

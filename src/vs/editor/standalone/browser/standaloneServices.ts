@@ -996,14 +996,13 @@ class StandaloneLogService extends LogService {
 
 class StandaloneContextMenuService extends ContextMenuService {
 	constructor(
-		@ITelemetryService telemetryService: ITelemetryService,
 		@INotificationService notificationService: INotificationService,
 		@IContextViewService contextViewService: IContextViewService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IMenuService menuService: IMenuService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 	) {
-		super(telemetryService, notificationService, contextViewService, keybindingService, menuService, contextKeyService);
+		super(notificationService, contextViewService, keybindingService, menuService, contextKeyService);
 		this.configure({ blockMouse: false }); // we do not want that in the standalone editor
 	}
 }

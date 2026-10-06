@@ -16,7 +16,6 @@ import { CodeWindow } from '../../../../base/browser/window.js';
 import { mark } from '../../../../base/common/performance.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { ShutdownReason } from '../../lifecycle/common/lifecycle.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { Barrier } from '../../../../base/common/async.js';
 import { IHostService } from '../../host/browser/host.js';
 import { applyZoom } from '../../../../platform/window/electron-browser/window.js';
@@ -150,12 +149,11 @@ export class NativeAuxiliaryWindowService extends BrowserAuxiliaryWindowService 
 		@INativeHostService private readonly nativeHostService: INativeHostService,
 		@IDialogService dialogService: IDialogService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IHostService hostService: IHostService,
 		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 	) {
-		super(layoutService, dialogService, configurationService, telemetryService, hostService, environmentService, contextMenuService);
+		super(layoutService, dialogService, configurationService, hostService, environmentService, contextMenuService);
 	}
 
 	protected override async resolveWindowId(auxiliaryWindow: NativeCodeWindow): Promise<number> {

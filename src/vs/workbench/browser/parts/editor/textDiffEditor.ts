@@ -14,7 +14,6 @@ import { EditorInput } from '../../../common/editor/editorInput.js';
 import { applyTextEditorOptions } from '../../../common/editor/editorOptions.js';
 import { DiffEditorInput } from '../../../common/editor/diffEditorInput.js';
 import { TextDiffEditorModel } from '../../../common/editor/textDiffEditorModel.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
 import { ITextResourceConfigurationChangeEvent, ITextResourceConfigurationService } from '../../../../editor/common/services/textResourceConfiguration.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
@@ -35,7 +34,7 @@ import { multibyteAwareBtoa } from '../../../../base/common/strings.js';
 import { ByteSize, FileOperationError, FileOperationResult, IFileService, TooLargeFileOperationError } from '../../../../platform/files/common/files.js';
 import { IBoundarySashes } from '../../../../base/browser/ui/sash/sash.js';
 import { IPreferencesService } from '../../../services/preferences/common/preferences.js';
-import { StopWatch } from '../../../../base/common/stopwatch.js';
+import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { DiffEditorWidget } from '../../../../editor/browser/widget/diffEditor/diffEditorWidget.js';
 
 /**
@@ -45,8 +44,6 @@ export class TextDiffEditor extends AbstractTextEditor<IDiffEditorViewState> imp
 	static readonly ID = TEXT_DIFF_EDITOR_ID;
 
 	private diffEditorControl: IDiffEditor | undefined = undefined;
-
-	private inputLifecycleStopWatch: StopWatch | undefined = undefined;
 
 	override get scopedContextKeyService(): IContextKeyService | undefined {
 		if (!this.diffEditorControl) {
@@ -103,9 +100,6 @@ export class TextDiffEditor extends AbstractTextEditor<IDiffEditorViewState> imp
 			this._previousViewModel = null;
 		}
 
-		// Cleanup previous things associated with the input
-		this.inputLifecycleStopWatch = undefined;
-
 		// Set input and resolve
 		await super.setInput(input, options, context, token);
 
@@ -159,9 +153,6 @@ export class TextDiffEditor extends AbstractTextEditor<IDiffEditorViewState> imp
 			});
 
 			control.handleInitialized();
-
-			// Start to measure input lifecycle
-			this.inputLifecycleStopWatch = new StopWatch(false);
 		} catch (error) {
 			await this.handleSetInputError(error, input, options);
 		}
@@ -355,37 +346,8 @@ export class TextDiffEditor extends AbstractTextEditor<IDiffEditorViewState> imp
 
 		super.clearInput();
 
-		// Log input lifecycle telemetry
-		const inputLifecycleElapsed = this.inputLifecycleStopWatch?.elapsed();
-		this.inputLifecycleStopWatch = undefined;
-		if (typeof inputLifecycleElapsed === 'number') {
-			this.logInputLifecycleTelemetry(inputLifecycleElapsed, this.getControl()?.getModel()?.modified?.getLanguageId());
-		}
-
 		// Clear Model
 		this.diffEditorControl?.setModel(null);
-	}
-
-	private logInputLifecycleTelemetry(duration: number, languageId: string | undefined): void {
-		let collapseUnchangedRegions = false;
-		if (this.diffEditorControl instanceof DiffEditorWidget) {
-			collapseUnchangedRegions = this.diffEditorControl.collapseUnchangedRegions;
-		}
-		this.telemetryService.publicLog2<{
-			editorVisibleTimeMs: number;
-			languageId: string;
-			collapseUnchangedRegions: boolean;
-		}, {
-			owner: 'hediet';
-			editorVisibleTimeMs: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Indicates the time the diff editor was visible to the user' };
-			languageId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Indicates for which language the diff editor was shown' };
-			collapseUnchangedRegions: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Indicates whether unchanged regions were collapsed' };
-			comment: 'This event gives insight about how long the diff editor was visible to the user.';
-		}>('diffEditor.editorVisibleTime', {
-			editorVisibleTimeMs: duration,
-			languageId: languageId ?? '',
-			collapseUnchangedRegions,
-		});
 	}
 
 	override getControl(): IDiffEditor | undefined {

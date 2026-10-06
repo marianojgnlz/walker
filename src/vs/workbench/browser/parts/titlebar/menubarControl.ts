@@ -8,7 +8,7 @@ import { localize, localize2 } from '../../../../nls.js';
 import { IMenuService, MenuId, IMenu, SubmenuItemAction, registerAction2, Action2, MenuItemAction } from '../../../../platform/actions/common/actions.js';
 import { MenuBarVisibility, IWindowOpenable, getMenuBarVisibility, MenuSettings, hasNativeMenu } from '../../../../platform/window/common/window.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
-import { IAction, Action, SubmenuAction, Separator, IActionRunner, ActionRunner, WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification, toAction } from '../../../../base/common/actions.js';
+import { IAction, Action, SubmenuAction, Separator, IActionRunner, ActionRunner, toAction } from '../../../../base/common/actions.js';
 import { addDisposableListener, Dimension, EventType } from '../../../../base/browser/dom.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { isMacintosh, isWeb, isIOS, isNative } from '../../../../base/common/platform.js';
@@ -35,7 +35,6 @@ import { KeyCode, KeyMod } from '../../../../base/common/keyCodes.js';
 import { KeybindingWeight } from '../../../../platform/keybinding/common/keybindingsRegistry.js';
 import { IsWebContext } from '../../../../platform/contextkey/common/contextkeys.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { OpenRecentAction } from '../../actions/windowActions.js';
 import { isICommandActionToggleInfo } from '../../../../platform/action/common/action.js';
 import { getFlatContextMenuActions } from '../../../../platform/actions/browser/menuEntryActionViewItem.js';
@@ -348,7 +347,6 @@ export class CustomMenubarControl extends MenubarControl {
 		@IPreferencesService preferencesService: IPreferencesService,
 		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
 		@IAccessibilityService accessibilityService: IAccessibilityService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IHostService hostService: IHostService,
 		@ICommandService commandService: ICommandService
 	) {
@@ -358,9 +356,6 @@ export class CustomMenubarControl extends MenubarControl {
 		this._onFocusStateChange = this._register(new Emitter<boolean>());
 
 		this.actionRunner = this._register(new ActionRunner());
-		this._register(this.actionRunner.onDidRun(e => {
-			this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: e.action.id, from: 'menu' });
-		}));
 
 		this.workspacesService.getRecentlyOpened().then((recentlyOpened) => {
 			this.recentlyOpened = recentlyOpened;

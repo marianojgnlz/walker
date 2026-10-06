@@ -6,7 +6,7 @@
 import { IJSONSchema } from '../../../../base/common/jsonSchema.js';
 import { KeyChord, KeyCode, KeyMod } from '../../../../base/common/keyCodes.js';
 import { Schemas, matchesScheme } from '../../../../base/common/network.js';
-import { extname, isEqual } from '../../../../base/common/resources.js';
+import { isEqual } from '../../../../base/common/resources.js';
 import { isNumber, isObject, isString, isUndefined } from '../../../../base/common/types.js';
 import { URI, UriComponents } from '../../../../base/common/uri.js';
 import { Codicon } from '../../../../base/common/codicons.js';
@@ -23,7 +23,6 @@ import { KeybindingWeight, KeybindingsRegistry } from '../../../../platform/keyb
 import { IListService, IOpenEvent, RawWorkbenchListFocusContextKey, WorkbenchTreeFindOpen, WorkbenchTreeStickyScrollFocused } from '../../../../platform/list/browser/listService.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { ActiveGroupEditorsByMostRecentlyUsedQuickAccess } from './editorQuickAccess.js';
 import { SideBySideEditor } from './sideBySideEditor.js';
 import { TextDiffEditor } from './textDiffEditor.js';
@@ -952,7 +951,6 @@ function registerCloseEditorCommands() {
 	async function reopenEditorWith(accessor: ServicesAccessor, editorOverride: string | EditorResolution, ...args: unknown[]) {
 		const editorService = accessor.get(IEditorService);
 		const editorResolverService = accessor.get(IEditorResolverService);
-		const telemetryService = accessor.get(ITelemetryService);
 		const textFileService = accessor.get(ITextFileService);
 		const workingCopyService = accessor.get(IWorkingCopyService);
 		const workingCopyEditorService = accessor.get(IWorkingCopyEditorService);
@@ -1015,30 +1013,6 @@ function registerCloseEditorCommands() {
 					replacement: resolvedEditor.editor,
 					forceReplaceDirty,
 					options: resolvedEditor.options
-				});
-
-				// Telemetry
-				type WorkbenchEditorReopenClassification = {
-					owner: 'rebornix';
-					comment: 'Identify how a document is reopened';
-					scheme: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'File system provider scheme for the resource' };
-					ext: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'File extension for the resource' };
-					from: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The editor view type the resource is switched from' };
-					to: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The editor view type the resource is switched to' };
-				};
-
-				type WorkbenchEditorReopenEvent = {
-					scheme: string;
-					ext: string;
-					from: string;
-					to: string;
-				};
-
-				telemetryService.publicLog2<WorkbenchEditorReopenEvent, WorkbenchEditorReopenClassification>('workbenchEditorReopen', {
-					scheme: editorToResolve.resource?.scheme ?? '',
-					ext: editorToResolve.resource ? extname(editorToResolve.resource) : '',
-					from: editor.editorId ?? '',
-					to: resolvedEditor.editor.editorId ?? ''
 				});
 			}
 		}

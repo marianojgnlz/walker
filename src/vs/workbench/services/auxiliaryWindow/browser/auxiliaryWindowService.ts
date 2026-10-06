@@ -22,7 +22,6 @@ import { IContextMenuService } from '../../../../platform/contextview/browser/co
 import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { DEFAULT_AUX_WINDOW_SIZE, IRectangle, WindowMinimumSize } from '../../../../platform/window/common/window.js';
 import { BaseWindow } from '../../../browser/window.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
@@ -266,7 +265,6 @@ export class BrowserAuxiliaryWindowService extends Disposable implements IAuxili
 		@IWorkbenchLayoutService protected readonly layoutService: IWorkbenchLayoutService,
 		@IDialogService protected readonly dialogService: IDialogService,
 		@IConfigurationService protected readonly configurationService: IConfigurationService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IHostService protected readonly hostService: IHostService,
 		@IWorkbenchEnvironmentService protected readonly environmentService: IWorkbenchEnvironmentService,
 		@IContextMenuService protected readonly contextMenuService: IContextMenuService,
@@ -310,16 +308,6 @@ export class BrowserAuxiliaryWindowService extends Disposable implements IAuxili
 		this._onDidOpenAuxiliaryWindow.fire({ window: auxiliaryWindow, disposables: eventDisposables });
 
 		mark('code/auxiliaryWindow/didOpen');
-
-		type AuxiliaryWindowClassification = {
-			owner: 'bpasero';
-			comment: 'An event that fires when an auxiliary window is opened';
-			bounds: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Has window bounds provided.' };
-		};
-		type AuxiliaryWindowOpenEvent = {
-			bounds: boolean;
-		};
-		this.telemetryService.publicLog2<AuxiliaryWindowOpenEvent, AuxiliaryWindowClassification>('auxiliaryWindowOpen', { bounds: !!options?.bounds });
 
 		return auxiliaryWindow;
 	}

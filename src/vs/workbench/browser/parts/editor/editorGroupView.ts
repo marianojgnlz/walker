@@ -25,7 +25,6 @@ import { EditorProgressIndicator } from '../../../services/progress/browser/prog
 import { localize } from '../../../../nls.js';
 import { coalesce } from '../../../../base/common/arrays.js';
 import { DisposableStore, MutableDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
-import { ITelemetryData, ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { DeferredPromise, Promises, RunOnceWorker } from '../../../../base/common/async.js';
 import { EventType as TouchEventType, GestureEvent } from '../../../../base/browser/touch.js';
 import { IEditorGroupsView, IEditorGroupView, fillActiveEditorViewState, EditorServiceImpl, IEditorGroupTitleHeight, IInternalEditorOpenOptions, IInternalMoveCopyOptions, IInternalEditorCloseOptions, IInternalEditorTitleControlOptions, IEditorPartsView, IEditorGroupViewOptions } from './editor.js';
@@ -39,9 +38,7 @@ import { IContextMenuService } from '../../../../platform/contextview/browser/co
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { createEditorTypeActions, getAvailableEditorTypes } from './editorTypePicker.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { hash } from '../../../../base/common/hash.js';
-import { getMimeTypes } from '../../../../editor/common/services/languagesAssociations.js';
-import { extname, isEqual } from '../../../../base/common/resources.js';
+import { isEqual } from '../../../../base/common/resources.js';
 import { Schemas } from '../../../../base/common/network.js';
 import { EditorActivation, IEditorOptions } from '../../../../platform/editor/common/editor.js';
 import { IFileDialogService, ConfirmResult, IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
@@ -50,7 +47,6 @@ import { URI } from '../../../../base/common/uri.js';
 import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
 import { isLinux, isMacintosh, isNative, isWindows } from '../../../../base/common/platform.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
-import { TelemetryTrustedValue } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { defaultProgressBarStyles } from '../../../../platform/theme/browser/defaultStyles.js';
 import { IBoundarySashes } from '../../../../base/browser/ui/sash/sash.js';
 import { EditorGroupWatermark } from './editorGroupWatermark.js';
@@ -162,7 +158,6 @@ export class EditorGroupView extends Themable implements IEditorGroupView {
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@IThemeService themeService: IThemeService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IKeybindingService private readonly keybindingService: IKeybindingService,
 		@IMenuService private readonly menuService: IMenuService,
 		@IContextMenuService private readonly contextMenuService: IContextMenuService,
@@ -669,16 +664,6 @@ export class EditorGroupView extends Themable implements IEditorGroupView {
 
 	private onDidOpenEditor(editor: EditorInput, editorIndex: number): void {
 
-		/* __GDPR__
-			"editorOpened" : {
-				"owner": "isidorn",
-				"${include}": [
-					"${EditorTelemetryDescriptor}"
-				]
-			}
-		*/
-		this.telemetryService.publicLog('editorOpened', this.toEditorTelemetryDescriptor(editor));
-
 		// Update container
 		this.updateContainer();
 	}
@@ -724,61 +709,6 @@ export class EditorGroupView extends Themable implements IEditorGroupView {
 		}
 
 		return true;
-	}
-
-	private toResourceTelemetryDescriptor(resource: URI): object | undefined {
-		if (!resource) {
-			return undefined;
-		}
-
-		const path = resource ? resource.scheme === Schemas.file ? resource.fsPath : resource.path : undefined;
-		if (!path) {
-			return undefined;
-		}
-
-		// Remove query parameters from the resource extension
-		let resourceExt = extname(resource);
-		const queryStringLocation = resourceExt.indexOf('?');
-		resourceExt = queryStringLocation !== -1 ? resourceExt.substr(0, queryStringLocation) : resourceExt;
-
-		return {
-			mimeType: new TelemetryTrustedValue(getMimeTypes(resource).join(', ')),
-			scheme: resource.scheme,
-			ext: resourceExt,
-			path: hash(path)
-		};
-	}
-
-	private toEditorTelemetryDescriptor(editor: EditorInput): ITelemetryData {
-		const descriptor = editor.getTelemetryDescriptor();
-
-		const resource = EditorResourceAccessor.getOriginalUri(editor, { supportSideBySide: SideBySideEditor.BOTH });
-		if (URI.isUri(resource)) {
-			descriptor.resource = this.toResourceTelemetryDescriptor(resource);
-
-			/* __GDPR__FRAGMENT__
-				"EditorTelemetryDescriptor" : {
-					"resource": { "${inline}": [ "${URIDescriptor}" ] }
-				}
-			*/
-			return descriptor;
-		} else if (resource) {
-			if (resource.primary) {
-				descriptor.resource = this.toResourceTelemetryDescriptor(resource.primary);
-			}
-			if (resource.secondary) {
-				descriptor.resourceSecondary = this.toResourceTelemetryDescriptor(resource.secondary);
-			}
-			/* __GDPR__FRAGMENT__
-				"EditorTelemetryDescriptor" : {
-					"resource": { "${inline}": [ "${URIDescriptor}" ] },
-					"resourceSecondary": { "${inline}": [ "${URIDescriptor}" ] }
-				}
-			*/
-			return descriptor;
-		}
-
-		return descriptor;
 	}
 
 	private onWillDisposeEditor(editor: EditorInput): void {

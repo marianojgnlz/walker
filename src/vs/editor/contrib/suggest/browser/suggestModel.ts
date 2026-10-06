@@ -17,7 +17,6 @@ import { IConfigurationService } from '../../../../platform/configuration/common
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IEnvironmentService } from '../../../../platform/environment/common/environment.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { ICodeEditor } from '../../../browser/editorBrowser.js';
 import { EditorOption } from '../../../common/config/editorOptions.js';
 import { IPosition, Position } from '../../../common/core/position.js';
@@ -32,7 +31,7 @@ import { getInlineCompletionsController } from '../../inlineCompletions/browser/
 import { InlineCompletionContextKeys } from '../../inlineCompletions/browser/controller/inlineCompletionContextKeys.js';
 import { SnippetController2 } from '../../snippet/browser/snippetController2.js';
 import { CompletionModel } from './completionModel.js';
-import { CompletionDurations, CompletionItem, CompletionOptions, getSnippetSuggestSupport, provideSuggestionItems, QuickSuggestionsOptions, SnippetSortOrder } from './suggest.js';
+import { CompletionItem, CompletionOptions, getSnippetSuggestSupport, provideSuggestionItems, QuickSuggestionsOptions, SnippetSortOrder } from './suggest.js';
 import { WordDistance } from './wordDistance.js';
 
 export interface ICancelEvent {
@@ -157,7 +156,6 @@ export class SuggestModel implements IDisposable {
 		private readonly _editor: ICodeEditor,
 		@IEditorWorkerService private readonly _editorWorkerService: IEditorWorkerService,
 		@IClipboardService private readonly _clipboardService: IClipboardService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@ILogService private readonly _logService: ILogService,
 		@IContextKeyService private readonly _contextKeyService: IContextKeyService,
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
@@ -636,9 +634,6 @@ export class SuggestModel implements IDisposable {
 
 			this._onNewContext(ctx);
 
-			// finally report telemetry about durations
-			this._reportDurationsTelemetry(completions.durations);
-
 			// report invalid completions by source
 			if (!this._envService.isBuilt || this._envService.isExtensionDevelopment) {
 				for (const item of completions.items) {
@@ -649,27 +644,6 @@ export class SuggestModel implements IDisposable {
 			}
 
 		}).catch(onUnexpectedError);
-	}
-
-	/**
-	 * Report durations telemetry with a 1% sampling rate.
-	 * The telemetry is reported only if a random number between 0 and 100 is less than or equal to 1.
-	 */
-	private _reportDurationsTelemetry(durations: CompletionDurations): void {
-		if (Math.random() > 0.0001) { // 0.01%
-			return;
-		}
-
-		setTimeout(() => {
-			type Durations = { data: string };
-			type DurationsClassification = {
-				owner: 'jrieken';
-				comment: 'Completions performance numbers';
-				data: { comment: 'Durations per source and overall'; classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth' };
-			};
-			this._telemetryService.publicLog2<Durations, DurationsClassification>('suggest.durations.json', { data: JSON.stringify(durations) });
-			this._logService.debug('suggest.durations.json', durations);
-		});
 	}
 
 	static createSuggestFilter(editor: ICodeEditor): { itemKind: Set<CompletionItemKind>; showDeprecated: boolean } {

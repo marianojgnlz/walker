@@ -5,21 +5,21 @@
 
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
-import { TelemetryLevel } from '../../../../platform/telemetry/common/telemetry.js';
-import { getTelemetryLevel } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
 
 /**
- * Determines if experiment properties will be set on telemetry events.
- * When true, TelemetryService should buffer events until setExperimentProperty is called.
+ * Determines whether experiment treatments (TAS) may be fetched and applied.
+ *
+ * This is an ordinary feature gate for the experiment client. It is deliberately independent of
+ * telemetry enablement: telemetry settings must never be able to switch the experiment client on
+ * or off, and an experiment fetch must not be confused with reporting.
  */
 export function experimentsEnabled(
 	configurationService: IConfigurationService,
 	productService: IProductService,
 	environmentService: IWorkbenchEnvironmentService
 ): boolean {
-	return getTelemetryLevel(configurationService) === TelemetryLevel.USAGE &&
-		!!productService.tasConfig &&
+	return !!productService.tasConfig &&
 		!environmentService.disableExperiments &&
 		!environmentService.extensionTestsLocationURI &&
 		!environmentService.enableSmokeTestDriver &&

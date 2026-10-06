@@ -117,8 +117,6 @@ export class AssignmentFilterProvider implements IExperimentationFilterProvider 
 	constructor(
 		private version: string,
 		private appName: string,
-		private machineId: string,
-		private devDeviceId: string,
 		private targetPopulation: TargetPopulation,
 		private releaseDate: string,
 		private windowKind: WindowKind
@@ -131,9 +129,10 @@ export class AssignmentFilterProvider implements IExperimentationFilterProvider 
 			case Filters.Build:
 				return this.appName; // productService.nameLong
 			case Filters.ClientId:
-				return this.machineId;
 			case Filters.DeveloperDeviceId:
-				return this.devDeviceId;
+				// No client/device identity is collected, so these filters are omitted rather
+				// than filled with a placeholder value.
+				return null;
 			case Filters.Language:
 				return platform.language;
 			case Filters.ExtensionName:

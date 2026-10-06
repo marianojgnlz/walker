@@ -18,7 +18,6 @@ import { IMarkdownRendererService } from '../../../../../platform/markdown/brows
 import * as nls from '../../../../../nls.js';
 import { IAccessibilityService } from '../../../../../platform/accessibility/common/accessibility.js';
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { GhostTextView } from '../view/ghostText/ghostTextView.js';
 
 export class InlineCompletionsHover implements IHoverPart {
@@ -46,7 +45,6 @@ export class InlineCompletionsHoverParticipant implements IEditorHoverParticipan
 		private readonly _editor: ICodeEditor,
 		@IAccessibilityService private readonly accessibilityService: IAccessibilityService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@IMarkdownRendererService private readonly _markdownRendererService: IMarkdownRendererService,
 	) {
 	}
@@ -102,11 +100,6 @@ export class InlineCompletionsHoverParticipant implements IEditorHoverParticipan
 	renderHoverParts(context: IEditorHoverRenderContext, hoverParts: InlineCompletionsHover[]): IRenderedHoverParts<InlineCompletionsHover> {
 		const disposables = new DisposableStore();
 		const part = hoverParts[0];
-
-		this._telemetryService.publicLog2<{}, {
-			owner: 'hediet';
-			comment: 'This event tracks whenever an inline completion hover is shown.';
-		}>('inlineCompletionHover.shown');
 
 		if (this.accessibilityService.isScreenReaderOptimized() && !this._editor.getOption(EditorOption.screenReaderAnnounceInlineSuggestion)) {
 			disposables.add(this.renderScreenReaderText(context, part));

@@ -15,7 +15,6 @@ import { CommandsRegistry, ICommandService } from '../../../../platform/commands
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IProgress, Progress } from '../../../../platform/progress/common/progress.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { ICodeEditor } from '../../../browser/editorBrowser.js';
 import { IBulkEditService } from '../../../browser/services/bulkEditService.js';
 import { Range } from '../../../common/core/range.js';
@@ -271,31 +270,9 @@ export async function applyCodeAction(
 ): Promise<void> {
 	const bulkEditService = accessor.get(IBulkEditService);
 	const commandService = accessor.get(ICommandService);
-	const telemetryService = accessor.get(ITelemetryService);
 	const notificationService = accessor.get(INotificationService);
 	const accessibilitySignalService = accessor.get(IAccessibilitySignalService);
 
-	type ApplyCodeActionEvent = {
-		codeActionTitle: string;
-		codeActionKind: string | undefined;
-		codeActionIsPreferred: boolean;
-		reason: ApplyCodeActionReason;
-	};
-	type ApplyCodeEventClassification = {
-		codeActionTitle: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The display label of the applied code action' };
-		codeActionKind: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The kind (refactor, quickfix) of the applied code action' };
-		codeActionIsPreferred: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Was the code action marked as being a preferred action?' };
-		reason: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The kind of action used to trigger apply code action.' };
-		owner: 'justschen';
-		comment: 'Event used to gain insights into which code actions are being triggered';
-	};
-
-	telemetryService.publicLog2<ApplyCodeActionEvent, ApplyCodeEventClassification>('codeAction.applyCodeAction', {
-		codeActionTitle: item.action.title,
-		codeActionKind: item.action.kind,
-		codeActionIsPreferred: !!item.action.isPreferred,
-		reason: codeActionReason,
-	});
 	accessibilitySignalService.playSignal(AccessibilitySignal.codeActionTriggered);
 	await item.resolve(token);
 	if (token.isCancellationRequested) {

@@ -625,3 +625,17 @@ Each file below is now an empty `export { }` module with zero importers after th
 **Measured total:** 5 files / 894 tracked lines, all plain text. **Coupling edits (not manifest items):** `npm run compile-client` and `npm run typecheck-client` are exit 0 with the empty modules still on disk; `./scripts/test.sh --run vs/code/test/electron-main/productDebloat.test` (9 passing), `vs/workbench/test/browser/productDebloatChatIntegrations.test` (30), `vs/platform/extensionManagement/test/common/extensionGalleryService.test` (38), `vs/platform/telemetry/test/common/nullTelemetryService.test` (2) and `vs/workbench/api/test/common/accountFreeApi.test` (10) all stay green before deletion.
 
 **Not manifest items (deliberately retained):** `src/vs/platform/telemetry/common/telemetryService.ts` (now only the retained `telemetry.feedback.enabled` registration; it is side-effect-imported again from `workbench.common.main.ts`), `src/vs/platform/telemetry/common/{telemetry,telemetryUtils,commonProperties,gdprTypings,editTelemetry,editArcTelemetry}.ts`, `workbench/services/telemetry/common/workbenchTelemetryUtils.ts`, `workbench/services/telemetry/{browser,electron-browser}/telemetryService.ts` (no-op shape registrations) and the argv/`environmentService` telemetry getters (T11 residual list in `apply-progress.md`).
+
+### W41 — U11 pass-2 pruning, one emptied module ready for parent `git rm` (2026-10-06)
+
+The module below is now an empty `export { }` file with zero importers after `u11.c.008`; the parent executes the `git rm`. This executor performed no unlink, stage, or commit. Line counts are measured at `HEAD` with `git show HEAD:<path> | wc -l`.
+
+| # | Path(s) | Lines | Ready? | Evidence |
+| --- | --- | ---: | --- | --- |
+| W41.a | `src/vs/workbench/services/telemetry/common/workbenchTelemetryUtils.ts` (22) | 22 | **Yes** | It contained only `experimentsEnabled`, whose single caller (`services/assignment/common/assignmentService.ts`) now imports the telemetry-independent gate from `services/assignment/common/assignmentExperiments.ts`. `git grep -n "workbenchTelemetryUtils"` returns no importer (only the deleted module's own declaration), and `npm run compile-client` plus the assignment suites are green with the empty module still on disk. |
+
+**Not manifest items (deliberately retained):**
+
+* `src/vs/platform/telemetry/common/telemetryService.ts` was **re-created** in this pass (`u11.c.004`, 39 lines) after the U11 pass-1 commit deleted it. It is the retained, non-reporting `telemetry.feedback.enabled` registration (type/default/description/`EnableFeedback` policy unchanged) and is side-effect-imported from `workbench.common.main.ts`. It must not be added to a deletion manifest: removing it silently disables the issue reporter, the NPS survey and the relauncher observer (see `telemetry-inventory.md` pass-2 regression note and `productDebloat.test.ts`).
+* `src/vs/workbench/services/assignment/common/assignmentExperiments.ts` (27 lines) is the new home of the telemetry-independent experiment/TAS gate.
+* `src/vs/workbench/services/telemetry/{browser,electron-browser}/telemetryService.ts` (no-op shape registrations) and `src/vs/workbench/services/telemetry/common/` are otherwise unchanged; only the common helper module above is emptied.

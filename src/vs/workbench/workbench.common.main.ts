@@ -174,6 +174,7 @@ registerSingleton(IAllowedMcpServersService, AllowedMcpServersService, Instantia
 
 // Feedback/consent configuration that is still read by retained workbench features
 // (issue reporter, surveys, relauncher). Telemetry enablement settings are gone.
+import '../platform/telemetry/common/telemetryService.js';
 
 // Preferences
 import './contrib/preferences/browser/preferences.contribution.js';

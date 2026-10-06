@@ -4,15 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { Extensions, IConfigurationRegistry } from '../../../platform/configuration/common/configurationRegistry.js';
 import { ServiceCollection } from '../../../platform/instantiation/common/serviceCollection.js';
+import { Registry } from '../../../platform/registry/common/platform.js';
 import { ITelemetryService, TelemetryLevel } from '../../../platform/telemetry/common/telemetry.js';
 import { NullTelemetryService } from '../../../platform/telemetry/common/telemetryUtils.js';
+import '../../../platform/telemetry/common/telemetryService.js';
 import { registerMainTelemetryService } from '../../electron-main/telemetryServiceRegistration.js';
 
 function readRepoFile(relativePath: string): string {
 	return readFileSync(join(process.cwd(), relativePath), 'utf8');
+}
+
+function repoFileExists(relativePath: string): boolean {
+	return existsSync(join(process.cwd(), relativePath));
 }
 
 suite('Product debloat process startup', () => {
@@ -63,8 +70,8 @@ suite('Product debloat process startup', () => {
 			assert.match(source, /registerSingleton\(ITelemetryService, new SyncDescriptor\(NullTelemetryServiceShape/);
 		}
 
-		const contribution = readRepoFile('src/vs/workbench/contrib/telemetry/browser/telemetry.contribution.ts');
-		assert.doesNotMatch(contribution, /ErrorTelemetry|showTelemetry|TelemetryLogGroup|telemetryLogId/);
+		const contribution = 'src/vs/workbench/contrib/telemetry/browser/telemetry.contribution.ts';
+		assert.strictEqual(repoFileExists(contribution), false, `${contribution} was deleted with the reporting infrastructure`);
 	});
 
 	test('workbench telemetry call-site contributions are removed from the shell', () => {
@@ -73,15 +80,15 @@ suite('Product debloat process startup', () => {
 		assert.doesNotMatch(commonMain, /services\/policies\/browser\/policyTelemetry\.contribution/);
 
 		// Representative call-site modules: no event, payload, classification or telemetry
-		// service residue may survive in them (spec criterion 3/4).
-		const callSites: [string, RegExp][] = [
-			['src/vs/workbench/contrib/telemetry/browser/telemetry.contribution.ts', /publicLog|workspaceLoad|fileGet|filePUT|WorkbenchTelemetry|TelemetryTrustedValue/],
-			['src/vs/workbench/services/policies/browser/policyTelemetry.contribution.ts', /publicLog|PolicyAppliedEvent|PolicyAppliedClassification|policy\.applied/],
+		// service residue may survive in them (spec criterion 3/4). The two shell-wide
+		// call-site modules were removed with the reporting infrastructure, so a reappearing
+		// file is itself the regression.
+		const removedCallSites = [
+			'src/vs/workbench/contrib/telemetry/browser/telemetry.contribution.ts',
+			'src/vs/workbench/services/policies/browser/policyTelemetry.contribution.ts',
 		];
-		for (const [relativePath, removal] of callSites) {
-			const source = readRepoFile(relativePath);
-			assert.doesNotMatch(source, removal, relativePath);
-			assert.doesNotMatch(source, /ITelemetryService/, relativePath);
+		for (const relativePath of removedCallSites) {
+			assert.strictEqual(repoFileExists(relativePath), false, `${relativePath} must stay deleted`);
 		}
 	});
 
@@ -119,6 +126,84 @@ suite('Product debloat process startup', () => {
 			assert.strictEqual(manifest.aiKey, undefined, `${extension} must not declare an aiKey`);
 			assert.strictEqual(manifest.dependencies?.['@vscode/extension-telemetry'], undefined, `${extension} must not depend on the reporter`);
 			assert.doesNotMatch(readRepoFile(`extensions/${extension}/package-lock.json`), /@vscode\/extension-telemetry/, `${extension} lock must not contain the reporter`);
+		}
+	});
+
+	test('retained feedback setting stays registered while telemetry enablement settings stay gone', () => {
+		const properties = Registry.as<IConfigurationRegistry>(Extensions.Configuration).getConfigurationProperties();
+		const feedback = properties['telemetry.feedback.enabled'];
+
+		// Reading an unregistered setting returns `undefined`, which the issue reporter, the NPS
+		// survey and the relauncher all treat as "feedback disabled". Losing this registration is a
+		// silent behavior regression, not a telemetry change.
+		assert.deepStrictEqual({
+			registered: !!feedback,
+			type: feedback?.type,
+			defaultValue: feedback?.default,
+			policyName: feedback?.policy?.name,
+		}, {
+			registered: true,
+			type: 'boolean',
+			defaultValue: true,
+			policyName: 'EnableFeedback',
+		});
+
+		for (const gone of ['telemetry.telemetryLevel', 'telemetry.enableTelemetry', 'telemetry.enableCrashReporter']) {
+			assert.strictEqual(properties[gone], undefined, `${gone} must not be registered`);
+		}
+
+		// The registration module is a side-effect import: it only works while the workbench shell
+		// actually imports it.
+		assert.match(readRepoFile('src/vs/workbench/workbench.common.main.ts'), /import '\.\.\/platform\/telemetry\/common\/telemetryService\.js';/);
+	});
+
+	test('workbench shell, editor and views call-sites carry no telemetry emission', () => {
+		// Representative owners of the T3 pruning: any of these events, payload builders or
+		// injections reappearing means the workbench started reporting again.
+		const prunedSites: [string, RegExp][] = [
+			['src/vs/workbench/browser/layout.ts', /publicLog|startupLayout|ITelemetryService/],
+			['src/vs/workbench/browser/actions/helpActions.ts', /machineId|ITelemetryService/],
+			['src/vs/workbench/browser/parts/editor/editorCommands.ts', /publicLog|workbenchEditorReopen|ITelemetryService/],
+			['src/vs/workbench/browser/parts/editor/editorGroupView.ts', /publicLog|editorOpened|ITelemetryService|getTelemetryDescriptor|TelemetryTrustedValue/],
+			['src/vs/workbench/browser/parts/editor/editorStatus.ts', /publicLog|AutomaticLanguageDetectionLikelyWrong|setUntitledDocumentLanguage|ITelemetryService/],
+			['src/vs/workbench/browser/parts/editor/textDiffEditor.ts', /publicLog|editorVisibleTime|logInputLifecycleTelemetry/],
+			['src/vs/workbench/browser/parts/notifications/notificationsCommands.ts', /publicLog|workbenchActionExecuted|ITelemetryService/],
+			['src/vs/workbench/browser/parts/statusbar/statusbarItem.ts', /publicLog|workbenchActionExecuted|ITelemetryService/],
+			['src/vs/workbench/browser/parts/titlebar/menubarControl.ts', /publicLog|workbenchActionExecuted|ITelemetryService/],
+			['src/vs/workbench/browser/parts/views/treeView.ts', /publicLog|Extension:ViewActivate|ITelemetryService|TelemetryTrustedValue/],
+			['src/vs/workbench/common/editor/editorInput.ts', /getTelemetryDescriptor|__GDPR__/],
+			['src/vs/workbench/common/editor/sideBySideEditorInput.ts', /getTelemetryDescriptor/],
+			['src/vs/workbench/electron-browser/window.ts', /publicLog|workbenchActionExecuted|ITelemetryService/],
+			['src/vs/workbench/services/auxiliaryWindow/browser/auxiliaryWindowService.ts', /publicLog|auxiliaryWindowOpen|ITelemetryService/],
+			['src/vs/workbench/services/auxiliaryWindow/electron-browser/auxiliaryWindowService.ts', /ITelemetryService/],
+			['src/vs/workbench/services/contextmenu/electron-browser/contextmenuService.ts', /publicLog|workbenchActionExecuted|ITelemetryService|skipTelemetry/],
+			['src/vs/platform/contextview/browser/contextMenuHandler.ts', /publicLog|workbenchActionExecuted|ITelemetryService/],
+			['src/vs/platform/contextview/browser/contextMenuService.ts', /ITelemetryService/],
+			['src/vs/workbench/services/themes/browser/workbenchThemeService.ts', /publicLog|activateThemeExtension|ITelemetryService|themeExtensionsActivated/],
+			['src/vs/workbench/services/timer/browser/timerService.ts', /publicLog|startupTimeVaried|startup\.timer\.mark|ITelemetryService|TelemetryTrustedValue|__GDPR__/],
+			['src/vs/workbench/services/timer/electron-browser/timerService.ts', /ITelemetryService|_shouldReportPerfMarks/],
+			['src/vs/workbench/services/views/browser/viewDescriptorService.ts', /publicLog|viewDescriptorService\.moveViews|ITelemetryService/],
+		];
+		for (const [relativePath, removal] of prunedSites) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+	});
+
+	test('editor call-sites carry no telemetry emission', () => {
+		// T2 representatives: editor actions, inline completions, suggest, diff and tree-sitter
+		// must not report. Only the standalone-editor no-op shape may still name the service.
+		const prunedSites: [string, RegExp][] = [
+			['src/vs/editor/browser/editorExtensions.ts', /publicLog|editorActionInvoked|ITelemetryService/],
+			['src/vs/editor/browser/services/inlineCompletionsService.ts', /publicLog|'inlineCompletions\.snooze'|ITelemetryService/],
+			['src/vs/editor/browser/widget/diffEditor/diffProviderFactoryService.ts', /publicLog|diffEditor\.computeDiff|ITelemetryService/],
+			['src/vs/editor/common/model/tokens/treeSitter/treeSitterTree.ts', /publicLog|treeSitter\.|ITelemetryService/],
+			['src/vs/editor/contrib/codeAction/browser/codeAction.ts', /publicLog|codeAction\.applyCodeAction|ITelemetryService/],
+			['src/vs/editor/contrib/suggest/browser/suggestController.ts', /publicLog|suggest\.acceptedSuggestion|ITelemetryService/],
+			['src/vs/editor/contrib/suggest/browser/suggestModel.ts', /publicLog|suggest\.durations|ITelemetryService/],
+			['src/vs/editor/contrib/inlineCompletions/browser/hintsWidget/hoverParticipant.ts', /publicLog|inlineCompletionHover|ITelemetryService/],
+		];
+		for (const [relativePath, removal] of prunedSites) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
 		}
 	});
 

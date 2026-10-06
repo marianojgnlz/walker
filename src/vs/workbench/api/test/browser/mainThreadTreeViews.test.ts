@@ -68,7 +68,7 @@ suite('MainThreadHostTreeView', function () {
 			id: testTreeViewId,
 			ctorDescriptor: null!,
 			name: nls.localize2('Test View 1', 'Test View 1'),
-			treeView: disposables.add(instantiationService.createInstance(CustomTreeView, 'testTree', 'Test Title', 'extension.id')),
+			treeView: disposables.add(instantiationService.createInstance(CustomTreeView, 'testTree', 'Test Title')),
 		};
 		ViewsRegistry.registerViews([viewDescriptor], container);
 
@@ -137,7 +137,7 @@ suite('MainThreadHostTreeView', function () {
 			id: testTreeViewIdWithDrag,
 			ctorDescriptor: null!,
 			name: nls.localize2('Test View 2', 'Test View 2'),
-			treeView: disposables.add(instantiationService.createInstance(CustomTreeView, 'testTree2', 'Test Title 2', 'extension.id')),
+			treeView: disposables.add(instantiationService.createInstance(CustomTreeView, 'testTree2', 'Test Title 2')),
 		};
 		ViewsRegistry.registerViews([viewDescriptorWithDrag], container);
 

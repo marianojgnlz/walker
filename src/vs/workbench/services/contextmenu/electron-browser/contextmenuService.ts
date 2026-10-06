@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IAction, WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification, Separator, SubmenuAction } from '../../../../base/common/actions.js';
+import { IAction, Separator, SubmenuAction } from '../../../../base/common/actions.js';
 import * as dom from '../../../../base/browser/dom.js';
 import { IContextMenuMenuDelegate, IContextMenuService, IContextViewService } from '../../../../platform/contextview/browser/contextView.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { getZoomFactor } from '../../../../base/browser/browser.js';
 import { unmnemonicLabel } from '../../../../base/common/labels.js';
@@ -43,7 +42,6 @@ export class ContextMenuService implements IContextMenuService {
 
 	constructor(
 		@INotificationService notificationService: INotificationService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IContextViewService contextViewService: IContextViewService,
@@ -53,8 +51,8 @@ export class ContextMenuService implements IContextMenuService {
 	) {
 		function createContextMenuService(native: boolean) {
 			return native ?
-				new NativeContextMenuService(popup, notificationService, telemetryService, keybindingService, menuService, contextKeyService, hostService)
-				: new HTMLContextMenuService(telemetryService, notificationService, contextViewService, keybindingService, menuService, contextKeyService);
+				new NativeContextMenuService(popup, notificationService, keybindingService, menuService, contextKeyService, hostService)
+				: new HTMLContextMenuService(notificationService, contextViewService, keybindingService, menuService, contextKeyService);
 		}
 
 		// set initial context menu service
@@ -104,7 +102,6 @@ export class NativeContextMenuService extends Disposable implements IContextMenu
 	constructor(
 		private readonly menuPopup: typeof popup,
 		@INotificationService private readonly notificationService: INotificationService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IKeybindingService private readonly keybindingService: IKeybindingService,
 		@IMenuService private readonly menuService: IMenuService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
@@ -287,10 +284,6 @@ export class NativeContextMenuService extends Disposable implements IContextMenu
 	}
 
 	private async runAction(actionToRun: IAction, delegate: IContextMenuDelegate, event: IContextMenuEvent, targetWindow: Window): Promise<void> {
-		if (!delegate.skipTelemetry) {
-			this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: actionToRun.id, from: 'contextMenu' });
-		}
-
 		const context = delegate.getActionsContext ? delegate.getActionsContext(event) : undefined;
 
 		try {

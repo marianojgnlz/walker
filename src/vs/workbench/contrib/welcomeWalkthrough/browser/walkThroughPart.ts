@@ -192,16 +192,7 @@ export class WalkThroughPart extends EditorPane {
 			this.notificationService.info(localize('walkThrough.gitNotFound', "It looks like Git is not installed on your system."));
 			return;
 		}
-		this.openerService.open(this.addFrom(uri), { allowCommands: true });
-	}
-
-	private addFrom(uri: URI) {
-		if (uri.scheme !== 'command' || !(this.input instanceof WalkThroughInput)) {
-			return uri;
-		}
-		const query = uri.query ? JSON.parse(uri.query) : {};
-		query.from = this.input.getTelemetryFrom();
-		return uri.with({ query: JSON.stringify(query) });
+		this.openerService.open(uri, { allowCommands: true });
 	}
 
 	layout(dimension: Dimension): void {
@@ -318,13 +309,7 @@ export class WalkThroughPart extends EditorPane {
 					const div = innerContent.querySelector(`#${id.replace(/[\\.]/g, '\\$&')}`) as HTMLElement;
 
 					const options = this.getEditorOptions(model.getLanguageId());
-					const telemetryData = {
-						target: this.input instanceof WalkThroughInput ? this.input.getTelemetryFrom() : undefined,
-						snippet: i
-					};
-					const editor = this.instantiationService.createInstance(CodeEditorWidget, div, options, {
-						telemetryData: telemetryData
-					});
+					const editor = this.instantiationService.createInstance(CodeEditorWidget, div, options, {});
 					editor.setModel(model);
 					this.contentDisposables.push(editor);
 
