@@ -1179,7 +1179,6 @@ function getMcpServerConfiguration(definition: McpServerDefinition): IMcpServerC
 			type: McpServerType.REMOTE,
 			url: launch.uri.toString(true),
 			headers: launch.headers.length > 0 ? Object.fromEntries(launch.headers) : undefined,
-			oauth: launch.oauth,
 			dev: definition.devMode,
 		};
 	}

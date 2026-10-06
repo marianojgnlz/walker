@@ -31,7 +31,6 @@ import { IContextMenuService } from '../../../../platform/contextview/browser/co
 import { IIssueFormService, IssueReporterData, IssueReporterExtensionData, IssueType } from '../common/issue.js';
 import { normalizeGitHubUrl } from '../common/issueReporterUtil.js';
 import { IssueReporterModel, IssueReporterData as IssueReporterModelData } from './issueReporterModel.js';
-import { IAuthenticationService } from '../../../services/authentication/common/authentication.js';
 
 const MAX_URL_LENGTH = 7500;
 
@@ -91,7 +90,6 @@ export class BaseIssueReporterService extends Disposable {
 		@IFileService public readonly fileService: IFileService,
 		@IFileDialogService public readonly fileDialogService: IFileDialogService,
 		@IContextMenuService public readonly contextMenuService: IContextMenuService,
-		@IAuthenticationService public readonly authenticationService: IAuthenticationService,
 		@IOpenerService public readonly openerService: IOpenerService
 	) {
 		super();
@@ -107,26 +105,6 @@ export class BaseIssueReporterService extends Disposable {
 			fileOnExtension: data.extensionId ? !targetExtension?.isBuiltin : undefined,
 			selectedExtension: targetExtension
 		});
-
-		this._register(this.authenticationService.onDidChangeSessions(async () => {
-			const previousAuthState = !!this.data.githubAccessToken;
-
-			let githubAccessToken = '';
-			try {
-				const githubSessions = await this.authenticationService.getSessions('github');
-				const potentialSessions = githubSessions.filter(session => session.scopes.includes('repo'));
-				githubAccessToken = potentialSessions[0]?.accessToken;
-			} catch (e) {
-				// Ignore
-			}
-
-			this.data.githubAccessToken = githubAccessToken;
-
-			const currentAuthState = !!githubAccessToken;
-			if (previousAuthState !== currentAuthState) {
-				this.updateButtonStates();
-			}
-		}));
 
 		const fileOnMarketplace = data.issueSource === IssueSource.Marketplace;
 		const fileOnProduct = data.issueSource === IssueSource.VSCode;

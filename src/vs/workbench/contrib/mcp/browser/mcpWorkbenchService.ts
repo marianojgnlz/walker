@@ -122,7 +122,6 @@ function sanitizeMcpServerConfiguration(payload: Record<string, unknown>): IMcpS
 		return undefined;
 	}
 	const headers = sanitizeStringRecord(payload.headers);
-	const oauth = sanitizeMcpOAuthConfiguration(payload.oauth);
 
 	return {
 		type,
@@ -130,7 +129,6 @@ function sanitizeMcpServerConfiguration(payload: Record<string, unknown>): IMcpS
 		...common,
 		...(payload.transport === 'http' || payload.transport === 'sse' ? { transport: payload.transport } : {}),
 		...(headers ? { headers } : {}),
-		...(oauth ? { oauth } : {}),
 	} satisfies IMcpRemoteServerConfiguration;
 }
 
@@ -183,15 +181,6 @@ function sanitizeRecord<T>(value: unknown, isValidValue: (entry: unknown) => ent
 	}
 
 	return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, T] => isValidValue(entry[1])));
-}
-
-function sanitizeMcpOAuthConfiguration(value: unknown): IMcpRemoteServerConfiguration['oauth'] | undefined {
-	if (!isObject(value)) {
-		return undefined;
-	}
-
-	const payload = value as Record<string, unknown>;
-	return isString(payload.clientId) ? { clientId: payload.clientId } : undefined;
 }
 
 class McpWorkbenchServer implements IWorkbenchMcpServer {

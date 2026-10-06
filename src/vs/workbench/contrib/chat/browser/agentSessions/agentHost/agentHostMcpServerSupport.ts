@@ -679,8 +679,6 @@ function getPartialSupportReasons(launch: McpServerLaunch, sandboxEnabled: boole
 		if (launch.sandbox || sandboxEnabled) {
 			reasons.push(AgentHostMcpSupportReason.SandboxConfigurationIgnored);
 		}
-	} else if (launch.oauth) {
-		reasons.push(AgentHostMcpSupportReason.OAuthClientConfigurationIgnored);
 	}
 	if (devMode) {
 		reasons.push(AgentHostMcpSupportReason.DevelopmentModeIgnored);

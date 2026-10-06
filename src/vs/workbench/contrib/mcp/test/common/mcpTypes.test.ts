@@ -288,7 +288,6 @@ suite('MCP Types', () => {
 				transport: 'sse',
 				url: 'https://example.com/mcp',
 				headers: { Authorization: 'Bearer token' },
-				oauth: { clientId: 'client' },
 			}),
 		}, {
 			local: {
@@ -305,7 +304,6 @@ suite('MCP Types', () => {
 				transport: 'sse',
 				uri: URI.parse('https://example.com/mcp'),
 				headers: [['Authorization', 'Bearer token']],
-				oauth: { clientId: 'client' },
 			},
 		});
 	});

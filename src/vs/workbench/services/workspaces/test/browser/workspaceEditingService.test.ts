@@ -96,10 +96,6 @@ suite('WorkspaceEditingService', () => {
 		assert.ok(!workbenchMain.includes('contrib/editSessions/browser/editSessions.contribution.js'));
 		assert.ok(!workbenchMain.includes('services/workspaces/common/editSessionIdentityService.js'));
 
-		const sessionsMain = readSource('src/vs/sessions/sessions.common.main.ts');
-		assert.ok(!sessionsMain.includes('workbench/contrib/editSessions/browser/editSessions.contribution.js'));
-		assert.ok(!sessionsMain.includes('workspaces/common/editSessionIdentityService.js'));
-
 		assert.ok(!readSource('src/vs/workbench/api/browser/extensionHost.contribution.ts').includes('mainThreadEditSessionIdentityParticipant.js'));
 		assert.ok(!readSource('src/vs/workbench/api/browser/mainThreadWorkspace.ts').includes('IEditSessionIdentityService'));
 		assert.ok(!readSource('src/vs/workbench/api/common/extHostWorkspace.ts').includes('registerEditSessionIdentityProvider'));

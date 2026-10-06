@@ -512,3 +512,42 @@ Scope: stale chat-attachment comment removal only.
 ### U05 dispositions (2026-10-06)
 - `approve-sessionArchiveNudge-import`: `src/vs/sessions/contrib/chat/test/browser/sessionArchiveNudge.test.ts` APPROVED — repoint the single `TestChatEntitlementService` import to `workbench/contrib/chat/test/common/chatTestServices.js` and remove the common re-export shim (both shared test factories become Chat-free).
 - Five paused C2 bridge pairs (`LanguageModels`, `ChatAgents2`, `ChatSessions`, `ChatDebug`, `LanguageModelTools`): each ACCEPTED as a single coupled-pair mechanical review batch (645–3,730 authored lines per the recorded split analyses) under the same disposition as U05.c.035 — deletion-heavy bridge/DTO/proxy/test retirement reviewed per-pair, NOT a blanket size:exception; the 400 cap remains the hard limit for authored feature work. Record each pair's analysis + measurement in `deletion-review.md` as its own D-style batch.
+
+### U05 addition (2026-10-06; C4 readiness — four retained edges approved for narrow disconnection)
+src/vs/workbench/contrib/editTelemetry/browser/editTelemetryContribution.ts
+Scope: remove ONLY the `IChatEntitlementService` gating import/usage (retained telemetry behavior preserved; telemetry machinery removal is T/U10 scope).
+(The other three edges — `src/vs/workbench/api/common/extHostApiCommands.ts`, `extHostTypes.ts`, `extHost.protocol.ts` — are within the `src/vs/workbench/api/**` grant.)
+
+## Stage U06/U07-prerequisite — authorized surfaces (2026-10-06; C4 deletion-wave prerequisite: sever retained → sessions/agentHost edges)
+
+src/vs/sessions/**
+src/vs/platform/agentHost/**
+src/vs/workbench/services/agentHost/**
+src/vs/server/node/agentHostChannel.ts
+src/vs/server/node/serverAgentHostManager.ts
+src/vs/server/node/serverServices.ts
+src/vs/code/electron-main/app.ts
+src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts
+src/vs/platform/windows/electron-main/windowImpl.ts
+src/vs/base/common/product.ts
+src/vs/workbench/browser/actions/developerActions.ts
+src/vs/workbench/contrib/browserView/electron-browser/browserViewWorkbenchService.ts
+src/vs/workbench/contrib/editTelemetry/browser/editTelemetry.contribution.ts
+src/vs/workbench/contrib/editTelemetry/browser/telemetry/agentHostEditMarkerService.ts
+src/vs/workbench/contrib/terminal/browser/agentHostOutputChannel.ts
+src/vs/workbench/contrib/terminal/browser/agentHostPty.ts
+src/vs/workbench/contrib/terminal/browser/agentHostTerminalService.ts
+src/vs/workbench/contrib/mcp/browser/mcpToolCallUI.ts
+src/vs/workbench/contrib/mcp/common/mcpEditorAffordanceState.ts
+src/vs/workbench/contrib/terminalContrib/chat/**
+src/vs/workbench/contrib/inlineChat/**
+src/vs/workbench/contrib/agentsVoice/**
+
+Scope: sever every retained → sessions/agentHost import (disconnect registrations/starters/channels), preserving generic server/SSH/terminal/MCP/diagnostics behavior. The sessions/agentHost TREES join the deletion wave (their U06/U07 cross-tree disconnection is this slice; Rust `cli` agent_* remaining work and any U06/U07 leftovers stay for their stages' checkboxes). Protected: `ITerminalChatService` interface usage documented earlier may now also go if its U07 consumers are being disconnected — its preservation was conditional on agentHostTerminalService surviving, which it no longer does.
+
+### U06/U07-prerequisite addition (2026-10-06, `approve-both-agent-host-edges`)
+src/vs/platform/agentPlugins/common/pluginParsers.ts
+src/vs/platform/agentPlugins/common/test/pluginParsers.test.ts
+src/vs/workbench/services/workspaces/common/workspaceTrust.ts
+src/vs/workbench/services/workspaces/test/common/workspaceTrust.test.ts
+Scope: narrow disconnection of `platform/agentHost` imports only (the `AGENT_HOST_SCHEME`/state-protocol edges); unrelated trust/plugin behavior preserved. (Exact test paths may differ from the placeholders above — the approved scope is "the pluginParsers and workspaceTrust files plus their tests as found".)

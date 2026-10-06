@@ -21,7 +21,6 @@ import { IThemeService } from '../../../../platform/theme/common/themeService.js
 import { IUpdateService, StateType } from '../../../../platform/update/common/update.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { applyZoom } from '../../../../platform/window/electron-browser/window.js';
-import { IAuthenticationService } from '../../../services/authentication/common/authentication.js';
 import { BaseIssueReporterService } from '../browser/baseIssueReporterService.js';
 import { IssueReporterData as IssueReporterModelData } from '../browser/issueReporterModel.js';
 import { IIssueFormService, IssueReporterData, IssueType } from '../common/issue.js';
@@ -56,10 +55,9 @@ export class IssueReporter extends BaseIssueReporterService {
 		@IUpdateService private readonly updateService: IUpdateService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IContextMenuService contextMenuService: IContextMenuService,
-		@IAuthenticationService authenticationService: IAuthenticationService,
 		@IOpenerService openerService: IOpenerService
 	) {
-		super(disableExtensions, data, os, product, window, false, issueFormService, themeService, fileService, fileDialogService, contextMenuService, authenticationService, openerService);
+		super(disableExtensions, data, os, product, window, false, issueFormService, themeService, fileService, fileDialogService, contextMenuService, openerService);
 		this.processService = processService;
 		this.processService.getSystemInfo().then(info => {
 			this.issueReporterModel.update({ systemInfo: info });

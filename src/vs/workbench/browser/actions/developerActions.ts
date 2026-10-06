@@ -21,7 +21,7 @@ import { IConfigurationService } from '../../../platform/configuration/common/co
 import { ContextKeyExpr, IContextKeyService, RawContextKey } from '../../../platform/contextkey/common/contextkey.js';
 import { Context } from '../../../platform/contextkey/browser/contextKeyService.js';
 import { StandardKeyboardEvent } from '../../../base/browser/keyboardEvent.js';
-import { raceTimeout, RunOnceScheduler } from '../../../base/common/async.js';
+import { RunOnceScheduler } from '../../../base/common/async.js';
 import { ILayoutService } from '../../../platform/layout/browser/layoutService.js';
 import { Registry } from '../../../platform/registry/common/platform.js';
 import { registerAction2, Action2, MenuRegistry } from '../../../platform/actions/common/actions.js';
@@ -47,14 +47,10 @@ import { CommandsRegistry, ICommandService } from '../../../platform/commands/co
 import { IEnvironmentService } from '../../../platform/environment/common/environment.js';
 import { IProductService } from '../../../platform/product/common/productService.js';
 import { IPolicyService, PolicyValueSource } from '../../../platform/policy/common/policy.js';
-import { IWorkspaceContextService } from '../../../platform/workspace/common/workspace.js';
-import { isVirtualWorkspace } from '../../../platform/workspace/common/virtualWorkspace.js';
 import { COPILOT_ENABLED_PLUGINS_KEY, COPILOT_EXTRA_MARKETPLACES_KEY, COPILOT_STRICT_MARKETPLACES_KEY, INativeManagedSettingsService, IFileManagedSettingsService, ManagedSettingsChannel, ManagedSettingsSource, normalizeManagedSettings, projectManagedSettings, pickManagedSettings } from '../../../platform/policy/common/copilotManagedSettings.js';
 import { IManagedSettingPolicyDefinition, ManagedSettingsData } from '../../../base/common/policy.js';
 import * as json from '../../../base/common/json.js';
 import { getParseErrorMessage } from '../../../base/common/jsonErrorMessages.js';
-import { IAgentHostService } from '../../../platform/agentHost/common/agentService.js';
-import { IAgentHostEnablementService } from '../../../platform/agentHost/common/agentHostEnablementService.js';
 import { IProgressService, ProgressLocation } from '../../../platform/progress/common/progress.js';
 import { INotificationService } from '../../../platform/notification/common/notification.js';
 import { markdownDetails, markdownJsonBlock, markdownTable, markdownText } from './policyDiagnosticsMarkdown.js';
@@ -720,7 +716,6 @@ function formatDiagnosticValue(value: unknown): string {
 	return JSON.stringify(value) ?? String(value);
 }
 
-const AGENT_RUNTIME_DIAGNOSTICS_TIMEOUT = 6000;
 
 interface IPolicyDiagnosticsSummary {
 	managedSettingsSources: string;
@@ -738,9 +733,6 @@ interface IPolicyDiagnosticsServices {
 	configurationService: IConfigurationService;
 	productService: IProductService;
 	policyService: IPolicyService;
-	agentHostService: IAgentHostService;
-	agentHostEnablementService: IAgentHostEnablementService;
-	workspaceContextService: IWorkspaceContextService;
 	nativeManagedSettingsService: INativeManagedSettingsService | undefined;
 	fileManagedSettingsService: IFileManagedSettingsService | undefined;
 }
@@ -763,9 +755,6 @@ class PolicyDiagnosticsAction extends Action2 {
 		const configurationService = accessor.get(IConfigurationService);
 		const productService = accessor.get(IProductService);
 		const policyService = accessor.get(IPolicyService);
-		const agentHostService = accessor.get(IAgentHostService);
-		const agentHostEnablementService = accessor.get(IAgentHostEnablementService);
-		const workspaceContextService = accessor.get(IWorkspaceContextService);
 		const progressService = accessor.get(IProgressService);
 		// Native MDM is a desktop-only channel, registered in the renderer service collection on
 		// desktop and Agents windows but absent in web. Resolve it now, synchronously, because the
@@ -796,9 +785,6 @@ class PolicyDiagnosticsAction extends Action2 {
 			configurationService,
 			productService,
 			policyService,
-			agentHostService,
-			agentHostEnablementService,
-			workspaceContextService,
 			nativeManagedSettingsService,
 			fileManagedSettingsService,
 		}));
@@ -812,9 +798,6 @@ class PolicyDiagnosticsAction extends Action2 {
 			configurationService,
 			productService,
 			policyService,
-			agentHostService,
-			agentHostEnablementService,
-			workspaceContextService,
 			nativeManagedSettingsService,
 			fileManagedSettingsService,
 		} = services;
@@ -970,38 +953,6 @@ class PolicyDiagnosticsAction extends Action2 {
 				markdownJsonBlock(declaredDefinitions)
 			);
 
-			content += '### Agent Runtime Resolution\n\n';
-			content += '*Resolved independently by each provider through its own SDK/runtime. This may include runtime-owned keys that VS Code does not declare as configuration policies.*\n\n';
-			if (!agentHostEnablementService.enabled.get()) {
-				summary.agentRuntime = 'Agent Host disabled';
-				content += '*Agent Host is disabled; runtime managed-settings diagnostics were not queried.*\n\n';
-			} else {
-				try {
-					const runtimeDiagnostics = await raceTimeout(agentHostService.getManagedSettingsDiagnostics(), AGENT_RUNTIME_DIAGNOSTICS_TIMEOUT);
-					if (!runtimeDiagnostics) {
-						summary.agentRuntime = 'Timed out';
-						content += '*The Agent Host did not return provider diagnostics within 6 seconds. The report continued without a runtime snapshot; check the Agent Host log for a stalled provider.*\n\n';
-					} else if (runtimeDiagnostics.length === 0) {
-						summary.agentRuntime = 'No provider diagnostics';
-						content += '*No agent provider exposes managed-settings diagnostics.*\n\n';
-					} else {
-						const failedProviderCount = runtimeDiagnostics.filter(diagnostic => diagnostic.error).length;
-						summary.agentRuntime = `${runtimeDiagnostics.length} ${runtimeDiagnostics.length === 1 ? 'provider' : 'providers'}, ${failedProviderCount} failed`;
-						for (const diagnostic of runtimeDiagnostics) {
-							content += `#### ${markdownText(diagnostic.provider)}\n\n`;
-							if (diagnostic.error) {
-								content += `*Probe failed: ${markdownText(diagnostic.error)}*\n\n`;
-							} else {
-								content += markdownDetails('Resolved settings snapshot', markdownJsonBlock(diagnostic.snapshot));
-							}
-						}
-					}
-				} catch (error) {
-					const message = getErrorMessage(error);
-					summary.agentRuntime = `Unavailable (${message})`;
-					content += `*Agent runtime diagnostics unavailable: ${markdownText(message)}*\n\n`;
-				}
-			}
 		} catch (error) {
 			content += `*Error rendering managed settings diagnostics: ${markdownText(getErrorMessage(error))}*\n\n`;
 		}
@@ -1098,29 +1049,6 @@ class PolicyDiagnosticsAction extends Action2 {
 			content += '*No policy-controlled settings found*\n\n';
 		}
 
-		content += '## Chat Harness Enforcement\n\n';
-		try {
-			const sandboxEnforced = agentHostEnablementService.managedSandboxEnforced.get();
-			const virtualWorkspace = isVirtualWorkspace(workspaceContextService.getWorkspace());
-			const agentHostEnabled = agentHostEnablementService.enabled.get();
-
-			if (!sandboxEnforced) {
-				summary.chatHarnessEnforcement = 'Not enforced';
-			} else if (virtualWorkspace) {
-				summary.chatHarnessEnforcement = 'Mandated, not applied (virtual workspace)';
-			} else if (!agentHostEnabled) {
-				summary.chatHarnessEnforcement = 'Mandated, not applied (Agent Host disabled)';
-			} else {
-				summary.chatHarnessEnforcement = 'Local harness hidden, new chats use the Agent Host Copilot SDK';
-			}
-
-			content += `**Effective decision:** ${summary.chatHarnessEnforcement}.\n\n`;
-		} catch (error) {
-			const message = getErrorMessage(error);
-			summary.chatHarnessEnforcement = `Unavailable (${message})`;
-			content += `*Error resolving chat harness enforcement: ${markdownText(message)}*\n\n`;
-		}
-
 		const report = '# VS Code Policy Diagnostics\n\n' +
 			'*WARNING: This file may contain sensitive information.*\n\n' +
 			'## Summary\n\n' +
@@ -1130,8 +1058,6 @@ class PolicyDiagnosticsAction extends Action2 {
 					['Managed-settings sources', summary.managedSettingsSources],
 					['Effective managed settings', summary.effectiveManagedSettings],
 					['Managed-settings issues', summary.managedSettingsIssues],
-					['Agent Runtime', summary.agentRuntime],
-					['Chat harness enforcement', summary.chatHarnessEnforcement],
 					['Policy-controlled settings', summary.policyControlledSettings]
 				]
 			) +

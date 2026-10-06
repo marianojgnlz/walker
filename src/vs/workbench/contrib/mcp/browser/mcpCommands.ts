@@ -39,15 +39,12 @@ import { mcpAutoStartConfig, McpAutoStartValue } from '../../../../platform/mcp/
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { observableConfigValue } from '../../../../platform/observable/common/platformObservableUtils.js';
 import { IQuickInputButton, IQuickInputService, IQuickPickItem, IQuickPickSeparator } from '../../../../platform/quickinput/common/quickInput.js';
-import { ISecretStorageService } from '../../../../platform/secrets/common/secrets.js';
 import { StorageScope } from '../../../../platform/storage/common/storage.js';
 import { defaultCheckboxStyles } from '../../../../platform/theme/browser/defaultStyles.js';
 import { IWorkspaceContextService, IWorkspaceFolder } from '../../../../platform/workspace/common/workspace.js';
 import { PICK_WORKSPACE_FOLDER_COMMAND_ID } from '../../../browser/actions/workspaceCommands.js';
 import { ActiveEditorContext, RemoteNameContext, ResourceContextKey, WorkbenchStateContext, WorkspaceFolderCountContext } from '../../../common/contextkeys.js';
 import { IWorkbenchContribution } from '../../../common/contributions.js';
-import { IAuthenticationService } from '../../../services/authentication/common/authentication.js';
-import { IAccountQuery, IAuthenticationQueryService } from '../../../services/authentication/common/authenticationQuery.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { IRemoteUserDataProfilesService } from '../../../services/userDataProfile/common/remoteUserDataProfiles.js';
 import { IUserDataProfileService } from '../../../services/userDataProfile/common/userDataProfile.js';
@@ -69,7 +66,7 @@ import { McpCommandIds } from '../common/mcpCommandIds.js';
 import { mcpWorkspaceRootConfig } from '../common/mcpConfiguration.js';
 import { McpContextKeys } from '../common/mcpContextKeys.js';
 import { IMcpRegistry } from '../common/mcpRegistryTypes.js';
-import { HasInstalledMcpServersContext, IMcpSamplingService, IMcpServer, IMcpServerStartOpts, IMcpService, InstalledMcpServersViewId, LazyCollectionState, McpCapability, McpCollectionDefinition, McpConnectionState, McpDefinitionReference, mcpOAuthClientSecretStorageKey, mcpPromptPrefix, McpServerCacheState, McpStartServerInteraction } from '../common/mcpTypes.js';
+import { HasInstalledMcpServersContext, IMcpSamplingService, IMcpServer, IMcpServerStartOpts, IMcpService, InstalledMcpServersViewId, LazyCollectionState, McpCapability, McpCollectionDefinition, McpConnectionState, mcpPromptPrefix, McpServerCacheState, McpStartServerInteraction } from '../common/mcpTypes.js';
 import { startServerAndWaitForLiveTools } from '../common/mcpTypesUtils.js';
 import { McpAddConfigurationCommand, McpInstallFromManifestCommand } from './mcpCommandsAddConfiguration.js';
 import { McpConfigurationDestination } from './mcpConfigurationDestination.js';
@@ -599,11 +596,6 @@ interface ActionItem extends IQuickPickItem {
 	action: 'start' | 'stop' | 'restart' | 'showOutput' | 'config' | 'configSampling' | 'samplingLog' | 'resources' | 'enable';
 }
 
-interface AuthActionItem extends IQuickPickItem {
-	action: 'disconnect' | 'signout';
-	accountQuery: IAccountQuery;
-}
-
 export class McpConfirmationServerOptionsCommand extends Action2 {
 	constructor() {
 		super({
@@ -660,8 +652,6 @@ export class McpServerOptionsCommand extends Action2 {
 		const editorService = accessor.get(IEditorService);
 		const commandService = accessor.get(ICommandService);
 		const samplingService = accessor.get(IMcpSamplingService);
-		const authenticationQueryService = accessor.get(IAuthenticationQueryService);
-		const authenticationService = accessor.get(IAuthenticationService);
 		const server = mcpService.servers.get().find(s => s.definition.id === id);
 		if (!server) {
 			return;
@@ -670,7 +660,7 @@ export class McpServerOptionsCommand extends Action2 {
 		const collection = mcpRegistry.collections.get().find(c => c.id === server.collection.id);
 		const serverDefinition = collection?.serverDefinitions.get().find(s => s.id === server.definition.id);
 
-		const items: (ActionItem | AuthActionItem | IQuickPickSeparator)[] = [];
+		const items: (ActionItem | IQuickPickSeparator)[] = [];
 		const serverState = server.connectionState.get();
 		const disabled = isContributionDisabled(server.enablement.get());
 
@@ -697,8 +687,6 @@ export class McpServerOptionsCommand extends Action2 {
 				action: 'restart'
 			});
 		}
-
-		items.push(...this._getAuthActions(authenticationQueryService, server.definition.id));
 
 		const configTarget = serverDefinition?.presentation?.origin || collection?.presentation?.origin;
 		if (configTarget) {
@@ -763,14 +751,6 @@ export class McpServerOptionsCommand extends Action2 {
 				await server.stop();
 				await server.start({ promptType: 'all-untrusted' });
 				break;
-			case 'disconnect':
-				await server.stop();
-				await this._handleAuth(authenticationService, pick.accountQuery, server.definition, false);
-				break;
-			case 'signout':
-				await server.stop();
-				await this._handleAuth(authenticationService, pick.accountQuery, server.definition, true);
-				break;
 			case 'showOutput':
 				server.showOutput();
 				break;
@@ -792,60 +772,7 @@ export class McpServerOptionsCommand extends Action2 {
 				});
 				break;
 			default:
-				assertNever(pick);
-		}
-	}
-
-	private _getAuthActions(
-		authenticationQueryService: IAuthenticationQueryService,
-		serverId: string
-	): AuthActionItem[] {
-		const result: AuthActionItem[] = [];
-		// Really, this should only ever have one entry.
-		for (const [providerId, accountName] of authenticationQueryService.mcpServer(serverId).getAllAccountPreferences()) {
-
-			const accountQuery = authenticationQueryService.provider(providerId).account(accountName);
-			if (!accountQuery.mcpServer(serverId).isAccessAllowed()) {
-				continue; // skip accounts that are not allowed
-			}
-			// If there are multiple allowed servers/extensions, other things are using this provider
-			// so we show a disconnect action, otherwise we show a sign out action.
-			if (accountQuery.entities().getEntityCount().total > 1) {
-				result.push({
-					action: 'disconnect',
-					label: localize('mcp.disconnect', 'Disconnect Account'),
-					description: `(${accountName})`,
-					accountQuery
-				});
-			} else {
-				result.push({
-					action: 'signout',
-					label: localize('mcp.signOut', 'Sign Out'),
-					description: `(${accountName})`,
-					accountQuery
-				});
-			}
-		}
-		return result;
-	}
-
-	private async _handleAuth(
-		authenticationService: IAuthenticationService,
-		accountQuery: IAccountQuery,
-		definition: McpDefinitionReference,
-		signOut: boolean
-	) {
-		const { providerId, accountName } = accountQuery;
-		accountQuery.mcpServer(definition.id).setAccessAllowed(false, definition.label);
-		if (signOut) {
-			const accounts = await authenticationService.getAccounts(providerId);
-			const account = accounts.find(a => a.label === accountName);
-			if (account) {
-				const sessions = await authenticationService.getSessions(providerId, undefined, { account });
-				for (const session of sessions) {
-					await authenticationService.removeSession(providerId, session.id);
-				}
-			}
+				assertNever(pick.action);
 		}
 	}
 }
@@ -1224,96 +1151,6 @@ export class EditStoredInput extends Action2 {
 	}
 }
 
-export class SetOAuthClientSecret extends Action2 {
-	constructor() {
-		super({
-			id: McpCommandIds.SetOAuthClientSecret,
-			title: localize2('mcp.setOAuthClientSecret', "Set OAuth Client Secret"),
-			category,
-			f1: false,
-		});
-	}
-
-	async run(accessor: ServicesAccessor, clientId: string, mcpServerUrl: string, serverName: string): Promise<void> {
-		const quickInputService = accessor.get(IQuickInputService);
-		const secretStorageService = accessor.get(ISecretStorageService);
-
-		const key = mcpOAuthClientSecretStorageKey(mcpServerUrl, clientId);
-		const existing = await secretStorageService.get(key);
-
-		const deleteButton = {
-			iconClass: ThemeIcon.asClassName(Codicon.trash),
-			tooltip: localize('mcp.setOAuthClientSecret.delete', "Delete stored client secret"),
-		};
-		const revealButton = {
-			iconClass: ThemeIcon.asClassName(Codicon.eye),
-			tooltip: localize('mcp.setOAuthClientSecret.reveal', "Show client secret"),
-		};
-		const hideButton = {
-			iconClass: ThemeIcon.asClassName(Codicon.eyeClosed),
-			tooltip: localize('mcp.setOAuthClientSecret.hide', "Hide client secret"),
-		};
-
-		const result = await new Promise<{ kind: 'accept'; value: string } | { kind: 'delete' } | undefined>(resolve => {
-			const input = quickInputService.createInputBox();
-			input.title = existing
-				? localize('mcp.setOAuthClientSecret.title.replace', "Replace Client Secret for {0}", serverName)
-				: localize('mcp.setOAuthClientSecret.title.set', "Set Client Secret for {0}", serverName);
-			input.prompt = localize('mcp.setOAuthClientSecret.prompt', "Enter the client secret for OAuth client '{0}'.", clientId);
-			input.placeholder = existing
-				? localize('mcp.setOAuthClientSecret.placeholder.replace', "Enter a new client secret to replace the stored value")
-				: localize('mcp.setOAuthClientSecret.placeholder.set', "Enter client secret");
-			input.password = true;
-			input.ignoreFocusOut = true;
-			if (existing) {
-				input.value = existing;
-				input.valueSelection = [0, existing.length];
-			}
-			const updateButtons = () => {
-				const toggleButton = input.password ? revealButton : hideButton;
-				input.buttons = existing ? [toggleButton, deleteButton] : [toggleButton];
-			};
-			updateButtons();
-			const disposables = new DisposableStore();
-			disposables.add(input.onDidAccept(() => {
-				const value = input.value;
-				if (value.length === 0) {
-					// Empty value: treat as a delete (same as the trash button)
-					resolve({ kind: 'delete' });
-					input.hide();
-					return;
-				}
-				resolve({ kind: 'accept', value });
-				input.hide();
-			}));
-			disposables.add(input.onDidTriggerButton(btn => {
-				if (btn === deleteButton) {
-					resolve({ kind: 'delete' });
-					input.hide();
-				} else if (btn === revealButton || btn === hideButton) {
-					input.password = !input.password;
-					updateButtons();
-				}
-			}));
-			disposables.add(input.onDidHide(() => {
-				resolve(undefined);
-				disposables.dispose();
-				input.dispose();
-			}));
-			input.show();
-		});
-
-		if (!result) {
-			return; // cancelled
-		}
-
-		if (result.kind === 'delete') {
-			await secretStorageService.delete(key);
-		} else {
-			await secretStorageService.set(key, result.value);
-		}
-	}
-}
 
 export class ShowConfiguration extends Action2 {
 	constructor() {

@@ -78,7 +78,6 @@ import './mainThreadInteractive.js';
 import './mainThreadTask.js';
 import './mainThreadLabelService.js';
 import './mainThreadTunnelService.js';
-import './mainThreadAuthentication.js';
 import './mainThreadTimeline.js';
 import './mainThreadTesting.js';
 import './mainThreadSecretState.js';

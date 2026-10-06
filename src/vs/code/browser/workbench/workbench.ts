@@ -19,7 +19,6 @@ import product from '../../../platform/product/common/product.js';
 import { ISecretStorageProvider } from '../../../platform/secrets/common/secrets.js';
 import { isFolderToOpen, isWorkspaceToOpen } from '../../../platform/window/common/window.js';
 import type { IWorkbenchConstructionOptions, IWorkspace, IWorkspaceProvider } from '../../../workbench/browser/web.api.js';
-import { AuthenticationSessionInfo } from '../../../workbench/services/authentication/browser/authenticationService.js';
 import type { IURLCallbackProvider } from '../../../workbench/services/url/browser/urlService.js';
 import { create } from '../../../workbench/workbench.web.main.internal.js';
 
@@ -201,14 +200,12 @@ export class LocalStorageSecretStorageProvider implements ISecretStorageProvider
 	}
 
 	private async load(): Promise<Record<string, string>> {
-		const record = this.loadAuthSessionFromElement();
-
 		const encrypted = localStorage.getItem(this.storageKey);
 		if (encrypted) {
 			try {
 				const decrypted = JSON.parse(await this.crypto.unseal(encrypted));
 
-				return { ...record, ...decrypted };
+				return decrypted;
 			} catch (err) {
 				// TODO: send telemetry
 				console.error('Failed to decrypt secrets from localStorage', err);
@@ -218,30 +215,7 @@ export class LocalStorageSecretStorageProvider implements ISecretStorageProvider
 			}
 		}
 
-		return record;
-	}
-
-	private loadAuthSessionFromElement(): Record<string, string> {
-		let authSessionInfo: (AuthenticationSessionInfo & { scopes: string[][] }) | undefined;
-		// eslint-disable-next-line no-restricted-syntax
-		const authSessionElement = mainWindow.document.getElementById('vscode-workbench-auth-session');
-		const authSessionElementAttribute = authSessionElement ? authSessionElement.getAttribute('data-settings') : undefined;
-		if (authSessionElementAttribute) {
-			try {
-				authSessionInfo = JSON.parse(authSessionElementAttribute);
-			} catch (error) { /* Invalid session is passed. Ignore. */ }
-		}
-
-		if (!authSessionInfo) {
-			return {};
-		}
-
-		const record: Record<string, string> = {};
-
-		// Settings Sync Entry
-		record[`${product.urlProtocol}.loginAccount`] = JSON.stringify(authSessionInfo);
-
-		return record;
+		return {};
 	}
 
 	async get(key: string): Promise<string | undefined> {

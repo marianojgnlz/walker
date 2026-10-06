@@ -164,6 +164,10 @@ suite('Account-free authentication API', () => {
 		const mainThreadChatSessions = readApiSource('src/vs/workbench/api/browser/mainThreadChatSessions.ts');
 		const extHostChatDebug = readApiSource('src/vs/workbench/api/common/extHostChatDebug.ts');
 		const mainThreadChatDebug = readApiSource('src/vs/workbench/api/browser/mainThreadChatDebug.ts');
+		const extHostAuthentication = readApiSource('src/vs/workbench/api/common/extHostAuthentication.ts');
+		const mainThreadAuthentication = readApiSource('src/vs/workbench/api/browser/mainThreadAuthentication.ts');
+		const nodeExtHostAuthentication = readApiSource('src/vs/workbench/api/node/extHostAuthentication.ts');
+		const extHostXaaAuthProvider = readApiSource('src/vs/workbench/api/common/extHostXaaAuthProvider.ts');
 		const disconnectedContexts = [
 			'ExtHostCodeMapper',
 			'ExtHostChatOutputRenderer',
@@ -210,6 +214,7 @@ suite('Account-free authentication API', () => {
 		assert.doesNotMatch(protocol, /ChatAgentsShape2|IChatAgentProgressShape|MainThreadChatAgents2:|ExtHostChatAgents2:/);
 		assert.doesNotMatch(protocol, /ChatSessionsShape|MainThreadChatSessions:|ExtHostChatSessions:/);
 		assert.doesNotMatch(protocol, /ChatDebugShape|MainThreadChatDebug:|ExtHostChatDebug:/);
+		assert.doesNotMatch(protocol, /AuthenticationShape|MainThreadAuthentication:|ExtHostAuthentication:|IRegisterAuthenticationProviderDetails|IRegisterDynamicAuthenticationProviderDetails|IXaaProviderDiscovery/);
 		assert.doesNotMatch(extHostChatQuota, /class ExtHostChatQuota/);
 		assert.doesNotMatch(mainThreadChatQuota, /class MainThreadChatQuota/);
 		assert.doesNotMatch(extHostChatStatus, /class ExtHostChatStatus/);
@@ -232,6 +237,10 @@ suite('Account-free authentication API', () => {
 		assert.doesNotMatch(mainThreadChatSessions, /class MainThreadChatSessions/);
 		assert.doesNotMatch(extHostChatDebug, /class ExtHostChatDebug/);
 		assert.doesNotMatch(mainThreadChatDebug, /class MainThreadChatDebug/);
+		assert.doesNotMatch(extHostAuthentication, /class ExtHostAuthentication/);
+		assert.doesNotMatch(mainThreadAuthentication, /class MainThreadAuthentication/);
+		assert.doesNotMatch(nodeExtHostAuthentication, /class NodeExtHostAuthentication/);
+		assert.doesNotMatch(extHostXaaAuthProvider, /class XaaifyAuthProvider/);
 		assert.doesNotMatch(apiImplementation, /accessor\.get\(IExtHostLanguageModels\)/);
 		assert.doesNotMatch(commonServices, /registerSingleton\(IExtHostLanguageModels/);
 		assert.doesNotMatch(extensionService, /IExtHostLanguageModels/);

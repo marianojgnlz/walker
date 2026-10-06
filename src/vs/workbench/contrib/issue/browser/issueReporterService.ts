@@ -9,7 +9,6 @@ import { IFileDialogService } from '../../../../platform/dialogs/common/dialogs.
 import { IFileService } from '../../../../platform/files/common/files.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
-import { IAuthenticationService } from '../../../services/authentication/common/authentication.js';
 import { IIssueFormService, IssueReporterData } from '../common/issue.js';
 import { BaseIssueReporterService } from './baseIssueReporterService.js';
 
@@ -32,10 +31,9 @@ export class IssueWebReporter extends BaseIssueReporterService {
 		@IFileService fileService: IFileService,
 		@IFileDialogService fileDialogService: IFileDialogService,
 		@IContextMenuService contextMenuService: IContextMenuService,
-		@IAuthenticationService authenticationService: IAuthenticationService,
 		@IOpenerService openerService: IOpenerService
 	) {
-		super(disableExtensions, data, os, product, window, true, issueFormService, themeService, fileService, fileDialogService, contextMenuService, authenticationService, openerService);
+		super(disableExtensions, data, os, product, window, true, issueFormService, themeService, fileService, fileDialogService, contextMenuService, openerService);
 
 		// eslint-disable-next-line no-restricted-syntax
 		const target = this.window.document.querySelector<HTMLElement>('.block-system .block-info');

@@ -41,7 +41,7 @@ suite('Removed Sync-only extension scope', () => {
 		assert.ok(service.includes('isApplicationScoped'), 'application-scoped installation metadata should remain');
 		assert.ok(service.includes('profileLocation'), 'profile-scoped installation behavior should remain');
 
-		for (const path of ['src/vs/workbench/workbench.common.main.ts', 'src/vs/sessions/sessions.common.main.ts']) {
+		for (const path of ['src/vs/workbench/workbench.common.main.ts']) {
 			assert.ok(!readFileSync(join(repositoryRoot, path), 'utf8').includes('IgnoredExtensionsManagementService'), `${path} still registers Sync extension scope`);
 		}
 	});

@@ -18,7 +18,6 @@ import type { ITextEditorOptions } from '../../platform/editor/common/editor.js'
 import type { IFolderToOpen, IWorkspaceToOpen } from '../../platform/window/common/window.js';
 import type { EditorGroupLayout } from '../services/editor/common/editorGroupsService.js';
 import type { IEmbedderTerminalOptions } from '../services/terminal/common/embedderTerminalService.js';
-import type { IAuthenticationProvider } from '../services/authentication/common/authentication.js';
 
 /**
  * The `IWorkbench` interface is the API facade for web embedders
@@ -373,12 +372,6 @@ export interface IWorkbenchConstructionOptions {
 	//#endregion
 
 	//#region Authentication Providers
-
-	/**
-	 * Optional authentication provider contributions. These take precedence over
-	 * any authentication providers contributed via extensions.
-	 */
-	readonly authenticationProviders?: readonly IAuthenticationProvider[];
 
 	//#endregion
 

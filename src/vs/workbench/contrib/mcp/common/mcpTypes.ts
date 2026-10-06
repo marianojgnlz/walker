@@ -681,41 +681,6 @@ export interface McpServerTransportStdio {
 	readonly sandbox: IMcpSandboxConfiguration | undefined;
 }
 
-export interface McpServerTransportHTTPAuthentication {
-	/**
-	 * Authentication provider ID to use to get a session for the initial MCP server connection.
-	 */
-	readonly providerId: string;
-	/**
-	 * Scopes to use to get a session for the initial MCP server connection.
-	 */
-	readonly scopes: string[];
-}
-
-export interface McpServerTransportHTTPOAuth {
-	readonly clientId?: string;
-	/**
-	 * (Preview) When true, the MCP server uses enterprise-managed authentication via the configured
-	 * SSO issuer (see `mcp.enterpriseManagedAuth.idp`). Tokens are obtained through OAuth Identity
-	 * Assertion Authorization Grant (ID-JAG) so that, after a one-time sign-in, subsequent enterprise-managed
-	 * servers connect silently.
-	 */
-	readonly enterpriseManaged?: boolean;
-}
-
-/**
- * Returns the secret-storage key under which an MCP server OAuth client secret is stored.
- * Scoped by the MCP server URL AND the OAuth client_id so that two servers sharing the same
- * client_id string (e.g. against different authorization servers) cannot clobber each other's
- * secret, and so the key is stable across mcp.json configurations that happen to share a label
- * (e.g. user mcp.json vs. workspace mcp.json). Set by the "Set Client Secret" code lens in
- * mcp.json and read at authentication time so that client secrets are never stored in
- * plain-text config files.
- */
-export function mcpOAuthClientSecretStorageKey(mcpServerUrl: string, clientId: string): string {
-	return `mcp.oauth.clientSecret:${mcpServerUrl}:${clientId}`;
-}
-
 /**
  * MCP server launched on the command line which communicated over SSE or Streamable HTTP.
  * https://spec.modelcontextprotocol.io/specification/2024-11-05/basic/transports/#http-with-sse
@@ -726,12 +691,6 @@ export interface McpServerTransportHTTP {
 	readonly transport?: 'sse' | 'streamable-http';
 	readonly uri: URI;
 	readonly headers: [string, string][];
-	readonly oauth?: McpServerTransportHTTPOAuth;
-	/**
-	 * @deprecated this was originally used for step-auth auth but a different approach was used instead
-	 * so it's effectively dead code.
-	 */
-	readonly authentication?: McpServerTransportHTTPAuthentication;
 }
 
 export type McpServerLaunch =
@@ -740,7 +699,7 @@ export type McpServerLaunch =
 
 export namespace McpServerLaunch {
 	export type Serialized =
-		| { type: McpServerTransportType.HTTP; transport?: 'sse' | 'streamable-http'; uri: UriComponents; headers: [string, string][]; oauth?: McpServerTransportHTTPOAuth; authentication?: McpServerTransportHTTPAuthentication }
+		| { type: McpServerTransportType.HTTP; transport?: 'sse' | 'streamable-http'; uri: UriComponents; headers: [string, string][] }
 		| { type: McpServerTransportType.Stdio; cwd: string | undefined; command: string; args: readonly string[]; env: Record<string, string | number | null>; envFile: string | undefined; sandbox: IMcpSandboxConfiguration | undefined };
 
 	export function toSerialized(launch: McpServerLaunch): McpServerLaunch.Serialized {
@@ -750,7 +709,7 @@ export namespace McpServerLaunch {
 	export function fromSerialized(launch: McpServerLaunch.Serialized): McpServerLaunch {
 		switch (launch.type) {
 			case McpServerTransportType.HTTP:
-				return { type: launch.type, transport: launch.transport, uri: URI.revive(launch.uri), headers: launch.headers, oauth: launch.oauth, authentication: launch.authentication };
+				return { type: launch.type, transport: launch.transport, uri: URI.revive(launch.uri), headers: launch.headers };
 			case McpServerTransportType.Stdio:
 				return {
 					type: launch.type,
@@ -784,7 +743,6 @@ export namespace McpServerLaunch {
 				...(configuration.transport === 'sse' ? { transport: 'sse' as const } : {}),
 				uri: URI.parse(configuration.url),
 				headers: Object.entries(configuration.headers ?? {}),
-				oauth: configuration.oauth,
 			};
 		} catch {
 			return undefined;

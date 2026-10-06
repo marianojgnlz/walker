@@ -5,15 +5,31 @@
 
 
 import { Disposable, DisposableStore } from '../../../../../base/common/lifecycle.js';
+import { Event } from '../../../../../base/common/event.js';
 import { observableSignal, runOnChange, IReader } from '../../../../../base/common/observable.js';
 import { AnnotatedStringEdit } from '../../../../../editor/common/core/edits/stringEdit.js';
 import { OffsetRange } from '../../../../../editor/common/core/ranges/offsetRange.js';
 import { TextModelEditSource } from '../../../../../editor/common/textModelEditSource.js';
 import { IDocumentWithAnnotatedEdits, EditKeySourceData, EditSource, EditSourceBase } from '../helpers/documentWithAnnotatedEdits.js';
-import { IExternalEditCorrelation, IExternalEditCorrelationResolution } from './agentHostEditMarkerService.js';
 
 const EXTERNAL_OBSERVATION_KEY_PREFIX = 'external-observation:';
 export type ExternalEditCorrelationPolicy = 'suppress' | 'reattribute';
+
+export interface IExternalEditCorrelationResolution {
+	readonly id: string;
+	readonly source?: TextModelEditSource;
+}
+
+export interface IExternalEditCorrelation {
+	readonly onDidSuppress: Event<string>;
+	readonly onDidResolve?: Event<IExternalEditCorrelationResolution>;
+	readonly onDidInvalidate: Event<string>;
+	register(before: string, after: string): string;
+	isSuppressed(id: string): boolean;
+	getResolution?(id: string): IExternalEditCorrelationResolution | undefined;
+	waitForResolution?(ids: readonly string[], timeoutMs: number): Promise<void>;
+	release(id: string): void;
+}
 
 /**
  * Tracks a single document.

@@ -18,3 +18,17 @@ The `authLearnMore`, `authIssuers`, and `authSession` proposal checks remain in 
 ## Terminal Chat service prerequisite (U05/U07)
 
 The retained terminal workbench no longer uses `ITerminalChatService` to render hidden Chat terminal tabs or drive generic tab visibility. Preserve the `ITerminalChatService` interface and the `agentHostTerminalService` implementation/consumer as a U07 Agent Host prerequisite until its owner disconnects the Chat-specific terminal-host paths. This retained interface does not authorize restoring terminal Chat UI registrations, Chat-agent tools, Chat-owned speech sessions, or Chat settings in generic terminal code. Physical removal of disconnected terminal Chat source remains parent-owned.
+
+## Account-free browser embedder API (A2-D2.001)
+
+`IWorkbenchConstructionOptions.authenticationProviders` was removed from `workbench/browser/web.api.ts` together with its consumer in `AuthenticationService` (environment-contributed providers). This is an intentional account-free API change: browser embedders can no longer inject authentication providers, and the web workbench no longer seeds the secret store from a server-rendered `vscode-workbench-auth-session` element. Local persisted secrets, profiles and settings are untouched — only account-login bootstrap and provider discovery are gone. The A1 public extension API facade remains the deterministic unsupported/passive-empty boundary.
+
+## Account-free MCP and issue-reporting retained behavior (A2-D2/D3)
+
+- **MCP servers that required OAuth now take the non-auth path.** The MCP client no longer discovers WWW-Authenticate/OAuth metadata, requests tokens, tracks sessions or replays them on session changes. Ordinary (non-auth) MCP servers keep working end-to-end; a server requiring authentication fails without token acquisition instead of prompting or signing in. The deprecated `authentication` launch property was removed end-to-end (types, validator, type converter and the `mcpToolDefinitions` proposal declaration) because it was already dead code.
+- **Issue reporting is anonymous.** The reporter no longer reads GitHub sessions or pre-fills `githubAccessToken`; it always uses the unauthenticated URL/form path. This is intentional under the account-free contract.
+- **A1 facade unchanged.** `createAuthenticationApiFacade` remains the deterministic unsupported/passive-empty public boundary, and `accountFreeApi.test` stays green throughout.
+
+## MCP OAuth configuration surface removed (A2-D3 residual)
+
+The MCP `oauth`/`enterpriseManaged` configuration surface was removed end-to-end as an intentional account-free change: the `mcp.json` schema no longer accepts `oauth.clientId`/`oauth.enterpriseManaged`, the `mcp.enterpriseManagedAuth.idp` setting and its policy registration are gone, the "Set/Replace Client Secret" code lens and `SetOAuthClientSecret` command are removed, and `McpServerTransportHTTPOAuth` / `mcpOAuthClientSecretStorageKey` / the client-secret sanitizer no longer exist. Generic MCP configuration (`mcp.json` servers, headers, dev mode, collision behavior, sampling, discovery) and ordinary server start/stop/output flows are unchanged; no previously stored client-secret values are deleted from the secret store (they simply become unreachable).

@@ -88,12 +88,12 @@ Retained-file imports of `contrib/chat/**` or `services/chat/**` after the C1–
 | Retained edge | Status |
 | --- | --- |
 | `api/browser/mainThreadEditorTabs.ts` — `ChatEditorInput` import + `TabInputKind.ChatEditorInput` branch | **Cleared in U05.c.043** |
-| `api/common/extHostApiCommands.ts:25-26` — `PromptsType`, `IExtensionPromptFileResult` (prompt-syntax API commands) | Remaining (C2/C3 tail) |
-| `contrib/editTelemetry/browser/editTelemetryContribution.ts:18` — `IChatEntitlementService` sentiment gating of edit telemetry | Remaining (C3 tail; telemetry itself is T3-owned) |
-| `api/common/extHostTypes.ts:33` — `HookTypeValue` public chat-hook types | Remaining (C2 type tail) |
-| `api/common/extHost.protocol.ts:58-60` — surviving Chat DTO members (`IChatProgressHistoryResponseContent`, `IChatExternalEditsDto`/`IChatMultiDiffData*`/`IChatNotebookEdit`/`IChatProgress`/`IChatTaskDto`, `IChatRequestVariableValue`) used by still-declared protocol members | Remaining (C2 protocol tail) |
+| `api/common/extHostApiCommands.ts:25-26` — `PromptsType`, `IExtensionPromptFileResult` (prompt-syntax API commands) | **Cleared in U05.c.045** |
+| `contrib/editTelemetry/browser/editTelemetryContribution.ts:18` — `IChatEntitlementService` sentiment gating of edit telemetry | **Cleared in U05.c.044** |
+| `api/common/extHostTypes.ts:33` — `HookTypeValue` public chat-hook types | **Cleared in U05.c.045** (`hookType` widened to `string`) |
+| `api/common/extHost.protocol.ts:58-60` — surviving Chat DTO members | **Cleared in U05.c.045** (14-declaration dead component removed; zero Chat imports remain) |
 
-Conclusion: the dedicated-tree manifests, shared-fixture extraction and account-policy ordering constraint are complete, but **C4 Chat-tree deletion is not yet executable** until the four remaining retained edges above are disconnected and the queued A2 tails land.
+Conclusion: all retained Chat-tree import edges are now gone; no file outside `contrib/chat/`, the dedicated deletion trees, U06 sessions and U07 agentHost imports `contrib/chat/**` or `services/chat/**`. The only remaining pre-deletion items are the queued A2 auth/RPC/MCP tails (and their entrypoint registrations), after which the C4 physical-deletion manifest can be finalized.
 
 **Additional C4 test tail:** `src/vs/workbench/test/browser/aiCustomizationManagementSectionRegistry.test.ts` (44 lines) imports the Chat-owned `aiCustomizationManagementSectionRegistry`/`AICustomizationManagementSection`; it belongs with the Chat test batch even though it lives under `workbench/test/`. `componentFixtures/agentsVoice/voiceModeOnboarding.fixture.ts` and both `componentFixtures/editor/inlineChat*.fixture.ts` are part of U05-C4-F/G/I scopes (fixtures are discovered by the component-fixture runner, not a static registry).
 
@@ -189,6 +189,8 @@ Measured tracked inventory from the current worktree; these refine U05-C4-F thro
 
 Protected edges for every batch: `terminal/browser/agentHostTerminalService.ts` and the `ITerminalChatService` U07 prerequisite stay; generic terminal contributions/exports, PTY ownership and the retained `terminalContrib/inlineHint`, `voice`, `accessibility` trees are not in these batches. `test/browser/__snapshots__/*.snap` are generated companion files of their owning tests and go with the same batch.
 
+**Notebook Chat dedicated files (C4, parent-owned):** `src/vs/workbench/contrib/notebook/browser/contrib/chat/notebookChatUtils.ts` (67), `browser/controller/chat/cellChatActions.ts` (270), `browser/controller/chat/notebook.chat.contribution.ts` (390), `browser/controller/chat/notebookChatContext.ts` (9), `browser/view/cellParts/chat/cellChatPart.ts` (38) — 5 files / 774 lines. The only inbound reference is from the Chat tree itself, so they are deletion-safe with the same batch order.
+
 ### C2 — API/RPC/protocol deletion candidates and mixed-owner files
 
 | Candidate batch | Exact scope | Files | Current lines | Review boundary |
@@ -206,4 +208,145 @@ Protected edges for every batch: `terminal/browser/agentHostTerminalService.ts` 
 | U05-A2-B | API auth registrations `api/node/extHost.node.services.ts` and `api/worker/extHost.worker.services.ts`; browser auth tests `api/test/browser/*Authentication*` | 6 | 1,232 | Replace service construction tests with inert facade / no-callback assertions; no token-store, provider, UI or network behavior. |
 | U05-A2-C | Approved MCP auth/OAuth members in `mcpCommands.ts`, `mcpServerActions.ts`, `mcpLanguageFeatures.ts`, `mcp.contribution.ts`, and `mcpConfiguration.ts` plus approved tests | 7 | 5,064 | These are mixed-purpose files, not deletion targets. Strip account/OAuth enrollment and secret lenses only; preserve independently used MCP configuration, ordinary server execution and non-account behavior. |
 
-C2/A2 counts are inventory snapshots only. The `AgentEditorComments`, ChatQuota, ChatStatus, ChatOutputRenderer, ChatCodeMapper, ChatContext and ChatInputNotification RPC shape/context pairs have been disconnected (U05.c.028–c.036); their bridge files (and the dedicated ChatInputNotification test) are 6-line `export {}` placeholders and their DTOs, shapes, proxy IDs and disconnected-set entries are physically removed from the mixed `extHost.protocol.ts`/`extHost.api.impl.ts` owners. The five remaining pairs — `LanguageModels`, `ChatAgents2`, `ChatSessions`, `ChatDebug`, `LanguageModelTools` — are bidirectionally shape-coupled and paused with measured split analyses in `apply-progress.md` (U05.c.036 continuation) pending a parent disposition; nothing was edited for them. Two in-scope new files from this stage remain **untracked** (`src/vs/workbench/api/common/extHostLanguageModelAccessInformation.ts` — the retained inert language-model access facade imported by `accountFreeApi.test.ts`, and `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`); they are outside `git rm` reach until the parent stages them with its commit. `extHostLanguageModelAccessInformation.ts` is still imported by `accountFreeApi.test.ts`. The API workspace integration test remains parent-owned. Authentication/MCP tail edits remain ordered after C1/C2/C3 consumer disconnection; no A2 source deletion or broad secret cleanup is implied.
+C2/A2 counts are inventory snapshots only. All seven Chat RPC shape/context pairs and the five formerly paused bridge pairs are retired (U05.c.028–c.042): their bridge files (and dedicated tests) are 6-line `export {}` placeholders and their DTOs, shapes, proxy IDs and disconnected-set entries are removed from the mixed `extHost.protocol.ts`/`extHost.api.impl.ts` owners. Two in-scope new files from that stage remain **untracked** (`src/vs/workbench/api/common/extHostLanguageModelAccessInformation.ts` — the retained inert language-model access facade imported by `accountFreeApi.test.ts`, and `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`); they are outside `git rm` reach until the parent stages them with its commit. The API workspace integration test remains parent-owned.
+
+### A2-D1 — Auth RPC bridge coupled batch (executor-executed)
+
+| Batch | Scope | Files | Measured deletion lines | Evidence |
+| --- | --- | ---: | ---: | --- |
+| A2-D1 | `api/browser/mainThreadAuthentication.ts` (755), `api/common/extHostAuthentication.ts` (1,063), `api/node/extHostAuthentication.ts` (339), `api/common/extHostXaaAuthProvider.ts` (402); their 5 dedicated tests (149+41+773+185+99); protocol `MainThreadAuthenticationShape`/`ExtHostAuthenticationShape`, the five auth option DTOs, `IXaaProviderDiscovery`, both proxies; and four registration sites (`extHost.api.impl.ts` import/const/context-set, `node/extHost.node.services.ts`, `worker/extHost.worker.services.ts`, `browser/extensionHost.contribution.ts`) | 15 | 3,944 | compile exit 0; `accountFreeApi` **10/10** with new auth-shape/class absence assertions; placeholder tests run clean |
+
+Coupled-batch rationale: the pair is bidirectionally shape-coupled (each side proxies the other), the ext-host implementations were registered in both Node and worker service collections, and the A1 public facade is independent of both (`createAuthenticationApiFacade` continues to serve the account-free contract). All nine modules/tests are now 6-line placeholders with zero importers, ready for parent `git rm`.
+
+### A2 remaining leaves (measured, not started)
+
+- **A2-D2 — auth tree disconnection:** `contrib/authentication/**` + `services/authentication/**` (25 files) still have retained consumers: `workbench/workbench.common.main.ts` (registration), `code/browser/workbench/workbench.ts`, `workbench/browser/web.api.ts`, `contrib/extensions/browser/extensionsActions.ts`, `contrib/issue/browser/*` + `electron-browser/*` (4 files), `contrib/mcp/browser/{mcpCommands,mcpServerActions}.ts`, `api/browser/mainThreadMcp.ts` + its test, and `workbench/test/browser/parts/globalCompositeBar.test.ts` (sessions and dedicated-tree consumers die under U06/C4 separately).
+- **A2-D3 — MCP account/OAuth constructors:** the approved `mcp/**` files plus the auth-dependent enrollment/secret lenses.
+- **A2-D4 — final readiness + parent manifest:** re-run the retained-import scan, then publish the complete “Pending physical deletion (parent)” list (C4 trees + dedicated trees + Notebook Chat batch + zero-importer placeholders + A2 trees).
+
+## Final "Pending physical deletion (parent)" manifest (A2-D4, 2026-10-06)
+
+Consolidated readiness check: retained chat/auth importers are now zero outside the deletion trees (only the C4-dedicated notebook chat file and the deletion-safe boundary test text reads remain, both listed below). Parent owns every unlink/revalidation.
+
+| Batch | Scope | Notes |
+| --- | --- | --- |
+| C4-A…L | `src/vs/workbench/contrib/chat/**`, `workbench/services/chat/**`, chat tests/styles/assets, component fixtures, `aiCustomizationManagementSectionRegistry.test.ts` | per the existing U05-C4 tables; source absence fixtures exist |
+| C4 dedicated trees | `inlineChat/**`, `agentsVoice/**`, `welcomeAgentSessions/**`, `terminalContrib/{chat,chatAgentTools}/**` | per-directory batches recorded (U05.c.038) with >400-line files listed |
+| Notebook Chat batch | `notebook/browser/{contrib/chat,controller/chat,view/cellParts/chat}` five files / 774 lines | added in U05.c.046 |
+| Zero-importer placeholders | 6-line `export {}` bridge/test placeholders from c.028–c.036, c.041, c.042, A2-D1 (auth bridges/tests) | each has zero importers |
+| A2 auth trees | `workbench/contrib/authentication/**`, `workbench/services/authentication/**` (25 files) | registrations removed in D2.006; no retained importers remain; **A2-D3 residual executed** (OAuth config surface removed end-to-end, U05.c.057) so this batch is deletion-ready |
+| A2-D3 residual | MCP OAuth config surface — **COMPLETE** (U05.c.057): schema, enterprise setting/policy, lens/command, sanitizer, types and fixtures removed | done; see `compatibility.md` for the user-visible config change |
+| U06/U07 | sessions/agentHost trees | separate stages |
+
+JSON/JSONC config and type files (`src/vs/base/common/product.ts` defaultChatAgent type, proposal registry entries) are Phase-C1/U09-owned and remain listed in their own manifests.
+
+
+## Combined deletion wave — U06/U07-prerequisite completion + U05 C4 tails (manifest refresh 2026-10-06)
+
+Recorded by the executor after leaf (d) marker-service rewrite, leaf (e) app/sharedProcess/server disconnection and leaf (f) entrypoint-registration removal landed (compile 0 errors; focused suites green — evidence in `apply-progress.md`). Everything below is a **read-only measured candidate inventory for the parent's `git rm`**; no path here was unlinked, staged, or committed by this executor. Counts are tracked files and tracked text lines measured from the current worktree (`git ls-files` + `wc -l`); placeholders that already emptied a file are counted at their current 6-line size.
+
+### Wave batches (per-directory, reviewable units)
+
+| Batch | Exact tracked scope | Files | Lines | Binary | Pre-conditions / retained edges |
+| --- | --- | ---: | ---: | ---: | --- |
+| W1 | `src/vs/workbench/contrib/chat/**` | 1,415 | 551,371 | 103 | C1–C3 disconnections + seven RPC-pair retirements complete; per-directory split in the tables below. |
+| W2 | `src/vs/workbench/services/chat/**` | 2 | 1,704 | 0 | zero importers outside the wave (verified scan). |
+| W3 | `src/vs/workbench/contrib/inlineChat/**` | 24 | 6,452 | 0 | per-directory batches in U05.c.038. |
+| W4 | `src/vs/workbench/contrib/agentsVoice/**` | 37 | 7,566 | 12 | 12 binary MP3 voice resources ride the same batch. |
+| W5 | `src/vs/workbench/contrib/welcomeAgentSessions/**` | 4 | 1,774 | 0 | generic onboarding untouched. |
+| W6 | `src/vs/workbench/contrib/terminalContrib/chat/**` | 14 | 2,953 | 0 | per-directory batches in U05.c.038. |
+| W7 | `src/vs/workbench/contrib/terminalContrib/chatAgentTools/**` | 110 | 37,121 | 0 | per-directory batches in U05.c.038; generic terminal contributions untouched. |
+| W8 | Notebook Chat batch: `notebook/browser/contrib/chat/**`, `notebook/browser/controller/chat/**`, `notebook/browser/view/cellParts/chat/**` | 5 | 774 | 0 | only inbound reference is the Chat tree itself. |
+| W9 | `src/vs/workbench/contrib/authentication/**` | 8 | 183 | 0 | A2-D2.006 removed the registration; remaining importers are sessions-only. |
+| W10 | `src/vs/workbench/services/authentication/**` | 17 | 7,813 | 0 | same as W9; A1 inert public facade stays (it lives in `api/common/extHostAuthentication…` surface, not here). |
+| W11 | `src/vs/sessions/**` | 942 | 319,537 | 0 | leaf (f) removed the common/web/desktop registrations; build/entrypoint + window-type residue listed under "C5 residue" below. |
+| W12 | `src/vs/platform/agentHost/**` | 2,344 | 521,031 | 0 | leaf (e) removed server/shared-process starters/channels; `platform/agentPlugins` correction below. |
+| W13 | `src/vs/workbench/services/agentHost/**` | 15 | 4,030 | 0 | leaf (f) removed all three desktop + two web registrations; zero importers outside the wave (verified). |
+| W14 | Agent-host terminal trio + command source: `terminal/browser/{agentHostOutputChannel,agentHostPty,agentHostTerminalService}.ts` (52/598/489) and `terminal/browser/ahpTerminalCommandSource.ts` (259); tests `terminal/test/browser/{agentHostPty,agentHostTerminalService}.test.ts` (992/266) | 6 | 2,656 | 0 | supersedes the earlier U05-C4-I hold; the six sessions importers are inside W11 (`remoteAgentHostTerminal.contribution`, `remoteAgentHost.contribution`, `agentHostSessionTaskRunner`(+test), `sessionsTerminalContribution`(+test)). |
+| W15 | MCP agent-host UI strip: `mcp/browser/mcpToolCallUI.ts` (446) + `mcp/test/browser/mcpToolCallUI.test.ts` (107) + `mcp/common/mcpEditorAffordanceState.ts` (46) + `mcp/test/common/mcpEditorAffordanceState.test.ts` (75) | 4 | 674 | 0 | `IMcpToolCallUIData` agentHost variant + the deletion-bound `chatMcpAppModel`/`stateToProgressAdapter`/`chatService` producers go in the same pass (they live in W1). |
+| W16 | Server agent-host channel/manager + tests: `server/node/agentHostChannel.ts` (412), `server/node/serverAgentHostManager.ts` (274), `server/test/node/agentHostChannel.test.ts` (261), `server/test/node/serverAgentHostManager.test.ts` (457) | 4 | 1,404 | 0 | leaf (e) removed construction/registration; both modules and suites are green today (9/9 and 20/20) and become zero-importer with this wave. |
+| W17 | editTelemetry marker placeholders: `contrib/editTelemetry/browser/telemetry/agentHostEditMarkerService.ts` + `test/browser/agentHostEditMarkerService.test.ts` | 2 | 12 | 0 | leaf (d) emptied both (778 + 788 original lines removed); subset of W18. |
+| W18 | Zero-importer API/auth/bridge placeholders: the 40 tracked 6-line `export {}` files listed below | 40 | 240 | 0 | each has zero importers. |
+| W19 | Workbench test fixtures bound to the wave: `workbench/test/browser/componentFixtures/chat/**` (33/10,346), `componentFixtures/sessions/**` (21/8,416), `componentFixtures/agentsVoice/**` (1/63), `componentFixtures/editor/inlineChatZoneWidget.fixture.ts` (1/494), `workbench/test/browser/aiCustomizationManagementSectionRegistry.test.ts` (1/44) | 57 | 19,363 | 0 | `componentFixtures/fixtureUtils.ts` is **retained** (leaf a2 removed its nine deletion-bound imports). |
+
+Wave total: **5,048 tracked files / 1,486,646 text lines + 115 binary files.** (Sum of W1–W16, W18 and W19; W17 is the same two files as the editTelemetry entry of W18 and is not double-counted. All placeholders are counted at their current 6-line size.)
+
+### Per-directory detail — W1 chat tree
+
+| Sub-batch | Files | Lines |
+| --- | ---: | ---: |
+| `browser/` | 794 | 272,859 (103 binary) |
+| `test/` | 442 | 220,237 |
+| `common/` | 157 | 53,773 |
+| `electron-browser/` + `chatCodeOrganization.md` | 22 | 4,502 |
+
+`browser/` deep split (top directories): `widget/` 339/85,097 · `agentSessions/` 100/40,977 · `aiCustomization/` 39/27,444 · `chatDebug/` 29/15,876 · `actions/` 38/14,604 · `chatEditing/` 33/12,975 · `voiceClient/` 14/11,691 · remaining browser files (dialog/controller/history/tools/etc.) carry the rest.
+
+### Per-directory detail — W11 sessions tree
+
+| Sub-batch | Files | Lines |
+| --- | ---: | ---: |
+| `contrib/providers/` | 160 | 75,963 |
+| `contrib/chat/` | 151 | 50,826 |
+| `contrib/sessions/` | 68 | 37,875 |
+| `services/sessions/` | 36 | 19,698 |
+| `browser/parts/` | 80 | 19,507 |
+| `contrib/automations/` | 27 | 14,361 |
+| `contrib/changes/` | 48 | 14,352 |
+| `contrib/agentFeedback/` | 41 | 11,928 |
+| `contrib/layout/` | 20 | 10,166 |
+| `test/browser/` | 28 | 9,590 |
+| `contrib/github/` | 44 | 9,323 |
+| `browser/workbench.ts` + remaining `browser/` | 37 | 7,231 |
+| remaining `contrib/` (terminal, tunnelHost, codeReview, accountMenu, policyBlocked, fileTreeView, onboardingTours, editor, …) + `services/` + `common/` + entrypoints + root docs | 222 | 51,121 |
+
+Entrypoint files inside this batch: `sessions.common.main.ts` (495), `sessions.desktop.main.ts` (252), `sessions.web.main.ts` (207), `sessions.web.main.internal.ts` (24), `electron-browser/sessions.{html,ts,main.ts,desktop.contribution.ts,-dev.html}` and 13 `skills/**` + 14 root `*.md` docs.
+
+### Per-directory detail — W12 platform/agentHost
+
+| Sub-batch | Files | Lines |
+| --- | ---: | ---: |
+| `test/` | 916 | 303,395 |
+| `node/` | 1,184 | 164,888 |
+| `common/` | 219 | 44,272 |
+| `browser/` | 15 | 4,909 |
+| `electron-browser/` | 6 | 2,215 |
+| `electron-main/electronAgentHostStarter.ts` | 1 | 322 |
+| root docs (`AGENTS.md`, `OTEL.md`, `LOCAL_ENDPOINT.md`) | 3 | 1,030 |
+
+`node/` deep split: `codex/` 854/28,485 · `claude/` 73/31,709 · `copilot/` 44/26,103 · `shared/` 35/12,284 · `agentService.ts` 1/9,135 · `chatContributions/` 25/2,518 · `sshRemoteAgentHostService.ts` 1/2,180 · remaining node files carry the rest. `test/node/` (837/279,930) is dominated by the agent SDK fixture/scenario suites and rides the same batch.
+
+### Dependency order for the wave
+
+1. W17+W18 placeholders (already zero-importer) and W16 (server channel/manager) — leaf (e) removed every construction/registration.
+2. W14 terminal trio — only after W11 removes its six sessions importers (recorded coupling finding: leaf (b) could not land earlier).
+3. W15 MCP strip together with the W1 `chatMcpAppModel` / `stateToProgressAdapter` / `chatService` producers (the `IMcpToolCallUIData` agentHost variant is produced by the Chat tree).
+4. W3–W8 dedicated/notebook trees (no retained importers).
+5. W9+W10 auth trees — only sessions importers remain, so they go with or after W11.
+6. W11 sessions tree (owns the terminal-trio importers, the auth-tree importers and the C5 build/entrypoint residue).
+7. W12+W13 agent host trees after W14/W15/W16 (their last retained consumers).
+8. W1+W2 chat tree + W19 fixtures last, after every retained edge has gone.
+
+### Scope corrections and residual tails (do NOT delete blindly)
+
+- **`src/vs/platform/agentPlugins/**` is REMOVED from this wave.** `platform/agentPlugins/common/pluginParsers.ts` (1,403 lines) is not agent-host-only: the retained `.mcp.json` path `src/vs/platform/mcp/common/mcpWorkspaceConfiguration.ts:8` imports `normalizeMcpServerConfiguration` from it, and that module is live through `platform/mcp/common/{mcpManagementService,mcpResourceScannerService}.ts`, `workbench/contrib/mcp/common/{mcpTypes,discovery/workspaceDotMcpDiscovery}.ts`, `workbench/contrib/mcp/browser/{mcpWorkbenchService,mcpConfigurationDestination}.ts` and `platform/mcp/test/common/mcpWorkspaceConfiguration.test.ts`. The retained MCP test `workbench/contrib/mcp/test/common/pluginMcpDiscovery.test.ts:15` also imports `PluginFormat` from it. Deleting the tree now would break the retained MCP workspace-configuration path; the correction is either (a) an approved extraction leaf moving the neutral normalizer (and its helper closure) into `platform/mcp/common/` with parity tests before deletion, or (b) deferring the tree until the agent-host-owned remainder has no consumers. The remaining agent-host imports in that file are `agentHost/common/state/protocol/{state,mcpAppDefaults}.js` and `agentHost/common/state/sessionState.js`.
+- **C5 build/entrypoint residue (retained files, outside this apply's surfaces):** `build/next/index.ts` L103, L117, L121, L123, L185–186, L197, L681 (`vs/sessions/*` entry points); `build/gulpfile.vscode.ts` L150–153 (`sessions.desktop.main.js/.css`, `sessions.html`, `sessions.js`) and L338 (`resources/win32/sessions.ico`); `src/vs/platform/windows/electron-main/windowImpl.ts` L1295–1296 (`configuration.isSessionsWindow` → `vs/sessions/electron-browser/sessions…html`). These must be disconnected before the sessions HTML/entrypoints disappear, or the sessions window type must be removed with them.
+- **Server bridge-token plumbing (retained, now inert):** `server/node/serverServices.ts` keeps the `_agentHostBridgeConnectionToken` parameter (unused) because `server/node/remoteExtensionHostAgentServer.ts` and `server/node/server.main.ts` still pass it; `server/node/serverEnvironmentService.ts:18` still exports `agentHostBridgeConnectionTokenEnvironmentVariable`. A later leaf removes the parameter and its env plumbing together.
+- **Agent-sessions theme/size tokens:** leaf (f) removed the `../sessions/common/{theme,sizes}.js` side-effect imports from `workbench.common.main.ts`. Consequences: `workbench/contrib/splash/browser/partsSplash.ts` L101–102 (`agentsPanel.background`/`agentsPanel.border`) now yields `undefined` (optional fields, retained splash still works), the agent token ids remain as data in `extensions/theme-*/themes/*.json`, and `build/lib/stylelint/vscode-known-variables.json` keeps the `agents-*` CSS variable entries generated from the deleted sessions stylesheets.
+- **Docs/comment residue:** `workbench/browser/web.main.ts` L448 mentions a "sessions in-memory workspace" override example (C5 wording cleanup).
+
+### Zero-importer placeholder batch (W18) — 40 files, 6 lines each (240 lines)
+
+`api/browser/`: mainThreadAgentEditorComments, mainThreadAuthentication, mainThreadChatAgents2, mainThreadChatCodeMapper, mainThreadChatContext, mainThreadChatDebug, mainThreadChatInputNotification, mainThreadChatOutputRenderer, mainThreadChatQuota, mainThreadChatSessions, mainThreadChatStatus, mainThreadLanguageModelTools, mainThreadLanguageModels.
+`api/common/`: extHostAgentEditorComments, extHostAuthentication, extHostChatAgents2, extHostChatContext, extHostChatDebug, extHostChatInputNotification, extHostChatOutputRenderer, extHostChatQuota, extHostChatSessions, extHostChatStatus, extHostCodeMapper, extHostLanguageModelTools, extHostLanguageModels, extHostXaaAuthProvider.
+`api/node/extHostAuthentication.ts`.
+`api/test/browser/`: extHostAuthentication.integrationTest, extHostAuthentication.test, extHostXaaAuthProvider.test, mainThreadAuthentication.integrationTest, mainThreadAuthentication.test, mainThreadChatAgents2.test, mainThreadChatInputNotification.test, mainThreadChatSessions.test, mainThreadLanguageModels.test.
+`api/test/common/extHostChatAgents2.test.ts`.
+`contrib/editTelemetry/`: `browser/telemetry/agentHostEditMarkerService.ts` (778 → 6) and `test/browser/agentHostEditMarkerService.test.ts` (788 → 6) — the W17 pair, included here so the batch totals stay disjoint.
+
+### Wave prerequisite evidence (executor-observed)
+
+- `npm run compile-client` (Node 24.18.0) exit 0 after leaves (d), (e) and (f).
+- Retained assertions green: `productDebloatChatIntegrations.test` **27/27** (now includes the agent-host edit-traces absence test and the server/shared-process channel-absence test), `accountFreeApi.test` **10/10**, `editSourceTrackingImpl.test` **8/8** (agent-host scenarios retired with the marker service), `editTracker.test` **9/9** (correlation interfaces relocated), `editTelemetry.test` **3/3**.
+- Server boundary evidence: `serverMain.test` **4/4**; the wave-listed modules/suites still pass intact (`agentHostChannel.test` 9/9, `serverAgentHostManager.test` 20/20).
+- `git diff --check` clean; no path was staged, committed, or unlinked by this executor.

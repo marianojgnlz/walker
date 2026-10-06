@@ -10,7 +10,6 @@ import { URI } from '../../../../../base/common/uri.js';
 import { AuthenticationAccessService } from '../../browser/authenticationAccessService.js';
 import { AuthenticationService } from '../../browser/authenticationService.js';
 import { AuthenticationProviderInformation, AuthenticationSessionsChangeEvent, IAuthenticationProvider } from '../../common/authentication.js';
-import { TestEnvironmentService } from '../../../../test/browser/workbenchTestServices.js';
 import { TestExtensionService, TestProductService, TestStorageService } from '../../../../test/common/workbenchTestServices.js';
 import { NullLogService } from '../../../../../platform/log/common/log.js';
 import { ActivationKind } from '../../../extensions/common/extensions.js';
@@ -40,7 +39,7 @@ suite('AuthenticationService', () => {
 	setup(() => {
 		const storageService = disposables.add(new TestStorageService());
 		const authenticationAccessService = disposables.add(new AuthenticationAccessService(storageService, TestProductService));
-		authenticationService = disposables.add(new AuthenticationService(new TestExtensionService(), authenticationAccessService, TestEnvironmentService, new NullLogService()));
+		authenticationService = disposables.add(new AuthenticationService(new TestExtensionService(), authenticationAccessService, new NullLogService()));
 	});
 
 	teardown(() => {
@@ -478,7 +477,7 @@ suite('AuthenticationService - tryActivateProvider', () => {
 	setup(() => {
 		const storageService = disposables.add(new TestStorageService());
 		const authenticationAccessService = disposables.add(new AuthenticationAccessService(storageService, TestProductService));
-		authenticationService = disposables.add(new AuthenticationService(new TestExtensionService(), authenticationAccessService, TestEnvironmentService, new NullLogService()));
+		authenticationService = disposables.add(new AuthenticationService(new TestExtensionService(), authenticationAccessService, new NullLogService()));
 	});
 
 	teardown(() => {
@@ -498,7 +497,7 @@ suite('AuthenticationService - tryActivateProvider', () => {
 				return new Promise<void>(() => { /* never resolves */ });
 			}
 		};
-		authenticationService = disposables.add(new AuthenticationService(hangingExtService, authAccessService, TestEnvironmentService, new NullLogService()));
+		authenticationService = disposables.add(new AuthenticationService(hangingExtService, authAccessService, new NullLogService()));
 
 		const provider = createProvider({ getSessions: async () => [createSession()] });
 

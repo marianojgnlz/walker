@@ -14,7 +14,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/tes
 import { EditKeySourceData, EditSourceData, IDocumentWithAnnotatedEdits } from '../../browser/helpers/documentWithAnnotatedEdits.js';
 import { DocumentEditSourceTracker } from '../../browser/telemetry/editTracker.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
-import { IExternalEditCorrelation, IExternalEditCorrelationResolution } from '../../browser/telemetry/agentHostEditMarkerService.js';
+import { IExternalEditCorrelation, IExternalEditCorrelationResolution } from '../../browser/telemetry/editTracker.js';
 
 suite('DocumentEditSourceTracker', () => {
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();

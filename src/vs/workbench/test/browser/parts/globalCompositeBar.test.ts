@@ -11,13 +11,6 @@ import { ActionBar } from '../../../../base/browser/ui/actionbar/actionbar.js';
 import { Action } from '../../../../base/common/actions.js';
 import { GLOBAL_ACTIVITY_ID } from '../../../common/activity.js';
 import { ActivityService } from '../../../services/activity/browser/activityService.js';
-import * as ManageAccountPreferencesForExtensionActionModule from '../../../contrib/authentication/browser/actions/manageAccountPreferencesForExtensionAction.js';
-import * as ManageAccountPreferencesForMcpServerActionModule from '../../../contrib/authentication/browser/actions/manageAccountPreferencesForMcpServerAction.js';
-import * as ManageAccountsActionModule from '../../../contrib/authentication/browser/actions/manageAccountsAction.js';
-import * as ManageDynamicAuthenticationProvidersActionModule from '../../../contrib/authentication/browser/actions/manageDynamicAuthenticationProvidersAction.js';
-import * as ManageTrustedExtensionsForAccountActionModule from '../../../contrib/authentication/browser/actions/manageTrustedExtensionsForAccountAction.js';
-import * as ManageTrustedMcpServersForAccountActionModule from '../../../contrib/authentication/browser/actions/manageTrustedMcpServersForAccountAction.js';
-import * as SignOutOfAccountActionModule from '../../../contrib/authentication/browser/actions/signOutOfAccountAction.js';
 
 interface IGlobalCompositeBarTestHarness {
 	globalActivityActionBar: ActionBar;
@@ -74,28 +67,4 @@ suite('GlobalCompositeBar', () => {
 		assert.strictEqual(Reflect.get(ActivityService.prototype, 'showAccountsActivity'), undefined);
 	});
 
-	test('does not export basic account management actions', () => {
-		assert.strictEqual(Object.hasOwn(ManageAccountsActionModule, 'ManageAccountsAction'), false);
-		assert.strictEqual(Object.hasOwn(SignOutOfAccountActionModule, 'SignOutOfAccountAction'), false);
-	});
-
-	test('does not export extension account preference action', () => {
-		assert.strictEqual(Object.hasOwn(ManageAccountPreferencesForExtensionActionModule, 'ManageAccountPreferencesForExtensionAction'), false);
-	});
-
-	test('does not export MCP account preference action', () => {
-		assert.strictEqual(Object.hasOwn(ManageAccountPreferencesForMcpServerActionModule, 'ManageAccountPreferencesForMcpServerAction'), false);
-	});
-
-	test('does not export trusted extension account action', () => {
-		assert.strictEqual(Object.hasOwn(ManageTrustedExtensionsForAccountActionModule, 'ManageTrustedExtensionsForAccountAction'), false);
-	});
-
-	test('does not export trusted MCP account action', () => {
-		assert.strictEqual(Object.hasOwn(ManageTrustedMcpServersForAccountActionModule, 'ManageTrustedMcpServersForAccountAction'), false);
-	});
-
-	test('does not export dynamic authentication provider management', () => {
-		assert.strictEqual(Object.hasOwn(ManageDynamicAuthenticationProvidersActionModule, 'RemoveDynamicAuthenticationProvidersAction'), false);
-	});
 });

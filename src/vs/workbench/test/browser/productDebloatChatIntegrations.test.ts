@@ -11,6 +11,10 @@ function readWorkbenchSource(relativePath: string): string {
 	return readFileSync(join(process.cwd(), 'src/vs/workbench', relativePath), 'utf8');
 }
 
+function readRepositorySource(relativePath: string): string {
+	return readFileSync(join(process.cwd(), relativePath), 'utf8');
+}
+
 suite('Product chat integration boundaries', () => {
 	test('retained accessibility features do not bridge into Chat', () => {
 		const accessibleView = readWorkbenchSource('contrib/accessibility/browser/accessibleView.ts');
@@ -385,5 +389,40 @@ suite('Product chat integration boundaries', () => {
 		const terminalMenus = readWorkbenchSource('contrib/terminal/browser/terminalMenus.ts');
 		assert.doesNotMatch(terminalMenus, /ChatContextKeys|ChatHasHiddenTerminals/);
 		assert.match(terminalMenus, /TabsShowActiveTerminal/);
+	});
+
+	test('edit telemetry retains generic source tracking without Agent Host attribution', () => {
+		const feature = readWorkbenchSource('contrib/editTelemetry/browser/telemetry/editSourceTrackingFeature.ts');
+		assert.doesNotMatch(feature, /agentHostEditMarkerService|AgentHostEditMarkerService|markerService/);
+		assert.match(feature, /createInstance\(EditSourceTrackingImpl, shouldSendDetails, this\._annotatedDocuments\)/);
+
+		const impl = readWorkbenchSource('contrib/editTelemetry/browser/telemetry/editSourceTrackingImpl.ts');
+		assert.doesNotMatch(impl, /agentHostEditMarkerService|AgentHostEditMarkerService|preparedAgentFlush|deferSuppressedExternal|includeSuppressedExternal|coverageGap|externalEditCorrelation/);
+		assert.doesNotMatch(impl, /platform\/agentHost/);
+		assert.match(impl, /new DocumentEditSourceTracker\(docWithJustReason, undefined\)/);
+		assert.match(impl, /const agentModifiedCount = data\.agentHostModifiedCount;/);
+		assert.match(impl, /const totalModifiedCount = data\.totalModifiedCharactersInFinalState;/);
+
+		const tracker = readWorkbenchSource('contrib/editTelemetry/browser/telemetry/editTracker.ts');
+		assert.doesNotMatch(tracker, /agentHostEditMarkerService/);
+		assert.match(tracker, /export interface IExternalEditCorrelation \{/);
+		assert.match(tracker, /export interface IExternalEditCorrelationResolution \{/);
+
+		// The Agent Host marker service is now a parent-owned deletion candidate: its
+		// agent-host protocol imports and implementation are gone from the retained tree.
+		const markerService = readWorkbenchSource('contrib/editTelemetry/browser/telemetry/agentHostEditMarkerService.ts');
+		assert.doesNotMatch(markerService, /platform\/agentHost|AgentHostEditMarkerService|IAgentHostEditMarkerService/);
+	});
+
+	test('server and shared process do not wire Agent Host starters or channels', () => {
+		const serverServices = readRepositorySource('src/vs/server/node/serverServices.ts');
+		assert.doesNotMatch(serverServices, /NodeAgentHostStarter|ServerAgentHostManager|AgentHostChannel|UnavailableAgentHostChannel|AgentHostIpcChannels/);
+		assert.match(serverServices, /socketServer\.registerChannel\('logger'/);
+		assert.match(serverServices, /socketServer\.registerChannel\('userDataProfiles'/);
+
+		const sharedProcessMain = readRepositorySource('src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts');
+		assert.doesNotMatch(sharedProcessMain, /AgentHost/);
+		assert.match(sharedProcessMain, /registerChannel\('localGit'/);
+		assert.match(sharedProcessMain, /registerChannel\('playwright'/);
 	});
 });

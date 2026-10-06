@@ -27,7 +27,7 @@ export class NodeExtHostMpcService extends ExtHostMcpService {
 		if (launch.type === McpServerTransportType.Stdio) {
 			this.startNodeMpc(id, launch, defaultCwd);
 		} else if (launch.type === McpServerTransportType.HTTP) {
-			this._sseEventSources.set(id, new McpHTTPHandleNode(id, launch, this._proxy, this._logService, errorOnUserInteraction));
+			this._sseEventSources.set(id, new McpHTTPHandleNode(id, launch, this._proxy, this._logService));
 		} else {
 			super._startMcp(id, launch, defaultCwd, errorOnUserInteraction);
 		}

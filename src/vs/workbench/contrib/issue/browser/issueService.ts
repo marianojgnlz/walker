@@ -19,7 +19,6 @@ import { IWorkspaceTrustManagementService } from '../../../../platform/workspace
 import { SIDE_BAR_BACKGROUND } from '../../../common/theme.js';
 import { IIssueFormService, IssueReporterData, IssueReporterExtensionData, IssueReporterStyles, IWorkbenchIssueService } from '../common/issue.js';
 import { IWorkbenchAssignmentService } from '../../../services/assignment/common/assignmentService.js';
-import { IAuthenticationService } from '../../../services/authentication/common/authentication.js';
 import { IWorkbenchExtensionEnablementService } from '../../../services/extensionManagement/common/extensionManagement.js';
 import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
 import { IExtensionService } from '../../../services/extensions/common/extensions.js';
@@ -39,7 +38,6 @@ export class BrowserIssueService implements IWorkbenchIssueService {
 		@IIntegrityService private readonly integrityService: IIntegrityService,
 		@IExtensionManagementService private readonly extensionManagementService: IExtensionManagementService,
 		@IWorkbenchExtensionEnablementService private readonly extensionEnablementService: IWorkbenchExtensionEnablementService,
-		@IAuthenticationService private readonly authenticationService: IAuthenticationService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IOpenerService private readonly openerService: IOpenerService,
 		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService
@@ -71,15 +69,6 @@ export class BrowserIssueService implements IWorkbenchIssueService {
 		if (this.productService.reportIssueUrl) {
 			const theme = this.themeService.getColorTheme();
 			const experiments = await this.experimentService.getCurrentExperiments();
-
-			let githubAccessToken = '';
-			try {
-				const githubSessions = await this.authenticationService.getSessions('github');
-				const potentialSessions = githubSessions.filter(session => session.scopes.includes('repo'));
-				githubAccessToken = potentialSessions[0]?.accessToken;
-			} catch (e) {
-				// Ignore
-			}
 
 			// Default to true (pure) so an integrity-check failure doesn't push an
 			// inaccurate `Modes: ..., Unsupported` line into the issue body.
@@ -137,7 +126,7 @@ export class BrowserIssueService implements IWorkbenchIssueService {
 				restrictedMode: !this.workspaceTrustManagementService.isWorkspaceTrusted(),
 				isInstallationPure,
 				isSessionsWindow: this.environmentService.isSessionsWindow,
-				githubAccessToken
+				githubAccessToken: ''
 			}, options);
 
 			return this.issueFormService.openReporter(issueReporterData);

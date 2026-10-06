@@ -16,7 +16,6 @@ import { IWorkspaceTrustManagementService } from '../../../../platform/workspace
 import { SIDE_BAR_BACKGROUND } from '../../../common/theme.js';
 import { IIssueFormService, IssueReporterData, IssueReporterExtensionData, IssueReporterStyles, IWorkbenchIssueService } from '../common/issue.js';
 import { IWorkbenchAssignmentService } from '../../../services/assignment/common/assignmentService.js';
-import { IAuthenticationService } from '../../../services/authentication/common/authentication.js';
 import { IWorkbenchExtensionEnablementService } from '../../../services/extensionManagement/common/extensionManagement.js';
 import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
 import { IIntegrityService } from '../../../services/integrity/common/integrity.js';
@@ -31,7 +30,6 @@ export class NativeIssueService implements IWorkbenchIssueService {
 		@IWorkbenchExtensionEnablementService private readonly extensionEnablementService: IWorkbenchExtensionEnablementService,
 		@IWorkspaceTrustManagementService private readonly workspaceTrustManagementService: IWorkspaceTrustManagementService,
 		@IWorkbenchAssignmentService private readonly experimentService: IWorkbenchAssignmentService,
-		@IAuthenticationService private readonly authenticationService: IAuthenticationService,
 		@IIntegrityService private readonly integrityService: IIntegrityService,
 		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
@@ -114,15 +112,6 @@ export class NativeIssueService implements IWorkbenchIssueService {
 
 		const experiments = await this.experimentService.getCurrentExperiments();
 
-		let githubAccessToken = '';
-		try {
-			const githubSessions = await this.authenticationService.getSessions('github');
-			const repoSession = githubSessions.find(session => session.scopes.includes('repo'));
-			githubAccessToken = repoSession?.accessToken ?? '';
-		} catch (e) {
-			// Ignore
-		}
-
 		let isInstallationPure = true;
 		try {
 			isInstallationPure = (await this.integrityService.isPure()).isPure;
@@ -139,7 +128,7 @@ export class NativeIssueService implements IWorkbenchIssueService {
 			restrictedMode: !this.workspaceTrustManagementService.isWorkspaceTrusted(),
 			isInstallationPure,
 			isSessionsWindow: this.environmentService.isSessionsWindow,
-			githubAccessToken,
+			githubAccessToken: '',
 		}, dataOverrides);
 
 		return this.issueFormService.openReporter(issueReporterData);
@@ -180,15 +169,6 @@ export class NativeIssueService implements IWorkbenchIssueService {
 		try {
 			const experiments = await this.experimentService.getCurrentExperiments();
 			data.experiments = experiments?.join('\n');
-		} catch (e) {
-			// Ignore
-		}
-
-		// GitHub access token — only fetch existing sessions, never prompt
-		try {
-			const githubSessions = await this.authenticationService.getSessions('github');
-			const repoSession = githubSessions.find(session => session.scopes.includes('repo'));
-			data.githubAccessToken = repoSession?.accessToken ?? '';
 		} catch (e) {
 			// Ignore
 		}

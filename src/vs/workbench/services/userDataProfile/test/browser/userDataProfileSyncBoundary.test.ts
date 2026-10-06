@@ -85,12 +85,6 @@ suite('User data profile Sync boundary', () => {
 		assert.ok(sharedProcess.includes("this.server.registerChannel('extensions', channel)"));
 	});
 
-	test('Sessions entrypoints do not construct Sync services', () => {
-		assertNoSyncStartup('sessions/sessions.common.main.ts');
-		assertNoSyncStartup('sessions/sessions.desktop.main.ts');
-		assertNoSyncStartup('sessions/sessions.web.main.ts');
-	});
-
 	test('legacy state remains inert without a Sync bootstrap reader', () => {
 		const sharedProcess = readFileSync(join(repositoryRoot, 'src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts'), 'utf8');
 		const syncStateReader = sharedProcess.match(/userDataSync\.enable|UserDataSyncEnablementService|UserDataAutoSyncService/);

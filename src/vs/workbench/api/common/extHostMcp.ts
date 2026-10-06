@@ -9,7 +9,6 @@ import { CancellationToken, CancellationTokenSource } from '../../../base/common
 import { CancellationError } from '../../../base/common/errors.js';
 import { Emitter, Event } from '../../../base/common/event.js';
 import { Disposable, DisposableMap, DisposableStore, IDisposable, toDisposable } from '../../../base/common/lifecycle.js';
-import { AUTH_SCOPE_SEPARATOR, fetchAuthorizationServerMetadata, fetchResourceMetadata, getDefaultMetadataForUrl, IAuthorizationProtectedResourceMetadata, IAuthorizationServerMetadata, parseWWWAuthenticateHeader, scopesMatch } from '../../../base/common/oauth.js';
 import { SSEParser } from '../../../base/common/sseParser.js';
 import { URI, UriComponents } from '../../../base/common/uri.js';
 import { vArray, vNumber, vObj, vObjAny, vOptionalProp, vString } from '../../../base/common/validation.js';
@@ -19,10 +18,10 @@ import { createDecorator } from '../../../platform/instantiation/common/instanti
 import { canLog, ILogService, LogLevel } from '../../../platform/log/common/log.js';
 import product from '../../../platform/product/common/product.js';
 import { StorageScope } from '../../../platform/storage/common/storage.js';
-import { extensionPrefixedIdentifier, McpCollectionDefinition, McpConnectionState, McpServerDefinition, McpServerLaunch, McpServerStaticMetadata, McpServerStaticToolAvailability, McpServerTransportHTTP, McpServerTransportType, UserInteractionRequiredError } from '../../contrib/mcp/common/mcpTypes.js';
+import { extensionPrefixedIdentifier, McpCollectionDefinition, McpConnectionState, McpServerDefinition, McpServerLaunch, McpServerStaticMetadata, McpServerStaticToolAvailability, McpServerTransportHTTP, McpServerTransportType } from '../../contrib/mcp/common/mcpTypes.js';
 import { MCP } from '../../contrib/mcp/common/modelContextProtocol.js';
-import { checkProposedApiEnabled, isProposedApiEnabled } from '../../services/extensions/common/extensions.js';
-import { ExtHostMcpShape, IMcpAuthenticationDetails, IAuthMetadataSource, IStartMcpOptions, MainContext, MainThreadMcpShape, IAuthResourceMetadataSource, IAuthServerMetadataSource } from './extHost.protocol.js';
+import { isProposedApiEnabled } from '../../services/extensions/common/extensions.js';
+import { ExtHostMcpShape, IStartMcpOptions, MainContext, MainThreadMcpShape } from './extHost.protocol.js';
 import { IExtHostInitDataService } from './extHostInitDataService.js';
 import { IExtHostRpcService } from './extHostRpcService.js';
 import * as Convert from './extHostTypeConverters.js';
@@ -55,10 +54,6 @@ const serverDataValidation = vObj({
 			availability: vNumber(),
 			definition: vObjAny(),
 		}))),
-	})),
-	authentication: vOptionalProp(vObj({
-		providerId: vString(),
-		scopes: vArray(vString()),
 	}))
 });
 
@@ -114,7 +109,7 @@ export class ExtHostMcpService extends Disposable implements IExtHostMpcService 
 
 	protected _startMcp(id: number, launch: McpServerLaunch, _defaultCwd?: URI, errorOnUserInteraction?: boolean): void {
 		if (launch.type === McpServerTransportType.HTTP) {
-			this._sseEventSources.set(id, new McpHTTPHandle(id, launch, this._proxy, this._logService, errorOnUserInteraction));
+			this._sseEventSources.set(id, new McpHTTPHandle(id, launch, this._proxy, this._logService));
 			return;
 		}
 
@@ -201,9 +196,6 @@ export class ExtHostMcpService extends Disposable implements IExtHostMpcService 
 				}
 
 				serverDataValidation.validateOrThrow(item);
-				if ((item as vscode.McpHttpServerDefinition2).authentication) {
-					checkProposedApiEnabled(extension, 'mcpToolDefinitions');
-				}
 
 				let staticMetadata: McpServerStaticMetadata | undefined;
 				const castAs2 = item as McpStdioServerDefinition | McpHttpServerDefinition;
@@ -363,7 +355,6 @@ export class McpHTTPHandle extends Disposable {
 	private _mode: HttpModeT = { value: HttpMode.Unknown };
 	private readonly _cts = new CancellationTokenSource();
 	private readonly _abortCtrl = new AbortController();
-	private _authMetadata?: AuthMetadata;
 	private _didSendClose = false;
 
 	constructor(
@@ -371,7 +362,6 @@ export class McpHTTPHandle extends Disposable {
 		private readonly _launch: McpServerTransportHTTP,
 		private readonly _proxy: MainThreadMcpShape,
 		private readonly _logService: ILogService,
-		private readonly _errorOnUserInteraction?: boolean,
 	) {
 		super();
 
@@ -414,14 +404,6 @@ export class McpHTTPHandle extends Disposable {
 			'Mcp-Session-Id': sessionId,
 		};
 
-		try {
-			await this._addAuthHeader(headers, { errorOnUserInteraction: true });
-		} catch (e) {
-			// If auth is no longer available (e.g. user signed out), skip the close request
-			this._log(LogLevel.Debug, `Skipping session close: authentication no longer available`);
-			return;
-		}
-
 		// no fetch with retry here -- don't try to auth if we get an auth failure
 		await this._fetch(
 			this._launch.uri.toString(true),
@@ -456,16 +438,14 @@ export class McpHTTPHandle extends Disposable {
 		if (sessionId) {
 			headers['Mcp-Session-Id'] = sessionId;
 		}
-		await this._addAuthHeader(headers);
 
-		const res = await this._fetchWithAuthRetry(
+		const res = await this._fetch(
 			this._launch.uri.toString(true),
 			{
 				method: 'POST',
 				headers,
 				body: asBytes,
-			},
-			headers
+			}
 		);
 
 		const wasUnknown = this._mode.value === HttpMode.Unknown;
@@ -576,7 +556,6 @@ export class McpHTTPHandle extends Disposable {
 					...Object.fromEntries(this._launch.headers),
 					'Accept': 'text/event-stream',
 				};
-				await this._addAuthHeader(headers);
 
 				if (this._mode.value === HttpMode.Http && this._mode.sessionId !== undefined) {
 					headers['Mcp-Session-Id'] = this._mode.sessionId;
@@ -585,13 +564,12 @@ export class McpHTTPHandle extends Disposable {
 					headers['Last-Event-ID'] = lastEventId;
 				}
 
-				res = await this._fetchWithAuthRetry(
+				res = await this._fetch(
 					this._launch.uri.toString(true),
 					{
 						method: 'GET',
 						headers,
 					},
-					headers
 				);
 			} catch (e) {
 				this._log(LogLevel.Info, `Error connecting to ${this._launch.uri} for async notifications, will retry`);
@@ -639,17 +617,15 @@ export class McpHTTPHandle extends Disposable {
 			...Object.fromEntries(this._launch.headers),
 			'Accept': 'text/event-stream',
 		};
-		await this._addAuthHeader(headers);
 
 		let res: CommonResponse;
 		try {
-			res = await this._fetchWithAuthRetry(
+			res = await this._fetch(
 				this._launch.uri.toString(true),
 				{
 					method: 'GET',
 					headers,
 				},
-				headers
 			);
 			if (res.status >= 300) {
 				this._proxy.$onDidChangeState(this._id, { state: McpConnectionState.Kind.Error, message: `${res.status} status connecting to ${this._launch.uri} as SSE: ${await this._getErrText(res)}` });
@@ -686,7 +662,6 @@ export class McpHTTPHandle extends Disposable {
 			...Object.fromEntries(this._launch.headers),
 			'Content-Type': 'application/json',
 		};
-		await this._addAuthHeader(headers);
 		const res = await this._fetch(url, {
 			method: 'POST',
 			headers,
@@ -723,63 +698,6 @@ export class McpHTTPHandle extends Disposable {
 		} while (!chunk.done);
 	}
 
-	private async _addAuthHeader(headers: Record<string, string>, options?: { forceNewRegistration?: boolean; errorOnUserInteraction?: boolean }) {
-		const errorOnUserInteraction = options?.errorOnUserInteraction ?? this._errorOnUserInteraction;
-		if (this._authMetadata) {
-			try {
-				const authDetails: IMcpAuthenticationDetails = {
-					authorizationServer: this._authMetadata.authorizationServer.toJSON(),
-					authorizationServerMetadata: this._authMetadata.serverMetadata,
-					resourceMetadata: this._authMetadata.resourceMetadata,
-					scopes: this._authMetadata.scopes,
-					clientId: this._launch.oauth?.clientId,
-					enterpriseManaged: this._launch.oauth?.enterpriseManaged,
-				};
-				const token = await this._proxy.$getTokenFromServerMetadata(
-					this._id,
-					authDetails,
-					{
-						errorOnUserInteraction,
-						forceNewRegistration: options?.forceNewRegistration
-					});
-				if (token) {
-					setHostHeader(headers, 'Authorization', `Bearer ${token}`);
-				}
-			} catch (e) {
-				if (UserInteractionRequiredError.is(e)) {
-					this._proxy.$onDidChangeState(this._id, { state: McpConnectionState.Kind.Stopped, reason: 'needs-user-interaction' });
-					throw new CancellationError();
-				}
-				this._log(LogLevel.Warning, `Error getting token from server metadata: ${String(e)}`);
-			}
-		}
-		if (this._launch.authentication) {
-			try {
-				this._log(LogLevel.Debug, `Using provided authentication config: providerId=${this._launch.authentication.providerId}, scopes=${this._launch.authentication.scopes.join(', ')}`);
-				const token = await this._proxy.$getTokenForProviderId(
-					this._id,
-					this._launch.authentication.providerId,
-					this._launch.authentication.scopes,
-					{
-						errorOnUserInteraction,
-						forceNewRegistration: options?.forceNewRegistration,
-						clientId: this._launch.oauth?.clientId,
-					}
-				);
-				if (token) {
-					setHostHeader(headers, 'Authorization', `Bearer ${token}`);
-					this._log(LogLevel.Info, 'Successfully obtained token from provided authentication config');
-				}
-			} catch (e) {
-				if (UserInteractionRequiredError.is(e)) {
-					this._proxy.$onDidChangeState(this._id, { state: McpConnectionState.Kind.Stopped, reason: 'needs-user-interaction' });
-					throw new CancellationError();
-				}
-				this._log(LogLevel.Warning, `Error getting token from provided authentication config: ${String(e)}`);
-			}
-		}
-		return headers;
-	}
 
 	private _log(level: LogLevel, message: string) {
 		if (!this._store.isDisposed) {
@@ -793,55 +711,6 @@ export class McpHTTPHandle extends Disposable {
 		} catch {
 			return res.statusText;
 		}
-	}
-
-	/**
-	 * Helper method to perform fetch with authentication retry logic.
-	 * If the initial request returns an auth error and we don't have auth metadata,
-	 * it will populate the auth metadata and retry once.
-	 * If we already have auth metadata, check if the scopes changed and update them.
-	 */
-	private async _fetchWithAuthRetry(mcpUrl: string, init: MinimalRequestInit, headers: Record<string, string>): Promise<CommonResponse> {
-		const doFetch = () => this._fetch(mcpUrl, init);
-
-		let res = await doFetch();
-		if (isAuthStatusCode(res.status)) {
-			if (!this._authMetadata) {
-				this._authMetadata = await createAuthMetadata(mcpUrl, res.headers, {
-					sameOriginHeaders: {
-						...Object.fromEntries(this._launch.headers),
-						'MCP-Protocol-Version': MCP.LATEST_PROTOCOL_VERSION
-					},
-					fetch: (url, init) => this._fetch(url, init as MinimalRequestInit),
-					log: (level, message) => this._log(level, message)
-				});
-				this._proxy.$logMcpAuthSetup(this._authMetadata.telemetry);
-				await this._addAuthHeader(headers);
-				if (headers['Authorization']) {
-					// Update the headers in the init object
-					init.headers = headers;
-					res = await doFetch();
-				}
-			} else {
-				// We have auth metadata, but got an auth error. Check if the scopes changed.
-				if (this._authMetadata.update(res.headers)) {
-					await this._addAuthHeader(headers);
-					if (headers['Authorization']) {
-						// Update the headers in the init object
-						init.headers = headers;
-						res = await doFetch();
-					}
-				}
-			}
-		}
-		// If we have an Authorization header and still get an auth error, we should retry with a new auth registration
-		if (headers['Authorization'] && isAuthStatusCode(res.status)) {
-			const errorText = await this._getErrText(res);
-			this._log(LogLevel.Info, `Received ${res.status} status with Authorization header, retrying with new auth registration. Error details: ${errorText || 'no additional details'}`);
-			await this._addAuthHeader(headers, { forceNewRegistration: true });
-			res = await doFetch();
-		}
-		return res;
 	}
 
 	private async _fetch(url: string, init: MinimalRequestInit): Promise<CommonResponse> {
@@ -957,245 +826,6 @@ function isJSON(str: string): boolean {
 
 function isAuthStatusCode(status: number): boolean {
 	return status === 401 || status === 403;
-}
-
-
-//#region AuthMetadata
-
-/**
- * Logger callback type for AuthMetadata operations.
- */
-export type AuthMetadataLogger = (level: LogLevel, message: string) => void;
-
-/**
- * Interface for authentication metadata that can be updated when scopes change.
- */
-export interface IAuthMetadata {
-	readonly authorizationServer: URI;
-	readonly serverMetadata: IAuthorizationServerMetadata;
-	readonly resourceMetadata: IAuthorizationProtectedResourceMetadata | undefined;
-	readonly scopes: string[] | undefined;
-	/** Telemetry data about how auth metadata was discovered */
-	readonly telemetry: IAuthMetadataSource;
-
-	/**
-	 * Updates the scopes based on the WWW-Authenticate header in the response.
-	 * @param response The HTTP response containing potential scope challenges
-	 * @returns true if scopes were updated, false otherwise
-	 */
-	update(responseHeaders: Headers): boolean;
-}
-
-/**
- * Concrete implementation of IAuthMetadata that manages OAuth authentication metadata.
- * Consumers should use {@link createAuthMetadata} to create instances.
- */
-class AuthMetadata implements IAuthMetadata {
-	private _scopes: string[] | undefined;
-
-	constructor(
-		public readonly authorizationServer: URI,
-		public readonly serverMetadata: IAuthorizationServerMetadata,
-		public readonly resourceMetadata: IAuthorizationProtectedResourceMetadata | undefined,
-		scopes: string[] | undefined,
-		public readonly telemetry: IAuthMetadataSource,
-		private readonly _log: AuthMetadataLogger,
-	) {
-		this._scopes = scopes;
-	}
-
-	get scopes(): string[] | undefined {
-		return this._scopes;
-	}
-
-	update(responseHeaders: Headers): boolean {
-		const scopesChallenge = this._parseScopesFromResponse(responseHeaders);
-		if (!scopesMatch(scopesChallenge, this._scopes)) {
-			this._log(LogLevel.Info, `Scopes changed from ${JSON.stringify(this._scopes)} to ${JSON.stringify(scopesChallenge)}, updating`);
-			this._scopes = scopesChallenge;
-			return true;
-		}
-		return false;
-	}
-
-	private _parseScopesFromResponse(responseHeaders: Headers): string[] | undefined {
-		const authHeader = responseHeaders.get('WWW-Authenticate');
-		if (!authHeader) {
-			return undefined;
-		}
-		const challenges = parseWWWAuthenticateHeader(authHeader);
-		for (const challenge of challenges) {
-			if (challenge.scheme === 'Bearer' && challenge.params['scope']) {
-				const scopes = challenge.params['scope'].split(AUTH_SCOPE_SEPARATOR).filter(s => s.trim().length);
-				if (scopes.length) {
-					this._log(LogLevel.Info, `Found scope challenge in WWW-Authenticate header: ${challenge.params['scope']}`);
-					return scopes;
-				}
-			}
-		}
-		return undefined;
-	}
-}
-
-/**
- * Options for creating AuthMetadata.
- */
-export interface ICreateAuthMetadataOptions {
-	/** Headers to include when fetching metadata from the same origin as the resource server */
-	sameOriginHeaders?: Record<string, string>;
-	/** Fetch function to use for HTTP requests */
-	fetch: (url: string, init: MinimalRequestInit) => Promise<CommonResponse>;
-	/** Logger function for diagnostic output */
-	log: AuthMetadataLogger;
-}
-
-/**
- * Creates an AuthMetadata instance by discovering OAuth metadata from the server.
- *
- * This function:
- * 1. Parses the WWW-Authenticate header for resource_metadata and scope challenges
- * 2. Fetches OAuth protected resource metadata from well-known URIs or the challenge URL
- * 3. Fetches authorization server metadata
- * 4. Falls back to default metadata if discovery fails
- *
- * @param resourceUrl The resource server URL
- * @param wwwAuthenticateValue The value of the WWW-Authenticate header from the original HTTP response
- * @param options Configuration options including headers, fetch function, and logger
- * @returns A new AuthMetadata instance
- */
-export async function createAuthMetadata(
-	resourceUrl: string,
-	initialResponseHeaders: Headers,
-	options: ICreateAuthMetadataOptions
-): Promise<AuthMetadata> {
-	const { sameOriginHeaders, fetch, log } = options;
-
-	// Track discovery sources for telemetry
-	let resourceMetadataSource = IAuthResourceMetadataSource.None;
-	let serverMetadataSource: IAuthServerMetadataSource | undefined;
-
-	// Parse the WWW-Authenticate header for resource_metadata and scope challenges
-	const { resourceMetadataChallenge, scopesChallenge: scopesChallengeFromHeader } = parseWWWAuthenticateHeaderForChallenges(initialResponseHeaders.get('WWW-Authenticate') ?? undefined, log);
-
-	// Fetch the resource metadata either from the challenge URL or from well-known URIs
-	let serverMetadataUrl: string | undefined;
-	let resource: IAuthorizationProtectedResourceMetadata | undefined;
-	let scopesChallenge = scopesChallengeFromHeader;
-
-	try {
-		const { metadata, discoveryUrl, errors } = await fetchResourceMetadata(resourceUrl, resourceMetadataChallenge, {
-			sameOriginHeaders,
-			fetch: (url, init) => fetch(url, init as MinimalRequestInit)
-		});
-		for (const err of errors) {
-			log(LogLevel.Warning, `Error fetching resource metadata: ${err}`);
-		}
-		log(LogLevel.Info, `Discovered resource metadata at ${discoveryUrl}`);
-
-		// Determine if resource metadata came from header or well-known
-		resourceMetadataSource = resourceMetadataChallenge ? IAuthResourceMetadataSource.Header : IAuthResourceMetadataSource.WellKnown;
-
-		// TODO:@TylerLeonhardt support multiple authorization servers
-		// Consider using one that has an auth provider first, over the dynamic flow
-		serverMetadataUrl = metadata.authorization_servers?.[0];
-		if (!serverMetadataUrl) {
-			log(LogLevel.Warning, `No authorization_servers found in resource metadata ${discoveryUrl} - Is this resource metadata configured correctly?`);
-		} else {
-			log(LogLevel.Info, `Using auth server metadata url: ${serverMetadataUrl}`);
-			serverMetadataSource = IAuthServerMetadataSource.ResourceMetadata;
-		}
-		scopesChallenge ??= metadata.scopes_supported;
-		resource = metadata;
-	} catch (e) {
-		log(LogLevel.Warning, `Could not fetch resource metadata: ${String(e)}`);
-	}
-
-	const baseUrl = new URL(resourceUrl).origin;
-
-	// If we are not given a resource_metadata, see if the well-known server metadata is available
-	// on the base url.
-	let additionalHeaders: Record<string, string> = {};
-	if (!serverMetadataUrl) {
-		serverMetadataUrl = baseUrl;
-		// Maintain the same origin headers when talking to the resource origin.
-		if (sameOriginHeaders) {
-			additionalHeaders = sameOriginHeaders;
-		}
-	}
-
-	try {
-		log(LogLevel.Debug, `Fetching auth server metadata for: ${serverMetadataUrl} ...`);
-		const { metadata, discoveryUrl, errors } = await fetchAuthorizationServerMetadata(serverMetadataUrl, {
-			additionalHeaders,
-			fetch: (url, init) => fetch(url, init as MinimalRequestInit)
-		});
-		for (const err of errors) {
-			log(LogLevel.Warning, `Error fetching authorization server metadata: ${err}`);
-		}
-		log(LogLevel.Info, `Discovered authorization server metadata at ${discoveryUrl}`);
-
-		// If serverMetadataSource is not yet defined, it means we fell back to baseUrl
-		// and successfully fetched from well-known
-		serverMetadataSource ??= IAuthServerMetadataSource.WellKnown;
-
-		return new AuthMetadata(
-			URI.parse(serverMetadataUrl),
-			metadata,
-			resource,
-			scopesChallenge,
-			{ resourceMetadataSource, serverMetadataSource },
-			log
-		);
-	} catch (e) {
-		log(LogLevel.Warning, `Error populating auth server metadata for ${serverMetadataUrl}: ${String(e)}`);
-	}
-
-	// If there's no well-known server metadata, then use the default values based off of the url.
-	const defaultMetadata = getDefaultMetadataForUrl(new URL(baseUrl));
-	log(LogLevel.Info, 'Using default auth metadata');
-	return new AuthMetadata(
-		URI.parse(baseUrl),
-		defaultMetadata,
-		resource,
-		scopesChallenge,
-		{ resourceMetadataSource, serverMetadataSource: IAuthServerMetadataSource.Default },
-		log
-	);
-}
-
-/**
- * Parses the WWW-Authenticate header for resource_metadata and scope challenges.
- */
-function parseWWWAuthenticateHeaderForChallenges(
-	wwwAuthenticateValue: string | undefined,
-	log: AuthMetadataLogger
-): { resourceMetadataChallenge?: string; scopesChallenge?: string[] } {
-	if (!wwwAuthenticateValue) {
-		return {};
-	}
-	let resourceMetadataChallenge: string | undefined;
-	let scopesChallenge: string[] | undefined;
-
-	const challenges = parseWWWAuthenticateHeader(wwwAuthenticateValue);
-	for (const challenge of challenges) {
-		if (challenge.scheme === 'Bearer') {
-			if (!resourceMetadataChallenge && challenge.params['resource_metadata']) {
-				resourceMetadataChallenge = challenge.params['resource_metadata'];
-				log(LogLevel.Debug, `Found resource_metadata challenge in WWW-Authenticate header: ${resourceMetadataChallenge}`);
-			}
-			if (!scopesChallenge && challenge.params['scope']) {
-				const scopes = challenge.params['scope'].split(AUTH_SCOPE_SEPARATOR).filter(s => s.trim().length);
-				if (scopes.length) {
-					log(LogLevel.Debug, `Found scope challenge in WWW-Authenticate header: ${challenge.params['scope']}`);
-					scopesChallenge = scopes;
-				}
-			}
-			if (resourceMetadataChallenge && scopesChallenge) {
-				break;
-			}
-		}
-	}
-	return { resourceMetadataChallenge, scopesChallenge };
 }
 
 //#endregion
