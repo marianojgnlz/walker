@@ -26,7 +26,8 @@ import { IMarkdownRenderer } from '../../../../../../../platform/markdown/browse
 import { IStorageService, StorageScope, StorageTarget } from '../../../../../../../platform/storage/common/storage.js';
 import { IPreferencesService } from '../../../../../../services/preferences/common/preferences.js';
 import { ITerminalChatService } from '../../../../../terminal/browser/terminal.js';
-import { TerminalContribCommandId, TerminalContribSettingId } from '../../../../../terminal/terminalContribExports.js';
+import { TerminalChatCommandId as TerminalContribCommandId } from '../../../../../terminalContrib/chat/browser/terminalChat.js';
+import { TerminalChatAgentToolsSettingId as TerminalContribSettingId } from '../../../../../terminalContrib/chatAgentTools/common/terminalChatAgentToolsConfiguration.js';
 import { ChatContextKeys } from '../../../../common/actions/chatContextKeys.js';
 import { migrateLegacyTerminalToolSpecificData } from '../../../../common/chat.js';
 import { SessionType } from '../../../../common/chatSessionsService.js';

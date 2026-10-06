@@ -21,7 +21,6 @@ suite('Removed Sync-only extension scope', () => {
 			'src/vs/workbench/services/localization/electron-browser/localeService.ts',
 			'src/vs/workbench/contrib/themes/browser/themes.contribution.ts',
 			'src/vs/workbench/contrib/remote/browser/remoteIndicator.ts',
-			'src/vs/workbench/contrib/chat/browser/chatSetup/chatSetupController.ts',
 			'extensions/copilot/test/scenarios/test-tools/workspace/chatSetup.ts',
 			'extensions/copilot/src/platform/parser/test/node/fixtures/chatSetup.ts',
 			'src/vs/workbench/services/userDataProfile/browser/extensionsResource.ts',

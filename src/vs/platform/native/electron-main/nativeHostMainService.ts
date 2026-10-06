@@ -315,15 +315,10 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 		}, options);
 	}
 
-	async openAgentsWindow(windowId: number | undefined, options?: IOpenAgentsWindowOptions): Promise<void> {
-		const windows = await this.windowsMainService.openAgentsWindow({
-			context: OpenContext.API,
-			contextWindowId: windowId,
-			cli: this.environmentMainService.args,
-		}, options?.folderUri ? URI.revive(options.folderUri) : undefined, options?.sessionResource ? URI.revive(options.sessionResource) : undefined, options?.source, options?.folderUriIsDefault, options?.draft);
-		if (windows.length > 0) {
-			windows[0].focus();
-		}
+	async openAgentsWindow(_windowId: number | undefined, _options?: IOpenAgentsWindowOptions): Promise<void> {
+		const error = new Error('Agents Window is unavailable in this product');
+		error.name = 'AgentsWindowUnsupported';
+		throw error;
 	}
 
 	async syncSystemWideKeybindings(windowId: number | undefined, keybindings: INativeSystemWideKeybinding[]): Promise<INativeSystemWideKeybindingResult> {

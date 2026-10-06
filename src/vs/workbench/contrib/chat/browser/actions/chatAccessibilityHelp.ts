@@ -16,7 +16,7 @@ import { IConfigurationService } from '../../../../../platform/configuration/com
 import { IWorkbenchEnvironmentService } from '../../../../services/environment/common/environmentService.js';
 import { AccessibilityVerbositySettingId } from '../../../accessibility/browser/accessibilityConfiguration.js';
 import { INLINE_CHAT_ID } from '../../../inlineChat/common/inlineChat.js';
-import { TerminalContribCommandId } from '../../../terminal/terminalContribExports.js';
+import { TerminalChatCommandId as TerminalContribCommandId } from '../../../terminalContrib/chat/browser/terminalChat.js';
 import { ChatContextKeyExprs, ChatContextKeys } from '../../common/actions/chatContextKeys.js';
 import { ChatAgentLocation, ChatConfiguration, ChatModeKind } from '../../common/constants.js';
 import { isStickyPromptHeaderShown } from '../promptTimeline/promptTimelineWidgetContrib.js';

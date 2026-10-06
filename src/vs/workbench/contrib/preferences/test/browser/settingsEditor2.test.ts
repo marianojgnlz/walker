@@ -300,9 +300,9 @@ suite('SettingsEditor2', () => {
 			}, { keys: ['test.assigned'], count: '1 Setting Found' });
 		});
 
-		test('assignment filter includes advanced settings in the resolved TOC and category filtering', async () => {
-			const settingKey = 'chat.detectParticipant.enabled';
-			const { editor, assignments, settingsModel, viewState, treeFilter } = createEditor('', true, [settingKey, 'chat.detectParticipant.unassigned']);
+		test('assignment filter includes advanced settings in a generic TOC category', async () => {
+			const settingKey = 'mcp.serverDiscovery.enabled';
+			const { editor, assignments, settingsModel, viewState, treeFilter } = createEditor('', true, [settingKey, 'mcp.serverDiscovery.unassigned']);
 			await editor['onConfigUpdate']();
 			const hiddenInitially = !settingsModel.getElementsByName(settingKey)?.length;
 			assignments.setAssignment(settingKey, true);
@@ -316,16 +316,17 @@ suite('SettingsEditor2', () => {
 			const searchModel = editor['searchResultModel']!;
 			const assigned = searchModel.root.children[0];
 			assert.ok(assigned instanceof SettingsTreeSettingElement);
-			const chat = settingsModel.root.children.find((child): child is SettingsTreeGroupElement => child instanceof SettingsTreeGroupElement && child.id === 'chat');
-			const context = chat?.children.find((child): child is SettingsTreeGroupElement => child instanceof SettingsTreeGroupElement && child.id === 'chat/context');
-			const categoryVisible = context ? treeFilter.filter(context, TreeVisibility.Visible) : false;
-			viewState.categoryFilter = context ?? settingsModel.root;
+			const features = settingsModel.root.children.find((child): child is SettingsTreeGroupElement => child instanceof SettingsTreeGroupElement && child.id === 'features');
+			const category = features?.children.find((child): child is SettingsTreeGroupElement => child instanceof SettingsTreeGroupElement && child.id === 'features/mcp');
+			assert.ok(category);
+			const categoryVisible = treeFilter.filter(category, TreeVisibility.Visible);
+			viewState.categoryFilter = category;
 			const categoryContainsAssignment = treeFilter.filter(assigned, TreeVisibility.Visible);
 			const active = {
 				inRoot: !!settingsModel.getElementsByName(settingKey)?.length,
 				resultCount: searchModel.getUniqueResultsCount(),
 				rootCount: settingsModel.root.count,
-				categoryCount: context?.count,
+				categoryCount: category.count,
 				categoryVisible,
 				categoryContainsAssignment,
 			};

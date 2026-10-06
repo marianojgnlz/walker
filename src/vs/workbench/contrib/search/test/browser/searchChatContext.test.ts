@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { CancellationToken } from '../../../../../base/common/cancellation.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
@@ -12,8 +14,31 @@ import { TestInstantiationService } from '../../../../../platform/instantiation/
 import { IFileQuery, ISearchService } from '../../../../services/search/common/search.js';
 import { MAX_CHAT_FILE_COMPLETION_RESULTS, searchFilesAndFolders } from '../../browser/searchChatContext.js';
 
+function readSearchSource(file: string): string {
+	return readFileSync(join(process.cwd(), 'src/vs/workbench/contrib/search/browser', file), 'utf8');
+}
+
 suite('Search Chat Context', () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
+
+	test('Search keeps ordinary quick access without chat integrations', () => {
+		const contribution = readSearchSource('search.contribution.ts');
+		assert.doesNotMatch(contribution, /SearchChatContextContribution|searchChatContext\.js/);
+		assert.match(contribution, /searchWidgetContributions\(\);/);
+		assert.match(contribution, /registerViews\(\[viewDescriptor\], viewContainer\)/);
+
+		const anythingQuickAccess = readSearchSource('anythingQuickAccess.ts');
+		assert.doesNotMatch(anythingQuickAccess, /ASK_QUICK_QUESTION_ACTION_ID|IQuickChatService|IChatWidgetService|quickChatService|chatWidgetService|attachmentModel/);
+		assert.doesNotMatch(anythingQuickAccess, /attach:\s*\(/);
+		assert.match(anythingQuickAccess, /class AnythingQuickAccessProvider/);
+		assert.match(anythingQuickAccess, /accept:\s*\(/);
+
+		const symbolsQuickAccess = readSearchSource('symbolsQuickAccess.ts');
+		assert.doesNotMatch(symbolsQuickAccess, /IChatWidgetService|ISymbolVariableEntry|chatWidgetService|attachmentModel/);
+		assert.doesNotMatch(symbolsQuickAccess, /attach:\s*\(/);
+		assert.match(symbolsQuickAccess, /class SymbolsQuickAccessProvider/);
+		assert.match(symbolsQuickAccess, /accept:\s*(?:async\s*)?\(/);
+	});
 
 	test('limits file completion search results', async () => {
 		const instantiationService = store.add(new TestInstantiationService());

@@ -19,11 +19,8 @@ import './sessions.common.main.js';
 
 //#region --- workbench (sessions desktop main)
 
-import { registerOpenAgentsWindowCommand } from './contrib/openAgentsWindow/electron-browser/openAgentsWindowCommand.js';
 import './electron-browser/sessions.main.js';
 import '../workbench/electron-browser/desktop.contribution.js';
-
-registerOpenAgentsWindowCommand();
 
 // Per-session layout controller (desktop / web desktop layout).
 import './contrib/layout/browser/sessions.layout.contribution.js';
@@ -107,16 +104,11 @@ import { RemoteAgentHostLocationPreferenceService } from '../platform/agentHost/
 import { ISSHHostKeyTrustService } from '../platform/agentHost/common/sshHostKeyTrust.js';
 import { SSHHostKeyTrustService } from '../platform/agentHost/browser/sshHostKeyTrustService.js';
 import { registerSharedProcessRemoteService } from '../platform/ipc/electron-browser/services.js';
-import { IPluginGitService } from '../workbench/contrib/chat/common/plugins/pluginGitService.js';
-import { NativePluginGitCommandService } from '../workbench/contrib/chat/electron-browser/pluginGitCommandService.js';
 import { IUserDataInitializationService, UserDataInitializationService } from '../workbench/services/userData/browser/userDataInit.js';
 import { SyncDescriptor } from '../platform/instantiation/common/descriptors.js';
 
 registerSingleton(IUserDataInitializationService, new SyncDescriptor(UserDataInitializationService, [[]], true));
 
-// Override the browser PluginGitCommandService with the native one that always
-// runs git locally via the shared process.
-registerSingleton(IPluginGitService, NativePluginGitCommandService, InstantiationType.Delayed);
 registerSingleton(IRemoteAgentHostService, AgentsWindowRemoteAgentHostService, InstantiationType.Delayed);
 registerSingleton(IRemoteAgentHostLocationPreferenceService, RemoteAgentHostLocationPreferenceService, InstantiationType.Delayed);
 registerSingleton(ISSHHostKeyTrustService, SSHHostKeyTrustService, InstantiationType.Delayed);
@@ -219,7 +211,6 @@ import '../workbench/contrib/keybindingsExport/electron-browser/keybindingsExpor
 //#region --- sessions contributions
 
 import './electron-browser/sessions.desktop.contribution.js';
-import './contrib/openAgentsWindow/electron-browser/openAgentsWindow.contribution.js';
 
 // Remote Agent Host
 import '../workbench/services/agentHost/electron-browser/agentHostService.js';
@@ -239,9 +230,8 @@ import './contrib/providers/remoteAgentHost/electron-browser/remoteAgentHostLoca
 import './contrib/providers/remoteAgentHost/electron-browser/forgetSSHHostKeyCommand.js';
 // Copilot cloud sandbox connections (copilot-developer-cli) over a Web PubSub AHP relay
 import './contrib/providers/remoteAgentHost/browser/cloudSandboxAgentHost.contribution.js';
-// Chat
+// Agent feedback
 import './contrib/agentFeedback/browser/agentFeedback.contribution.js';
-import './contrib/chat/electron-browser/chat.contribution.js';
 
 // Local Agent Host
 import './contrib/providers/agentHost/browser/localAgentHost.contribution.js';

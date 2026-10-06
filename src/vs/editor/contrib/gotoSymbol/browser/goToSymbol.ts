@@ -21,8 +21,8 @@ function shouldIncludeLocationLink(sourceModel: ITextModel, loc: LocationLink): 
 		return true;
 	}
 
-	// Otherwise filter out locations from internal schemes
-	if (matchesSomeScheme(loc.uri, Schemas.walkThroughSnippet, Schemas.vscodeChatCodeBlock, Schemas.vscodeChatCodeCompareBlock)) {
+	// Filter out internal walkthrough snippet locations
+	if (matchesSomeScheme(loc.uri, Schemas.walkThroughSnippet)) {
 		return false;
 	}
 

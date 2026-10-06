@@ -152,7 +152,6 @@ import '../workbench/services/editor/browser/editorPaneService.js';
 import '../workbench/services/editor/common/customEditorLabelService.js';
 import '../workbench/services/dataChannel/browser/dataChannelService.js';
 import '../workbench/services/inlineCompletions/common/inlineCompletionsUnification.js';
-import '../workbench/services/chat/common/chatEntitlementService.js';
 import '../workbench/services/log/common/defaultLogLevels.js';
 import '../workbench/services/agentHost/common/agentHostResourceService.js';
 import '../platform/agentHost/browser/agentHostConnectionsService.js';
@@ -227,17 +226,9 @@ import '../workbench/contrib/notebook/browser/notebook.contribution.js';
 // Speech
 import '../workbench/contrib/speech/browser/speech.contribution.js';
 
-// Chat
-import '../workbench/contrib/chat/browser/chat.shared.contribution.js';
-//import '../workbench/contrib/inlineChat/browser/inlineChat.contribution.js';
+// MCP and image preview
 import '../workbench/contrib/mcp/browser/mcp.contribution.js';
-import '../workbench/contrib/chat/browser/chatSessions/chatSessions.contribution.js';
-import '../workbench/contrib/chat/browser/contextContrib/chatContext.contribution.js';
 import '../workbench/contrib/imageCarousel/browser/imageCarousel.contribution.js';
-
-// Voice Mode (voice UI actions, settings and context keys)
-import '../workbench/contrib/agentsVoice/browser/agentsVoice.contribution.js';
-import './contrib/chat/browser/voiceBridge.contribution.js';
 
 // Interactive
 import '../workbench/contrib/interactive/browser/interactive.contribution.js';
@@ -468,15 +459,9 @@ import './browser/parts/menubar.contribution.js';
 import './browser/layoutActions.js';
 
 import './contrib/aiCustomizationTreeView/browser/aiCustomizationTreeView.contribution.js';
-import './contrib/chat/browser/chat.contribution.js';
-import './contrib/chat/browser/btwSlashCommand.contribution.js';
-import './contrib/chat/browser/requestOriginProvider.contribution.js';
-import './contrib/chat/browser/sideChatProvider.contribution.js';
 import './contrib/providers/agentHost/browser/exportDebugLogsAction.js';
 import './contrib/providers/agentHost/browser/agentHostSessionConfigPicker.js';
 import './contrib/providers/agentHost/browser/agentHostForkActions.js';
-import './contrib/chat/browser/customizationsDebugLog.contribution.js';
-import './contrib/providers/copilotChatSessions/browser/copilotChatSessions.contribution.js';
 import './contrib/sessions/browser/sessions.contribution.js';
 import './services/sessions/browser/sessionsListModelService.js';
 import './services/sessions/browser/sessionGroupsService.js';
@@ -495,7 +480,6 @@ import './contrib/editor/browser/editor.contribution.js';
 import './contrib/extensions/browser/extensions.contribution.js';
 
 import './contrib/terminal/browser/sessionsTerminalContribution.js';
-import './contrib/chatDebug/browser/chatDebug.contribution.js';
 import './contrib/workspace/browser/workspace.contribution.js';
 import './contrib/aquarium/browser/aquarium.contribution.js';
 import './contrib/policyBlocked/browser/policyBlocked.contribution.js';

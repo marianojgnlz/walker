@@ -17,7 +17,7 @@ import { localize } from '../../../../../../nls.js';
 import { ActionListItemKind, IActionListItem, IActionListOptions } from '../../../../../../platform/actionWidget/browser/actionList.js';
 import { KNOWN_AUTO_APPROVE_VALUES } from '../../../../../../platform/agentHost/common/sessionConfigKeys.js';
 import { SessionConfigPropertySchema } from '../../../../../../platform/agentHost/common/state/protocol/commands.js';
-import { TerminalContribSettingId } from '../../../../terminal/terminalContribExports.js';
+import { TerminalChatAgentToolsSettingId as TerminalContribSettingId } from '../../../../terminalContrib/chatAgentTools/common/terminalChatAgentToolsConfiguration.js';
 import { ChatConfiguration, ChatPermissionLevel } from '../../../common/constants.js';
 import { getCompactCodicon } from '../../chatIcons.js';
 

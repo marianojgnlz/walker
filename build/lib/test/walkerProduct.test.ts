@@ -185,6 +185,148 @@ suite('Walker packaged product composition', () => {
 		}
 	});
 
+	test('workbench and Sessions entrypoints do not register Chat integrations', () => {
+		const entrypoints = [
+			['src/vs/workbench/workbench.common.main.ts', ['services/chat/', 'contrib/chat/', 'contrib/inlineChat/', 'contrib/agentsVoice/', 'contrib/welcomeAgentSessions/']],
+			['src/vs/workbench/workbench.desktop.main.ts', ['contrib/chat/', 'contrib/agentsVoice/']],
+			['src/vs/sessions/sessions.common.main.ts', ['services/chat/', 'contrib/chat/', 'contrib/agentsVoice/', 'contrib/chatDebug/', 'contrib/providers/copilotChatSessions/']],
+			['src/vs/sessions/sessions.desktop.main.ts', ['contrib/chat/', 'pluginGitService.js', 'NativePluginGitCommandService']],
+			['src/vs/sessions/sessions.web.main.ts', ['contrib/chat/', 'BrowserAgentHostDebugLogsExportService']],
+		] as const;
+
+		for (const [entrypoint, forbiddenImports] of entrypoints) {
+			const source = readFileSync(resolve(import.meta.dirname, '../../../', entrypoint), 'utf8');
+			for (const forbiddenImport of forbiddenImports) {
+				assert.ok(!source.includes(forbiddenImport), `${entrypoint} still references ${forbiddenImport}`);
+			}
+		}
+
+		const commonWorkbench = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/workbench.common.main.ts'), 'utf8');
+		assert.ok(commonWorkbench.includes('./contrib/notebook/browser/notebook.contribution.js'), 'ordinary notebook contribution remains registered');
+		assert.ok(commonWorkbench.includes('../platform/agentHost/browser/agentHostConnectionsService.js'), 'U07 Agent Host prerequisite remains registered');
+
+		const sessionsDesktop = readFileSync(resolve(import.meta.dirname, '../../../src/vs/sessions/sessions.desktop.main.ts'), 'utf8');
+		assert.ok(sessionsDesktop.includes('sshAgentHost.contribution.js'), 'Sessions SSH Agent Host registration remains available for U07');
+	});
+
+	test('code-OSS fallback and web startup omit Chat-owned product wiring', () => {
+		const platformProduct = readFileSync(resolve(import.meta.dirname, '../../../src/vs/platform/product/common/product.ts'), 'utf8');
+		assert.ok(!platformProduct.includes('defaultChatAgent:'), 'code-OSS fallback wires the default Chat agent');
+		assert.ok(platformProduct.includes("nameShort: 'Code - OSS Dev'"), 'generic Code-OSS fallback identity remains');
+		assert.ok(platformProduct.includes("applicationName: 'code-oss'"), 'generic Code-OSS application name remains');
+
+		const workbenchWeb = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/workbench.web.main.ts'), 'utf8');
+		assert.ok(!workbenchWeb.includes('BrowserAgentHostDebugLogsExportService'), 'browser entrypoint imports the Chat-owned Agent Host debug exporter');
+		assert.ok(!workbenchWeb.includes('IAgentHostDebugLogsExportService'), 'browser entrypoint registers the Chat-owned Agent Host debug service');
+		assert.ok(workbenchWeb.includes('EditorRemoteAgentHostServiceClient'), 'U07 Agent Host client remains available');
+		assert.ok(workbenchWeb.includes('registerSingleton(IAgentHostService, EditorRemoteAgentHostServiceClient'), 'U07 Agent Host client remains registered');
+		assert.ok(workbenchWeb.includes('registerSingleton(IRemoteAgentHostService, NullRemoteAgentHostService'), 'generic remote Agent Host fallback remains registered');
+		assert.ok(workbenchWeb.includes('webAgentHostEnablementService.js'), 'U07 Agent Host enablement remains registered');
+	});
+
+	test('desktop startup does not construct or route to Chat/Agent Host windows', () => {
+		const desktopStartup = readFileSync(resolve(import.meta.dirname, '../../../src/vs/code/electron-main/app.ts'), 'utf8');
+		for (const removedRoute of ['ElectronAgentHostStarter', 'AgentHostProcessManager', 'parseExternalOpenSessionLinkUri', 'openAgentsWindow', "args['agents']"]) {
+			assert.ok(!desktopStartup.includes(removedRoute), `desktop startup retains ${removedRoute}`);
+		}
+		assert.ok(desktopStartup.includes('windowsMainService.open({'), 'ordinary workbench windows remain openable');
+		assert.ok(desktopStartup.includes('initialProtocolUrls.openables'), 'ordinary workspace/file protocol opening remains');
+	});
+
+	test('desktop CLI and history do not restore the Agents Window', () => {
+		const launchService = readFileSync(resolve(import.meta.dirname, '../../../src/vs/platform/launch/electron-main/launchMainService.ts'), 'utf8');
+		assert.ok(!launchService.includes("args['agents']"), 'CLI launch still selects the Agents Window');
+		assert.ok(!launchService.includes('openAgentsWindow'), 'CLI launch still calls the Agents Window API');
+		assert.ok(launchService.includes('this.windowsMainService.open({'), 'ordinary CLI workspaces still open');
+
+		const workspacesHistory = readFileSync(resolve(import.meta.dirname, '../../../src/vs/platform/workspaces/electron-main/workspacesHistoryMainService.ts'), 'utf8');
+		assert.ok(!workspacesHistory.includes("localize('agentsWindowRecentWorkspace'"), 'legacy Agent sessions workspaces are still exposed as a recent Agents Window');
+		assert.ok(!workspacesHistory.includes("title: localize('agentsWindow'"), 'Windows Jump List still offers an Agents Window task');
+		assert.ok(workspacesHistory.includes('this.isAgentSessionsWorkspace(recent.workspace)'), 'legacy Agent sessions recents are not filtered');
+		assert.ok(workspacesHistory.includes("localize('newWindow'"), 'ordinary Windows Jump List task was removed');
+	});
+
+	test('Agents Window native and main-window routes cannot open a session window', () => {
+		const nativeHostMainService = readFileSync(resolve(import.meta.dirname, '../../../src/vs/platform/native/electron-main/nativeHostMainService.ts'), 'utf8');
+		assert.ok(!nativeHostMainService.includes('this.windowsMainService.openAgentsWindow'), 'native host still routes to the Agents Window');
+		assert.ok(nativeHostMainService.includes("error.name = 'AgentsWindowUnsupported'"), 'legacy native-host calls do not fail deterministically');
+
+		const windowsApi = readFileSync(resolve(import.meta.dirname, '../../../src/vs/platform/windows/electron-main/windows.ts'), 'utf8');
+		assert.ok(!windowsApi.includes('openAgentsWindow('), 'main window service still exposes an Agents Window API');
+		const windowsMainService = readFileSync(resolve(import.meta.dirname, '../../../src/vs/platform/windows/electron-main/windowsMainService.ts'), 'utf8');
+		assert.ok(!windowsMainService.includes('openAgentsWindow('), 'main window service still implements Agents Window opening');
+		assert.ok(windowsMainService.includes('async open(openConfig: IOpenConfiguration)'), 'ordinary workbench window opening remains');
+
+		const sessionsDesktop = readFileSync(resolve(import.meta.dirname, '../../../src/vs/sessions/sessions.desktop.main.ts'), 'utf8');
+		assert.ok(!sessionsDesktop.includes('registerOpenAgentsWindowCommand'), 'Sessions entrypoint still registers the Open Agents Window command');
+		assert.ok(!sessionsDesktop.includes('openAgentsWindow.contribution.js'), 'Sessions entrypoint still registers Agents Window keybindings');
+	});
+
+	test('Walker product has no default Chat agent or Agents Window extension allowlist', () => {
+		const walkerProduct = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../../product.json'), 'utf8'));
+		assert.equal(walkerProduct.defaultChatAgent, undefined, 'Walker product still configures a default Chat agent');
+		assert.equal(walkerProduct.sessionsWindowAllowedExtensions, undefined, 'Walker product still carries an Agents Window extension allowlist');
+		assert.deepStrictEqual(walkerProduct.builtInExtensionsEnabledWithAutoUpdates, [], 'Copilot Chat remains in the product auto-update list');
+
+		const productReaders = [
+			'src/vs/platform/extensionManagement/common/abstractExtensionManagementService.ts',
+			'src/vs/platform/extensionManagement/common/extensionGalleryService.ts',
+			'src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts',
+		];
+		for (const productReader of productReaders) {
+			const source = readFileSync(resolve(import.meta.dirname, '../../../', productReader), 'utf8');
+			assert.ok(!source.includes('defaultChatAgent'), `${productReader} retains Walker Chat product wiring`);
+		}
+
+		const workbenchConfiguration = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/browser/workbench.contribution.ts'), 'utf8');
+		assert.ok(!workbenchConfiguration.includes('agentsWindow:'), 'workbench settings retain Agents Window-only defaults');
+		assert.ok(!workbenchConfiguration.includes('workbench.commandPalette.experimental.askChatLocation'), 'command palette retains the Chat location setting');
+		assert.ok(!workbenchConfiguration.includes('workbench.commandPalette.showAskInChat'), 'command palette retains the Ask in Chat setting');
+	});
+
+	test('extension-host Chat API no longer exposes a live participant bridge', () => {
+		const apiImplementation = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/api/common/extHost.api.impl.ts'), 'utf8');
+		const chatApiStart = apiImplementation.indexOf('const chat = createChatApiFacade();');
+		assert.notEqual(chatApiStart, -1, 'Chat API facade is not connected to the public namespace');
+		const languageModelApiStart = apiImplementation.indexOf('// namespace: lm', chatApiStart);
+		assert.notEqual(languageModelApiStart, -1, 'language model API boundary could not be located');
+		const chatApiImplementation = apiImplementation.slice(chatApiStart, languageModelApiStart);
+		assert.doesNotMatch(chatApiImplementation, /extHostChatAgents2\.createChatAgent/, 'Chat participant registration still reaches the Chat bridge');
+	});
+
+	test('extension-host language model APIs no longer reach live providers', () => {
+		const apiImplementation = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/api/common/extHost.api.impl.ts'), 'utf8');
+		const languageModelApiStart = apiImplementation.indexOf('const lm = createLanguageModelApiFacade();');
+		assert.notEqual(languageModelApiStart, -1, 'language model API facade is not connected to the public namespace');
+		const speechApiStart = apiImplementation.indexOf('// namespace: speech', languageModelApiStart);
+		assert.notEqual(speechApiStart, -1, 'language model API boundary could not be located');
+		const languageModelApiImplementation = apiImplementation.slice(languageModelApiStart, speechApiStart);
+		assert.doesNotMatch(languageModelApiImplementation, /extHostLanguageModels\.selectLanguageModels/, 'language model discovery still reaches the live provider service');
+	});
+
+	test('extension-host chat-session and agent-comment APIs cannot reach live bridges', () => {
+		const apiImplementation = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/api/common/extHost.api.impl.ts'), 'utf8');
+		assert.ok(apiImplementation.includes('const interactive: typeof vscode.interactive = createInteractiveApiFacade();'), 'interactive session API still delegates to the Chat bridge');
+		assert.ok(apiImplementation.includes('const chatWindowApi = createChatWindowApiFacade();'), 'window chat and agent APIs still delegate to their bridges');
+		assert.doesNotMatch(apiImplementation, /extHostChatAgents2\.transferActiveChat|extHostChatStatus\.createChatStatusItem|extHostAgentEditorComments\.createAgentEditorComments/, 'chat/session/agent API still invokes a live extension-host bridge');
+
+		const extensionHostContribution = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/api/browser/extensionHost.contribution.ts'), 'utf8');
+		assert.ok(!extensionHostContribution.includes('mainThreadAgentEditorComments.js'), 'Agent Editor Comments main-thread customer remains registered');
+
+	});
+
+	test('Walker product removes Chat auth, voice, and Copilot auto-update grants', () => {
+		const walkerProduct = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../../product.json'), 'utf8'));
+		assert.equal(walkerProduct.trustedExtensionAuthAccess, undefined, 'Copilot Chat retains a product-level authentication grant');
+		assert.deepStrictEqual(walkerProduct.builtInExtensionsEnabledWithAutoUpdates, [], 'Copilot Chat remains in the product auto-update list');
+		assert.equal(walkerProduct.voiceWsUrl, undefined, 'the Walker product still configures the Chat voice endpoint');
+		assert.equal(walkerProduct.agentsTelemetryAppName, 'agents', 'U07 Agent Host product identity remains protected');
+
+		const webClientServer = readFileSync(resolve(import.meta.dirname, '../../../src/vs/server/node/webClientServer.ts'), 'utf8');
+		assert.ok(!webClientServer.includes('voiceWsUrl: this._productService.voiceWsUrl'), 'server web product still exports the Chat voice endpoint');
+		assert.ok(webClientServer.includes("embedderIdentifier: 'server-distro'"), 'generic server product composition remains');
+	});
+
 	test('rejects missing, malformed, or provider-bearing gallery mixins', () => {
 		const invalidMixins: unknown[] = [
 			null,

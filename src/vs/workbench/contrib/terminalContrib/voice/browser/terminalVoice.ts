@@ -15,11 +15,9 @@ import { IContextKey, IContextKeyService } from '../../../../../platform/context
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { SpeechTimeoutDefault } from '../../../accessibility/browser/accessibilityConfiguration.js';
 import { ISpeechService, AccessibilityVoiceSettingId, ISpeechToTextEvent, SpeechToTextStatus } from '../../../speech/common/speechService.js';
-import { ChatSpeechToTextState, IChatSpeechToTextService } from '../../../chat/browser/speechToText/chatSpeechToTextService.js';
-import { getDictationPreparingLabel } from '../../../chat/browser/speechToText/dictationDownloadRing.js';
 import type { IMarker, IDecoration } from '@xterm/xterm';
 import { alert } from '../../../../../base/browser/ui/aria/aria.js';
-import { addDisposableListener, EventType, getActiveWindow } from '../../../../../base/browser/dom.js';
+import { addDisposableListener, EventType } from '../../../../../base/browser/dom.js';
 import { getDefaultHoverDelegate } from '../../../../../base/browser/ui/hover/hoverDelegateFactory.js';
 import { IHoverService } from '../../../../../platform/hover/browser/hover.js';
 import { IKeybindingService } from '../../../../../platform/keybinding/common/keybinding.js';
@@ -99,12 +97,7 @@ export class TerminalVoiceSession extends Disposable {
 	private static _instance: TerminalVoiceSession | undefined = undefined;
 	private _acceptTranscriptionScheduler: RunOnceScheduler | undefined;
 	private readonly _terminalDictationInProgress: IContextKey<boolean>;
-	/** True while the current session is driven by the built-in on-device engine. */
-	private _usingBuiltin = false;
-	/** True while awaiting the built-in engine's final transcript during accept. */
-	private _builtinFinalizing = false;
 	private _sessionTerminalInstanceId: number | undefined;
-	private _sessionTerminalDisposed = false;
 	static getInstance(instantiationService: IInstantiationService): TerminalVoiceSession {
 		if (!TerminalVoiceSession._instance) {
 			TerminalVoiceSession._instance = instantiationService.createInstance(TerminalVoiceSession);
@@ -117,7 +110,6 @@ export class TerminalVoiceSession extends Disposable {
 	private readonly _decorationDisposables: DisposableStore;
 	constructor(
 		@ISpeechService private readonly _speechService: ISpeechService,
-		@IChatSpeechToTextService private readonly _chatSpeechToTextService: IChatSpeechToTextService,
 		@ITerminalService private readonly _terminalService: ITerminalService,
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
 		@IContextKeyService contextKeyService: IContextKeyService,
@@ -134,7 +126,6 @@ export class TerminalVoiceSession extends Disposable {
 		this.stop();
 		const activeInstance = this._terminalService.activeInstance;
 		this._sessionTerminalInstanceId = activeInstance?.instanceId;
-		this._sessionTerminalDisposed = false;
 		this._disposables.add(this._terminalService.onDidChangeActiveInstance(instance => {
 			if (instance?.instanceId !== this._sessionTerminalInstanceId) {
 				this.stop();
@@ -142,7 +133,6 @@ export class TerminalVoiceSession extends Disposable {
 		}));
 		this._disposables.add(this._terminalService.onDidDisposeInstance(instance => {
 			if (instance.instanceId === this._sessionTerminalInstanceId) {
-				this._sessionTerminalDisposed = true;
 				this.stop();
 			}
 		}));
@@ -154,24 +144,11 @@ export class TerminalVoiceSession extends Disposable {
 			voiceTimeout = SpeechTimeoutDefault;
 		}
 		this._acceptTranscriptionScheduler = this._disposables.add(new RunOnceScheduler(() => {
-			// The built-in engine returns its final utterance only from
-			// stopAndTranscribe(), so accept through stop(true) rather than
-			// sending the interim text and discarding the recording.
-			if (this._usingBuiltin) {
-				this.stop(true);
-				return;
-			}
 			this._sendText();
 			this.stop();
 		}, voiceTimeout));
 		this._cancellationTokenSource = new CancellationTokenSource();
 		this._register(toDisposable(() => this._cancellationTokenSource?.dispose(true)));
-
-		// Prefer the built-in on-device engine (private, in-box) when configured,
-		// falling back to the speech extension's provider otherwise.
-		if (this._chatSpeechToTextService.isConfigured) {
-			return this._startBuiltin(voiceTimeout);
-		}
 
 		const session = await this._speechService.createSpeechToTextSession(this._cancellationTokenSource?.token, 'terminal');
 
@@ -215,128 +192,7 @@ export class TerminalVoiceSession extends Disposable {
 		}));
 	}
 
-	/**
-	 * Drive terminal dictation from the built-in on-device engine. Unlike the
-	 * extension provider (which emits discrete `Recognizing`/`Recognized` events
-	 * per utterance), the built-in engine streams a single growing cumulative
-	 * transcript. We render it live as ghost text and keep it staged in
-	 * `_input`, then send it once the silence timeout elapses or the user stops.
-	 */
-	private async _startBuiltin(voiceTimeout: number): Promise<void> {
-		const service = this._chatSpeechToTextService;
-
-		// Only one dictation can run at a time (the on-device engine is a shared
-		// singleton). If it is already recording elsewhere (chat input or an
-		// editor), cancel that session so the terminal can take over — the other
-		// surface clears its own state and UI when it observes the engine go Idle.
-		// This runs before we attach our own listeners below, so it cannot tear
-		// down this new terminal session.
-		if (service.isBusy) {
-			await service.cancel();
-		}
-		// If the engine somehow stayed busy, bail rather than subscribing to it.
-		if (service.state !== ChatSpeechToTextState.Idle) {
-			this.stop();
-			return;
-		}
-
-		this._usingBuiltin = true;
-		this._terminalDictationInProgress.set(true);
-		if (!this._decoration) {
-			this._createDecoration();
-		}
-
-		// On first use the model downloads/loads before any transcript arrives.
-		// Unlike the chat input (which has a toolbar download ring), the terminal
-		// has no progress affordance, so surface a "Preparing…/Downloading… X%"
-		// hint in the ghost-text slot until the model is ready and real
-		// transcripts start streaming.
-		const renderPreparing = () => {
-			if (this._cancellationTokenSource?.token.isCancellationRequested || this._builtinFinalizing) {
-				return;
-			}
-			if (service.isPreparingModel) {
-				this._renderPreparingText(getDictationPreparingLabel(service));
-			}
-		};
-		renderPreparing();
-		this._disposables.add(service.onDidChangePreparingModel(() => renderPreparing()));
-		this._disposables.add(service.onDidChangeModelDownloadProgress(() => renderPreparing()));
-
-		this._disposables.add(service.onDidUpdateTranscript(update => {
-			if (this._cancellationTokenSource?.token.isCancellationRequested || this._builtinFinalizing) {
-				return;
-			}
-			// Reuse the provider-path rendering by shaping the cumulative
-			// transcript as a recognizing event. The staged text is only sent
-			// once accepted (silence timeout or Stop Dictation), which fetches
-			// the engine's final transcript. The first real transcript replaces
-			// any lingering "Preparing…" hint.
-			const event: ISpeechToTextEvent = { status: SpeechToTextStatus.Recognizing, text: update.text };
-			this._updateInput(event);
-			this._renderGhostText(event);
-			this._updateDecoration();
-			if (voiceTimeout > 0) {
-				this._acceptTranscriptionScheduler!.cancel();
-				this._acceptTranscriptionScheduler!.schedule();
-			}
-		}));
-
-		// If the engine ends the session on its own (e.g. the model failed to
-		// load), abort the terminal-side rendering. Guarded so neither the
-		// accept-triggered nor the abort-triggered Idle transition re-enters.
-		this._disposables.add(service.onDidChangeState(state => {
-			if (state === ChatSpeechToTextState.Idle && !this._builtinFinalizing && !this._cancellationTokenSource?.token.isCancellationRequested) {
-				this.stop();
-			}
-		}));
-
-		try {
-			await service.start(getActiveWindow(), 'terminal');
-		} catch {
-			// Microphone acquisition/connection failure is surfaced by the service.
-			this.stop();
-		}
-	}
-
-	/**
-	 * Accept the built-in dictation: fetch the engine's final transcript (the
-	 * last utterance is only returned by `stopAndTranscribe`, not the interim
-	 * stream), stage it, then tear down and send it. Used by the silence timeout
-	 * and the Stop Dictation action; abort/error teardown uses `cancel()` instead.
-	 */
-	private async _finalizeBuiltinThenStop(): Promise<void> {
-		let finalText: string | undefined;
-		try {
-			finalText = await this._chatSpeechToTextService.stopAndTranscribe();
-		} catch {
-			// Fall back to the last interim text already staged in `_input`.
-		}
-		// A concurrent abort (e.g. the terminal was disposed) already tore down.
-		if (!this._usingBuiltin || this._cancellationTokenSource?.token.isCancellationRequested) {
-			return;
-		}
-		if (finalText !== undefined) {
-			this._updateInput({ status: SpeechToTextStatus.Recognized, text: finalText });
-		}
-		// _builtinFinalizing is set, so this reaches the synchronous teardown and
-		// sends the staged (final) text.
-		this.stop(true);
-	}
-
 	stop(send?: boolean): void {
-		// Built-in accept path: fetch the final transcript before tearing down.
-		if (this._usingBuiltin && send && !this._builtinFinalizing) {
-			this._builtinFinalizing = true;
-			this._acceptTranscriptionScheduler?.cancel();
-			this._finalizeBuiltinThenStop();
-			return;
-		}
-		if (this._builtinFinalizing && !send
-			&& !this._sessionTerminalDisposed
-			&& this._terminalService.activeInstance?.instanceId === this._sessionTerminalInstanceId) {
-			return;
-		}
 		this._setInactive();
 		if (send) {
 			this._acceptTranscriptionScheduler!.cancel();
@@ -349,18 +205,10 @@ export class TerminalVoiceSession extends Disposable {
 		this._marker = undefined;
 		this._ghostTextMarker = undefined;
 		this._cancellationTokenSource?.cancel();
-		// Abort the on-device engine on teardown. On the accept path the engine
-		// has already finished via stopAndTranscribe(), so this is a no-op there.
-		if (this._usingBuiltin) {
-			void this._chatSpeechToTextService.cancel();
-		}
 		this._disposables.clear();
 		this._input = '';
 		this._terminalDictationInProgress.reset();
-		this._usingBuiltin = false;
-		this._builtinFinalizing = false;
 		this._sessionTerminalInstanceId = undefined;
-		this._sessionTerminalDisposed = false;
 	}
 
 	private _sendText(): void {
@@ -409,9 +257,8 @@ export class TerminalVoiceSession extends Disposable {
 
 	/**
 	 * Make the recording mic icon a discoverable Stop affordance: clicking it
-	 * stops (and accepts) the dictation, mirroring the animated mic button in the
-	 * editor and chat input, and a hover surfaces the Escape keybinding so the
-	 * stop gesture is not hidden.
+	 * stops (and accepts) dictation, mirroring the editor's control. A hover also
+	 * surfaces the Escape keybinding so the stop gesture is not hidden.
 	 */
 	private _registerMicInteractions(element: HTMLElement): void {
 		// The decoration's onRender can fire multiple times for the same element
@@ -424,9 +271,7 @@ export class TerminalVoiceSession extends Disposable {
 		this._decorationDisposables.add(addDisposableListener(element, EventType.CLICK, e => {
 			e.preventDefault();
 			e.stopPropagation();
-			if (!this._builtinFinalizing) {
-				this.stop(true);
-			}
+			this.stop(true);
 		}));
 		const keybindingLabel = this._keybindingService.lookupKeybinding(TerminalCommandId.StopVoice)?.getLabel();
 		const title = keybindingLabel
@@ -451,15 +296,6 @@ export class TerminalVoiceSession extends Disposable {
 
 	private _renderGhostText(e: ISpeechToTextEvent): void {
 		this._renderGhostTextContent(e.text, 'terminal-voice-progress-text');
-	}
-
-	/**
-	 * Render a non-transcript hint (e.g. "Preparing…/Downloading… X%") in the
-	 * ghost-text slot while the on-device model is still preparing on first use.
-	 * Styled distinctly from the live transcript so it does not read as speech.
-	 */
-	private _renderPreparingText(label: string): void {
-		this._renderGhostTextContent(label, 'terminal-voice-preparing-text');
 	}
 
 	private _renderGhostTextContent(text: string | undefined, className: string): void {

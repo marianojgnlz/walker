@@ -214,7 +214,7 @@ export class MarkerHoverParticipant implements IEditorHoverParticipant<MarkerHov
 			}
 		}
 
-		// Menu-contributed actions (e.g. fix with inline chat)
+		// Menu-contributed actions
 		const menuActions: MenuItemAction[] = [];
 		for (const [, actions] of this._menuService.getMenuActions(MenuId.MarkerHoverStatusBar, this._contextKeyService)) {
 			for (const action of actions) {

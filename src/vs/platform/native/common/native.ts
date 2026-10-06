@@ -274,6 +274,7 @@ export interface ICommonNativeHostService {
 	openWindow(options?: IOpenEmptyWindowOptions): Promise<void>;
 	openWindow(toOpen: IWindowOpenable[], options?: IOpenWindowOptions): Promise<void>;
 
+	/** @deprecated The Agents Window is disconnected; calls reject with `AgentsWindowUnsupported`. */
 	openAgentsWindow(options?: IOpenAgentsWindowOptions): Promise<void>;
 
 	/**

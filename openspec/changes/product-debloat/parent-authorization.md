@@ -235,6 +235,18 @@ src/vs/platform/windows/electron-main/windowImpl.ts
 src/vs/workbench/services/workspaces/test/browser/workspaceEditingService.test.ts
 src/vs/editor/standalone/browser/standaloneServices.ts
 
+## Stage U05 — additional authorized surfaces (C1–C4 + A2: chat core + auth tails)
+
+src/vs/workbench/contrib/chat/**
+src/vs/workbench/contrib/authentication/**
+src/vs/workbench/services/authentication/**
+src/vs/workbench/api/**
+src/vs/workbench/test/**
+src/vscode-dts/**
+src/vs/platform/extensions/common/extensionsApiProposals.ts
+
+Scope: C1 product/chat/session registration + entrypoint disconnection (incl. remaining `defaultChatAgent`/copilot product wiring references — but `extensions/copilot` itself is U09/C7, do not delete it here); C2 chat/language-model API bridges/converters/tests + proposed-API d.ts + generated proposal registry regeneration; C3 non-chat contribution integrations/test fixtures; C4 the chat tree/services/tests/styles/assets (parent-deletion manifest); A2 workbench auth/RPC/dynamic-OAuth/MCP tails (`contrib/authentication`, `services/authentication`, `mainThreadAuthentication`, `extHostAuthentication` implementation — the inert A1 public facade stays). Protected: A1 facade semantics, Git carve-out, local profiles, generic diagnostics, U07 Agent Host prerequisites. Verification — U05: task-named selectors + `npm run compile-client` + `npm run typecheck-client` + `./scripts/test-integration.sh --suite api-workspace` (or parent-run citation if the runner's cleanup trips your safety rules) + accountFreeApi GREEN maintenance.
+
 ## Stage U03 — additional authorized surfaces (A7: account tunnels/CLI/cloud-forwarding)
 
 src/vs/workbench/contrib/remoteTunnel/**
@@ -326,3 +338,167 @@ reviewWorkloadGate: RESOLVED — feature-branch-chain split, 400 lines/leaf, siz
 - `src/vs/platform/secrets/common/secrets.ts`: remove ONLY the obsolete `CROSS_APP_SHARED_SECRET_KEYS` entry for `vscode.github-authentication`/`github.auth`; stored secret data must be preserved (protected-boundary spec).
 - **Chat Pet decision (ACCEPTED LOSS):** the account-panel contribution hosts `SessionsChatPetAchievementBadges` — removing the account panel removes the badge-selection UI. This is intended: Chat Pet is agent-chat gamification and the entire `sessions` tree is deleted in U06. Do NOT create a retained-UI task for it; leave achievement unlock services untouched (they die with U06). Document the loss in apply-progress.
 - `compile-client` runs `clean-out` (regenerates `out/**`) — expected, not a deletion incident. Ignored generated residue under deleted extension dirs (`out/`, `dist/`, `node_modules`) is untracked build garbage; parent may clean it outside apply passes; package-absence evidence must not claim those dirs are physically empty.
+
+## Stage U05 — candidate group approvals (2026-10-05, `approve-all-listed`; narrow U05 changes only; physical deletion remains parent-owned)
+
+### approve-c1-product-sessions
+src/vs/base/common/product.ts
+src/vs/workbench/browser/workbench.contribution.ts
+src/vs/workbench/browser/web.api.ts
+src/vs/sessions/sessions.common.main.ts
+src/vs/sessions/sessions.desktop.main.ts
+src/vs/sessions/sessions.web.main.ts
+
+### approve-c4-services-chat
+src/vs/workbench/services/chat/**
+
+### approve-a2-mcp
+src/vs/workbench/contrib/mcp/browser/mcpCommands.ts
+src/vs/workbench/contrib/mcp/browser/mcpServerActions.ts
+src/vs/workbench/contrib/mcp/browser/mcpLanguageFeatures.ts
+src/vs/workbench/contrib/mcp/browser/mcp.contribution.ts
+src/vs/workbench/contrib/mcp/browser/mcpWorkbenchService.ts
+src/vs/workbench/contrib/mcp/browser/mcpAddContextContribution.ts
+src/vs/workbench/contrib/mcp/browser/openPanelChatAndGetWidget.ts
+src/vs/workbench/contrib/mcp/browser/mcpResourceQuickAccess.ts
+src/vs/workbench/contrib/mcp/common/mcpConfiguration.ts
+src/vs/workbench/contrib/mcp/common/mcpTypes.ts
+src/vs/workbench/contrib/mcp/common/mcpCommandIds.ts
+src/vs/workbench/contrib/mcp/common/mcpLanguageModelToolContribution.ts
+src/vs/workbench/contrib/mcp/test/browser/mcpCommands.test.ts
+src/vs/workbench/contrib/mcp/test/browser/mcpConfigurationEntryPoints.test.ts
+src/vs/workbench/contrib/mcp/test/browser/mcpWorkbenchService.test.ts
+src/vs/workbench/contrib/mcp/test/common/mcpTypes.test.ts
+src/vs/workbench/contrib/mcp/test/common/mcpService.test.ts
+src/vs/workbench/contrib/mcp/test/common/mcpServerConnection.test.ts
+
+### approve-c3-cross-tree (dedicated chat-feature trees = parent-deletion manifest; the rest = narrow chat-integration removal, preserve each host feature)
+src/vs/workbench/contrib/inlineChat/**
+src/vs/workbench/contrib/agentsVoice/**
+src/vs/workbench/contrib/welcomeAgentSessions/**
+src/vs/workbench/contrib/terminalContrib/chat/**
+src/vs/workbench/contrib/terminalContrib/chatAgentTools/**
+src/vs/workbench/contrib/accessibility/browser/accessibleView.ts
+src/vs/workbench/contrib/accessibility/browser/accessibleViewActions.ts
+src/vs/workbench/contrib/accessibility/browser/editorAccessibilityHelp.ts
+src/vs/workbench/contrib/accessibility/browser/accessibilityConfiguration.ts
+src/vs/workbench/contrib/terminalContrib/accessibility/browser/terminalAccessibilityHelp.ts
+src/vs/workbench/contrib/browserView/electron-browser/features/browserEditorChatFeatures.ts
+src/vs/workbench/contrib/browserView/electron-browser/features/browserWelcomeFeature.ts
+src/vs/workbench/contrib/browserView/electron-browser/tools/**
+src/vs/workbench/contrib/codeEditor/browser/dictation/editorDictation.ts
+src/vs/workbench/contrib/codeEditor/browser/emptyTextEditorHint/emptyTextEditorHint.ts
+src/vs/workbench/contrib/codeEditor/browser/quickaccess/gotoSymbolQuickAccess.ts
+src/vs/editor/contrib/inlineCompletions/browser/model/inlineCompletionsModel.ts
+src/vs/editor/contrib/codeAction/browser/codeActionController.ts
+src/vs/editor/contrib/codeAction/browser/codeActionCommands.ts
+src/vs/editor/contrib/hover/browser/markerHoverParticipant.ts
+src/vs/editor/contrib/quickAccess/browser/gotoSymbolQuickAccess.ts
+src/vs/editor/contrib/gotoSymbol/browser/goToSymbol.ts
+src/vs/workbench/contrib/debug/browser/debugChatIntegration.ts
+src/vs/workbench/contrib/debug/browser/debug.contribution.ts
+src/vs/workbench/contrib/debug/browser/debugCommands.ts
+src/vs/workbench/contrib/debug/browser/debugEditorActions.ts
+src/vs/workbench/contrib/extensions/common/installExtensionsTool.ts
+src/vs/workbench/contrib/extensions/common/searchExtensionsTool.ts
+src/vs/workbench/contrib/imageCarousel/browser/imageCarousel.contribution.ts
+src/vs/workbench/contrib/inlineCompletions/browser/inlineCompletionLanguageStatusBarContribution.ts
+src/vs/workbench/contrib/interactive/browser/interactiveEditor.ts
+src/vs/workbench/contrib/interactive/browser/interactive.contribution.ts
+src/vs/workbench/contrib/markers/browser/markersChatContext.ts
+src/vs/workbench/contrib/notebook/browser/controller/chat/cellChatActions.ts
+src/vs/workbench/contrib/notebook/browser/notebook.chat.contribution.ts
+src/vs/workbench/contrib/notebook/browser/notebookChatContext.ts
+src/vs/workbench/contrib/notebook/browser/controller/executeActions.ts
+src/vs/workbench/contrib/notebook/browser/controller/editActions.ts
+src/vs/workbench/contrib/notebook/browser/contrib/chat/notebookChatUtils.ts
+src/vs/workbench/contrib/notebook/browser/contrib/cellDiagnostics/cellDiagnosticEditorContrib.ts
+src/vs/workbench/contrib/notebook/browser/contrib/cellDiagnostics/cellDiagnosticsActions.ts
+src/vs/workbench/contrib/notebook/browser/contrib/cellDiagnostics/diagnosticCellStatusBarContrib.ts
+src/vs/workbench/contrib/notebook/browser/contrib/editorHint/emptyCellEditorHint.ts
+src/vs/workbench/contrib/notebook/browser/contrib/navigation/arrow.ts
+src/vs/workbench/contrib/notebook/browser/diff/notebookDiffActions.ts
+src/vs/workbench/contrib/notebook/browser/diff/inlineDiff/notebookOriginalModelRefFactory.ts
+src/vs/workbench/contrib/notebook/browser/diff/notebookCellDiffDecorator.ts
+src/vs/workbench/contrib/notebook/browser/view/renderers/cellRenderer.ts
+src/vs/workbench/contrib/notebook/test/browser/contrib/notebookCellDiagnostics.test.ts
+src/vs/workbench/contrib/preferences/browser/settingsEditor2.ts
+src/vs/workbench/contrib/preferences/browser/settingsLayout.ts
+src/vs/workbench/contrib/preferences/common/preferences.ts
+src/vs/workbench/contrib/quickaccess/browser/commandsQuickAccess.ts
+src/vs/workbench/contrib/scm/browser/quickDiffModel.ts
+src/vs/workbench/contrib/scm/browser/scm.contribution.ts
+src/vs/workbench/contrib/scm/browser/scmHistoryChatContext.ts
+src/vs/workbench/contrib/scm/browser/scmInput.ts
+src/vs/workbench/contrib/scm/browser/scmHistoryViewPane.ts
+src/vs/workbench/contrib/search/browser/anythingQuickAccess.ts
+src/vs/workbench/contrib/search/browser/searchChatContext.ts
+src/vs/workbench/contrib/search/browser/symbolsQuickAccess.ts
+src/vs/workbench/contrib/search/browser/search.contribution.ts
+src/vs/workbench/contrib/search/test/browser/searchChatContext.test.ts
+src/vs/workbench/contrib/tasks/browser/abstractTaskService.ts
+src/vs/workbench/contrib/tasks/electron-browser/taskService.ts
+src/vs/workbench/contrib/terminal/common/terminal.ts
+src/vs/workbench/contrib/terminal/browser/chatTerminalCommandMirror.ts
+src/vs/workbench/contrib/terminal/browser/terminal.ts
+src/vs/workbench/contrib/terminal/browser/terminalMenus.ts
+src/vs/workbench/contrib/terminal/browser/terminalTabsChatEntry.ts
+src/vs/workbench/contrib/terminal/browser/xterm/decorationAddon.ts
+src/vs/workbench/contrib/terminal/terminal.all.ts
+src/vs/workbench/contrib/terminal/terminalContribChatExports.ts
+src/vs/workbench/contrib/terminal/terminalContribExports.ts
+src/vs/workbench/contrib/terminal/test/browser/chatTerminalCommandMirror.test.ts
+src/vs/workbench/contrib/terminal/test/browser/chatTerminalMirrorTestUtils.ts
+src/vs/workbench/contrib/terminalContrib/inlineHint/browser/terminal.initialHint.contribution.ts
+src/vs/workbench/contrib/terminalContrib/inlineHint/test/browser/terminalInitialHint.test.ts
+src/vs/workbench/contrib/terminalContrib/voice/browser/terminalVoiceActions.ts
+src/vs/workbench/contrib/terminalContrib/voice/browser/terminalVoice.ts
+src/vs/workbench/contrib/terminalContrib/voice/test/browser/terminalVoice.test.ts
+src/vs/workbench/contrib/testing/common/testingChatAgentTool.ts
+src/vs/workbench/contrib/testing/test/common/testingChatAgentTool.test.ts
+src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.contribution.ts
+src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts
+src/vs/workbench/contrib/welcomeGettingStarted/browser/startupPage.ts
+src/vs/workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts
+src/vs/workbench/contrib/welcomeOnboarding/test/browser/onboardingVariationA.test.ts
+
+### U05 addition (2026-10-05, `approve-both-listed`; narrow scope)
+src/vs/platform/product/common/product.ts
+Scope: remove ONLY the `defaultChatAgent` fallback product object.
+src/vs/workbench/workbench.web.main.ts
+Scope: remove ONLY the Chat-backed `BrowserAgentHostDebugLogsExportService` import/registration.
+
+### U05 addition (2026-10-05, `approve-all-seven`; narrow C1 routing/product-reader cleanup)
+src/vs/platform/launch/electron-main/launchMainService.ts
+src/vs/platform/native/electron-main/nativeHostMainService.ts
+src/vs/platform/native/common/native.ts
+src/vs/platform/windows/electron-main/windows.ts
+src/vs/platform/window/common/window.ts
+src/vs/platform/workspaces/electron-main/workspacesHistoryMainService.ts
+src/vs/platform/extensionManagement/common/abstractExtensionManagementService.ts
+
+### U05 addition (2026-10-05; narrow chat-config residue cleanup)
+src/vs/workbench/browser/quickaccess.ts
+src/vs/workbench/contrib/terminalContrib/inlineHint/browser/terminalInitialHintConfiguration.ts
+
+### U05 addition (2026-10-05; narrow importer cleanup)
+src/vs/workbench/contrib/notebook/browser/notebook.contribution.ts
+
+### U05 addition (2026-10-05; narrow chat registration cleanup)
+src/vs/workbench/contrib/markers/browser/markers.contribution.ts
+
+### U05 addition (2026-10-05; C3 terminal/testing batch — option 1, all four)
+src/vs/workbench/contrib/terminal/common/terminalContextKey.ts
+src/vs/workbench/contrib/terminal/browser/terminalTabbedView.ts
+src/vs/workbench/contrib/testing/browser/testing.contribution.ts
+src/vs/workbench/contrib/telemetry/browser/telemetry.contribution.ts
+Scope: remove Chat-owned export edges/registrations/setting references only (the telemetry file's Chat-only `OutputLocation` setting reference; the telemetry machinery itself remains for T5/U10).
+Also accepted disposition: `ITerminalChatService` interface + its `agentHostTerminalService` usage are preserved as a documented U07 prerequisite. `src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedService.ts` (already in grant) is approved for removing the legacy `agentSessionsWelcomePage` startup-editor comparison.
+
+### U05 addition (2026-10-05; C3 residue batch)
+src/vs/workbench/contrib/tasks/common/tasks.ts
+Scope: remove ONLY the Chat-only `TaskRunSource.ChatAgent` value.
+src/vs/workbench/contrib/preferences/browser/settingsTreeModels.ts
+Scope: remove ONLY the chat-feature-filter code (AGENTS_WINDOW_SETTING_TAG consumers preserved).
+src/vs/workbench/contrib/imageCarousel/browser/imageCarouselEditor.ts
+Scope: stale chat-attachment comment removal only.

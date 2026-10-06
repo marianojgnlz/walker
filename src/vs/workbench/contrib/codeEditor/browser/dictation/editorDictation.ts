@@ -5,17 +5,13 @@
 
 import './editorDictation.css';
 import { localize, localize2 } from '../../../../../nls.js';
-import { getActiveWindow, getWindow, IDimension } from '../../../../../base/browser/dom.js';
+import { IDimension } from '../../../../../base/browser/dom.js';
 import { CancellationTokenSource } from '../../../../../base/common/cancellation.js';
 import { Disposable, DisposableStore, MutableDisposable, toDisposable } from '../../../../../base/common/lifecycle.js';
 import { ContentWidgetPositionPreference, ICodeEditor, IContentWidget, IContentWidgetPosition } from '../../../../../editor/browser/editorBrowser.js';
 import { IEditorContribution } from '../../../../../editor/common/editorCommon.js';
 import { ContextKeyExpr, IContextKey, IContextKeyService, RawContextKey } from '../../../../../platform/contextkey/common/contextkey.js';
-import { ILogService } from '../../../../../platform/log/common/log.js';
 import { HasSpeechProvider, ISpeechService, SpeechToTextInProgress, SpeechToTextStatus } from '../../../speech/common/speechService.js';
-import { ChatContextKeys } from '../../../chat/common/actions/chatContextKeys.js';
-import { ChatSpeechToTextState, IChatSpeechToTextService } from '../../../chat/browser/speechToText/chatSpeechToTextService.js';
-import { activeDictationEditor, cancelDictation, isDictating, startDictation, stopDictation } from '../../../chat/browser/speechToText/dictationSession.js';
 import { Codicon } from '../../../../../base/common/codicons.js';
 import { EditorOption } from '../../../../../editor/common/config/editorOptions.js';
 import { EditorAction2, EditorContributionInstantiation, registerEditorContribution } from '../../../../../editor/browser/editorExtensions.js';
@@ -39,14 +35,6 @@ import { EmptyTextEditorHintContributionId, IEmptyTextEditorHintContribution } f
 const EDITOR_DICTATION_IN_PROGRESS = new RawContextKey<boolean>('editorDictation.inProgress', false);
 const VOICE_CATEGORY = localize2('voiceCategory', "Voice");
 
-/**
- * True when the built-in on-device dictation engine is available (and AI
- * features are enabled). Mirrors the chat input's `ChatSpeechToTextConfigured`
- * gate so editor dictation can run through the built-in engine even when the
- * `ms-vscode.vscode-speech` extension is not installed.
- */
-const BuiltinDictationConfigured = ContextKeyExpr.and(ChatContextKeys.enabled, ChatContextKeys.speechToTextConfigured);
-
 export class EditorDictationStartAction extends EditorAction2 {
 
 	static readonly ID = 'workbench.action.editorDictation.start';
@@ -57,9 +45,7 @@ export class EditorDictationStartAction extends EditorAction2 {
 			title: localize2('startDictation', "Start Dictation in Editor"),
 			category: VOICE_CATEGORY,
 			precondition: ContextKeyExpr.and(
-				// Available either through the built-in on-device engine or the
-				// speech extension's provider.
-				ContextKeyExpr.or(HasSpeechProvider, BuiltinDictationConfigured),
+				HasSpeechProvider,
 				// Keep the toggle available for editor dictation, but not unrelated speech-to-text sessions.
 				ContextKeyExpr.or(SpeechToTextInProgress.toNegated(), EDITOR_DICTATION_IN_PROGRESS),
 				EditorContextKeys.readOnly.toNegated()	// disable in read-only editors
@@ -80,7 +66,7 @@ export class EditorDictationStartAction extends EditorAction2 {
 				// available and the editor is editable. No persistent toolbar
 				// button is added; the entry point stays confined to the menu.
 				when: ContextKeyExpr.and(
-					ContextKeyExpr.or(HasSpeechProvider, BuiltinDictationConfigured),
+					HasSpeechProvider,
 					EditorContextKeys.readOnly.toNegated()
 				)
 			}
@@ -90,8 +76,7 @@ export class EditorDictationStartAction extends EditorAction2 {
 	override async runEditorCommand(accessor: ServicesAccessor, editor: ICodeEditor): Promise<void> {
 		const dictation = EditorDictation.get(editor);
 
-		// Toggle: pressing the start keybinding again while dictation is in
-		// progress stops it, mirroring the chat input's Cmd/Ctrl+I behavior.
+		// Toggle: pressing the start keybinding again while dictation is in progress stops it.
 		if (dictation?.isInProgress()) {
 			dictation.stop();
 			return;
@@ -232,8 +217,6 @@ export class EditorDictation extends Disposable implements IEditorContribution {
 	constructor(
 		private readonly editor: ICodeEditor,
 		@ISpeechService private readonly speechService: ISpeechService,
-		@IChatSpeechToTextService private readonly chatSpeechToTextService: IChatSpeechToTextService,
-		@ILogService private readonly logService: ILogService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IKeybindingService keybindingService: IKeybindingService
 	) {
@@ -245,58 +228,12 @@ export class EditorDictation extends Disposable implements IEditorContribution {
 
 	/** True while a dictation session is active in this editor. */
 	isInProgress(): boolean {
-		return !!this.editorDictationInProgress.get() || activeDictationEditor() === this.editor;
+		return !!this.editorDictationInProgress.get();
 	}
 
 	async start(): Promise<void> {
 		this.editor.getContribution<IEmptyTextEditorHintContribution>(EmptyTextEditorHintContributionId)?.disposeHint();
-
-		// Prefer the built-in on-device engine (private, in-box) when it is
-		// configured, falling back to the speech extension's provider otherwise.
-		if (this.chatSpeechToTextService.isConfigured) {
-			return this.startBuiltin();
-		}
 		return this.startWithProvider();
-	}
-
-	/**
-	 * Run editor dictation through the built-in on-device engine, reusing the
-	 * shared chat dictation renderer (live transcript, interim styling, and
-	 * "Listening…" placeholder). A floating stop widget is shown so the mic can
-	 * be stopped by mouse as well as by toggling the start keybinding.
-	 */
-	private async startBuiltin(): Promise<void> {
-		const disposables = new DisposableStore();
-		this.sessionDisposables.value = disposables;
-
-		this.widget.show();
-		this.widget.active();
-		disposables.add(toDisposable(() => this.widget.hide()));
-
-		disposables.add(this.editor.onDidChangeCursorPosition(() => this.widget.layout()));
-
-		const window = getWindow(this.editor.getDomNode()) ?? getActiveWindow();
-		await startDictation(this.chatSpeechToTextService, this.editor, window, this.logService, 'editor');
-
-		// If the session did not take (start failed without a state transition),
-		// do not leave the widget stranded.
-		if (activeDictationEditor() !== this.editor) {
-			this.sessionDisposables.clear();
-			return;
-		}
-
-		this.editorDictationInProgress.set(true);
-		disposables.add(toDisposable(() => this.editorDictationInProgress.reset()));
-
-		// When the shared session ends on its own (final transcript applied, an
-		// error, or the model failing to load), tear down the editor-side UI. This
-		// is registered only after the takeover in `startDictation` has settled so
-		// cancelling a previous surface's session cannot tear down this one.
-		disposables.add(this.chatSpeechToTextService.onDidChangeState(state => {
-			if (state === ChatSpeechToTextState.Idle) {
-				this.sessionDisposables.clear();
-			}
-		}));
 	}
 
 	private async startWithProvider(): Promise<void> {
@@ -389,16 +326,6 @@ export class EditorDictation extends Disposable implements IEditorContribution {
 	}
 
 	stop(): void {
-		// Built-in dictation into this editor is owned by the shared chat
-		// dictation session; stop it there so the final transcript is applied.
-		if (isDictating() && activeDictationEditor() === this.editor) {
-			if (this.chatSpeechToTextService.state === ChatSpeechToTextState.Idle) {
-				cancelDictation();
-				return;
-			}
-			stopDictation();
-			return;
-		}
 		this.sessionDisposables.clear();
 	}
 }

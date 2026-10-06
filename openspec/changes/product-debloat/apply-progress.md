@@ -707,3 +707,1132 @@ The executor may not unlink these files. Exact paths, review batches, counts, an
 
 - U03/A7 implementation is complete for its authorized RemoteTunnel, cloud-forwarding, CLI and product/packaging surfaces. Generic tunnel common/proxy tests, CLI regression assertions, Sessions SSH/WSL checks, terminal-suggest completions, and product composition remain green. No user data, credentials, remote tunnel, or provider account was read, revoked, or deleted.
 - No U03 task checkbox remains unchecked. The next route is an independent `sdd-verify` pass over U03; the verifier should check the parent D6–D9 deletion evidence/count discrepancy, confirm retained generic Ports/server/SSH boundaries, and preserve the explicit U07 Auth/Agent Host residual as out-of-scope prerequisite rather than certifying whole-product absence. Live remote/network and SSH endpoint gaps remain as stated above.
+
+## U05.a.001 — Disconnect Chat registrations from approved workbench and Sessions entrypoints
+
+### Structured status and workload consumed
+
+- Consumed parent-produced status for `product-debloat`: `artifactStore=openspec`, `applyState=ready`, `dependencies.apply=ready`, `nextRecommended=sdd-apply`; `actionContext.mode=apply`, workspace `/home/marialez/Work/walker`, branch `product-debloat`; no action-context warnings. The parent snapshot in `parent-authorization.md` still says 101 tasks / 39 checked / 62 remaining; the current persisted `tasks.md` recount is 108 rows / 49 checked / 59 remaining, with no malformed or non-implementation ownership markers. No checkbox was changed in this leaf because no broad task row is complete.
+- The Review Workload Forecast is resolved to `feature-branch-chain`, 400 additions+deletions per leaf, no size exception. `openspec/config.yaml` declares strict TDD false; the U05 leaf contract nevertheless requires RED → GREEN → TRIANGULATE → REFACTOR.
+- The `approve-all-listed` C1/C3 candidate grants in the parent-owned authorization file were re-read. This leaf uses only the authorized workbench/Sessions entrypoint files and existing build test surface. The already-modified parent authorization file and pre-existing untracked `.pi/` were preserved.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added a Walker build boundary assertion requiring no direct Chat, inline-chat, voice, welcome-agent-session, Copilot-chat-session or Chat-backed Agent Host debug-log imports/registrations in the selected entrypoints, while requiring ordinary notebook/Agent Host/SSH registrations to remain. Before production edits, `node --test lib/test/walkerProduct.test.ts` from `build/` failed **7 pass / 1 fail** on the existing `services/chat/` import in `workbench.common.main.ts`.
+- **GREEN:** removed Chat entitlement and Chat/inline-chat/Agents Voice/welcome-agent-session contribution imports from the regular workbench entrypoints; removed the Chat entitlement, Chat/session voice/contribution imports, Chat-backed Plugin Git registration and Chat-backed Agent Host debug-log registration from the approved Sessions entrypoints. Preserved MCP and image-preview registration, notebook/other workbench contributions, the generic Agent Host prerequisite services, and Sessions SSH registration. The Sessions source tree itself remains for U06; these removed registrations are documented as U06 prerequisites, not physical deletion.
+- **TRIANGULATE:** a first post-edit rerun found a second direct `sessions.desktop.main.ts` Chat contribution import; that exact approved registration was removed. Final Walker boundary selector passed **8/8**, including positive notebook, generic Agent Host and SSH checks. `npm run compile-client` passed with zero errors; `npm run typecheck-client` passed; `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` passed **5/5**, preserving the A1 API boundary.
+- **REFACTOR / retained behavior:** no feature implementation was deleted or replaced; all source trees remain physically present. No Agent Host service/process/SSH/WSL implementation, local data, account facade, or non-chat MCP behavior was changed. The desktop test confirms selected entrypoint registration absence, not whole-product absence or runtime process-start behavior.
+
+### Files, deletion boundary, and verification
+
+- Changed: `src/vs/workbench/workbench.common.main.ts`, `src/vs/workbench/workbench.desktop.main.ts`, `src/vs/sessions/sessions.common.main.ts`, `src/vs/sessions/sessions.desktop.main.ts`, `src/vs/sessions/sessions.web.main.ts`, `build/lib/test/walkerProduct.test.ts`, `removal-inventory.md`, and this progress record. `tasks.md` remains unchanged because C1/C2/C3/C4/A2 task rows are still in progress. No file was unlinked, staged or committed.
+- Inventory leaf `U05.a.001` records exact paths, retained services, its focused selector and the U06 prerequisite boundary. The final scoped authored delta is **127 additions+deletions** (24 test additions + 48 source deletions + 8 inventory additions + 47 progress additions), excluding the pre-existing 135-line parent-authorization grant diff; this is within the 120–400 leaf budget.
+- RED command: `export PATH="/home/marialez/.local/share/mise/installs/node/24.18.0/bin:$PATH"; cd build && node --test lib/test/walkerProduct.test.ts` — **7 pass / 1 fail**.
+- GREEN command: same selector — **8/8 pass**. `export PATH="/home/marialez/.local/share/mise/installs/node/24.18.0/bin:$PATH"; npm run compile-client` — **PASS**, 0 source/extension/API-proposal errors; expected `out/**` and extension build outputs regenerated. `export PATH="/home/marialez/.local/share/mise/installs/node/24.18.0/bin:$PATH"; npm run typecheck-client` — **PASS**. `export PATH="/home/marialez/.local/share/mise/installs/node/24.18.0/bin:$PATH"; ./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` — **5/5 PASS**. Scoped `git diff --check` — **PASS**.
+- Required `./scripts/test-integration.sh --suite api-workspace` was **not run**: inspection found the runner executes `rm -rf -- "$VSCODEUSERDATADIR"` in its cleanup/error paths (lines 170, 198 and 350), which is disallowed by this executor's no-deletion rule. Parent-run evidence is needed if that selector remains required.
+- A scoped source scan confirms the selected five entrypoints no longer contain the tested Chat registrations. `src/vs/workbench/workbench.web.main.ts` still imports `BrowserAgentHostDebugLogsExportService` from the chat tree, and `src/vs/platform/product/common/product.ts` still has the code-OSS fallback `defaultChatAgent`; both are outside the current allowed surfaces, were not edited, and were reported to the parent. Further defaultChatAgent removal also requires the authorized downstream product/gallery/extension-management consumers to be disconnected before removing its product value/type.
+- C4's full-chat-tree parent deletion manifest is **not ready**: additional C1/C2/C3 inbound references remain, no directory/file batches were physically deleted, and no source-absence claim is made. The current leaf is one registration-disconnection prerequisite, not C1/C4 completion.
+
+### Exact remaining unchecked U05 implementation rows
+
+- [ ] C1.RED: Add fresh/legacy product registration/window-restoration/process-start tests with no defaultChatAgent or account; require no chat/views/commands/Open in Agents/settings/session window/host IPC startup while normal workbench starts. <!-- sdd-owner: implementation -->
+- [ ] C1.GREEN: Disconnect chat/agent/session activation from `workbench.{common,desktop,web}.main.ts`, `code/electron-main/app.ts` starter/manager/session-link opening, server registrations and main/window APIs. Remove product `defaultChatAgent`, Copilot IDs/URLs/commands/auth access/proposal/auto-update/session fields and fallback defaults in `platform/product/common/product.ts`; remove only exclusive product type/schema members and direct links. Entry/registration/constructor blocks are separate measured leaves. <!-- sdd-owner: implementation -->
+- [ ] C1.TRIANGULATE → REFACTOR: Exercise old enabled chat/agent state and API requests without resurrecting a window/process/channel; keep normal workbench/local toolchain/onboarding/remote extension host usable. Do not call disconnection final source deletion. <!-- sdd-owner: implementation -->
+- [ ] C2.RED: Add empty-discovery/unsupported registration/execution tests for unavoidable public `chat`/`lm` members plus positive ordinary extension API activation; inventory every bridge/context/protocol/converter/type/proposal/test dependency before deleting it. <!-- sdd-owner: implementation -->
+- [ ] C2.GREEN: Remove `api/browser/mainThreadChat*`, `mainThreadLanguageModels.ts`, `mainThreadLanguageModelTools.ts`, `mainThreadAgentEditorComments.ts`, corresponding common `extHostChat*`/language-model/tools/comments modules, protocol/context/service registrations, `extHostTypeConverters` and internal type/test tails. Replace only unavoidable stable facade members with tiny empty/unsupported functions from design D4; no `extHostChat` or chat-service compatibility framework survives. Preserve non-chat converters and APIs. <!-- sdd-owner: implementation -->
+- [ ] C2.TRIANGULATE → REFACTOR: Exercise Node/worker ordinary APIs and public declaration checks; remove dead proposed-only grants/fixtures and document exact inert facade members/Error name/code. Re-scan to ensure converter/type tests no longer import deleted chat structures. <!-- sdd-owner: implementation -->
+- [ ] C3.RED: For each inbound consumer batch in M0, add/identify positive non-chat tests for notebook controllers, terminal/inline hints, editor/inline completions, SCM/debug/Search/accessibility/getting-started and ordinary test services; assert removed actions never register. <!-- sdd-owner: implementation -->
+- [ ] C3.GREEN: Remove only chat/agent portions of retained contributions and constructor/fixture imports; delete exclusively agent contributions such as `welcomeAgentSessions`/`agentsVoice` with source-use evidence. Clean `workbench/test/{browser,electron-browser}/workbenchTestServices.ts`, component snapshots and onboarding chat setup helper consumers. Extract a truly neutral helper only into the proper retained layer, with parity tests and no chat-shaped model/service copied elsewhere. <!-- sdd-owner: implementation -->
+- [ ] C3.TRIANGULATE → REFACTOR: Verify ordinary editor/notebook/terminal/debug/SCM/Search/diagnostic/toolchain behavior, disposable ownership and import/layer validity. Remove direct dead command links; list broader welcome-content follow-ups without editing onboarding copy/design beyond direct removal. <!-- sdd-owner: implementation -->
+- [ ] C4.RED → GREEN: Once retained inbound references are gone, assert source/import absence and remove **all `src/vs/workbench/contrib/chat/`** plus chat-only `workbench/services/chat/` source/tests/styles/assets. Expand the manifest into reverse-dependent member/file/test batches <=400; run the existing retained boundary/positive tests and add deletion assertions per leaf. No shadow chat subtree or inactive replacement models. <!-- sdd-owner: implementation -->
+- [ ] C4.TRIANGULATE → REFACTOR: Close chat ownership including mocks/component/API/test/asset and default-entitlement tails, credit telemetry deletion to T10, and rerun retained feature/API diagnostics. A physically present disconnected source file keeps the family open. <!-- sdd-owner: implementation -->
+- [ ] A2.RED: After A5/A6/A7 and C1/C2/C3 consumer disconnections, add no-auth-service/RPC/callback/loopback/device/XAA construction assertions; inventory residual `IAuthentication*`/defaultAccount/dynamic token references including `contrib/mcp` configuration/actions/language lenses and API implementations. <!-- sdd-owner: implementation -->
+- [ ] A2.GREEN: Remove `contrib/authentication/`, `services/authentication/`, `api/browser/mainThreadAuthentication.ts`, active common/node auth implementations and `extHostXaaAuthProvider`/loopback/token-storage helpers; delete main/ext-host auth RPC shapes/context/service registrations. Strip MCP account/OAuth enrollment/secret lenses/provider activation and unsupported auth-dependent operations without deleting independently used non-account behavior. Delete obsolete service/provider/OAuth tests in measured leaves while preserving A1 boundary tests. <!-- sdd-owner: implementation -->
+- [ ] A2.TRIANGULATE → REFACTOR: Re-scan callbacks/session restore/auth DI across all entrypoints, run API Node/worker fixtures and ordinary secret/URL/request tests; verify deterministic unsupported behavior and no broad secret wipe/remote revocation. Final residual auth types are public inert signatures or justified Git/generic transport semantics, never active account infrastructure. <!-- sdd-owner: implementation -->
+
+### Next-step blockers and review focus
+
+- The earlier U05.a.001 review noted that `src/vs/platform/product/common/product.ts` and `src/vs/workbench/workbench.web.main.ts` were outside the original grant. The parent has since authorized only removal of `defaultChatAgent` from the former's code-OSS fallback and removal of the Chat-backed Agent Host debug-log import/registration from the latter; this authorization supersedes that specific blocker, not any wider source-tree scope.
+- Next review should verify `U05.a.001` and `U05.a.002` claims, inspect preserved MCP/image-preview/Notebook/SSH/Agent Host behavior, and keep the C1/C2/C3 inbound-reference inventory current. No executable C4 physical-deletion manifest is ready; no source tree was physically deleted and U05 is not complete.
+
+## U05.a.002 — Remove code-OSS Chat fallback and browser Chat debug service
+
+### Structured status and action-context gate
+
+- The current parent prompt authorized this leaf's two narrow changes but supplied no current structured SDD status object. The prior U05.a.001 record contains only historical status and is not treated as a current status producer. Missing current fields: `activeChange`, `artifactStore`, `applyState`, `nextRecommended`, `dependencies`, `blockedReasons`, and `actionContext` (including mode, workspace/edit roots, and warnings).
+- Therefore this record documents only the bounded work already performed under the explicit path approval; implementation is stopped here. Do not infer readiness from the previous status snapshot or continue into additional C1, C2, C3, C4, or A2 work until the parent supplies current structured status. The earlier `feature-branch-chain`/400-line decision remains historical context, not a substitute for this missing status.
+- Current parent authorization allowed exactly: remove the `defaultChatAgent` object only from the code-OSS source fallback in `src/vs/platform/product/common/product.ts`; remove only the Chat-backed `BrowserAgentHostDebugLogsExportService` import and `IAgentHostDebugLogsExportService` registration in `src/vs/workbench/workbench.web.main.ts`. No other path was added.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** extended `build/lib/test/walkerProduct.test.ts` to reject `defaultChatAgent` in the source fallback, preserve generic Code-OSS fallback identity, reject the Chat-owned browser debug-service import/registration, and require the U07 Agent Host client/enablement seam to remain. Before source edits, `node --test lib/test/walkerProduct.test.ts` from `build/` reported **8 passing / 1 failing**, with the expected failure on `defaultChatAgent:`.
+- **GREEN:** removed the fallback `defaultChatAgent` object and the browser debug exporter import/registration. The Walker product root, product type, Chat source, desktop debug service, generic Agent Host services, and unrelated product fields were not changed in this leaf.
+- **TRIANGULATE:** the same focused selector passed **9/9** after the changes, including explicit positive checks for the web Agent Host client registration, generic remote Agent Host fallback registration, and enablement import. `npm run compile-client` completed with zero compilation errors; `npm run typecheck-client` passed; `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` passed **5/5**.
+- **REFACTOR / boundaries:** Code-OSS `nameShort` and `applicationName` fallback values remain. U07's generic Agent Host browser services remain. The change proves source fallback/entrypoint boundaries only; it does not prove Chat source-tree absence, runtime process-start absence, or the full C1 acceptance criteria.
+
+### Verification evidence and parent-run request
+
+| Exact command / evidence | Result |
+| --- | --- |
+| With Node 24.18.0 on `PATH`, `cd build && node --test lib/test/walkerProduct.test.ts` before the production edits | **8 pass / 1 fail**, expected RED on the `defaultChatAgent` fallback. |
+| Same focused `node --test` after edits | **9/9 PASS**. |
+| `npm run compile-client` | **PASS**, source/extension/API-proposal compilation reported zero errors; only non-fatal npm configuration/deprecation warnings. |
+| `npm run typecheck-client` | **PASS**, exit 0. |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **5/5 PASS**; A1 passive-empty/unsupported facade and proposal guards remain green. |
+| Scoped `git diff --check` for this leaf's files and OpenSpec artifacts | **PASS** after the final test/artifact edits. |
+| `./scripts/test-integration.sh --suite api-workspace`, cwd `/home/marialez/Work/walker` | **Parent-run verification request:** this executor did not run it because the runner's cleanup/error paths execute `rm -rf -- "$VSCODEUSERDATADIR"` (previous inspection found lines 170, 198, and 350), prohibited by the no-deletion executor boundary. Please run the exact selector in the parent-controlled environment if it remains required and return the result; do not treat it as passed here. |
+
+### Files, workload, and persisted task state
+
+- Leaf source/test changes are limited to `src/vs/platform/product/common/product.ts`, `src/vs/workbench/workbench.web.main.ts`, and `build/lib/test/walkerProduct.test.ts`. OpenSpec bookkeeping adds the U05.a.002 row to `removal-inventory.md` and this cumulative progress section. No `tasks.md` checkbox was changed: this narrow leaf does not complete any broad C1 task row; the exact unchecked C1/C2/C3/C4/A2 implementation rows remain listed in the preceding U05 section and were not altered.
+- This bounded feature-chain leaf measures **77 additions+deletions**: 17 source deletions, 15 focused test additions, 6 inventory lines, and 39 progress lines. It is below the 120-line floor; the two parent-approved source edits have no natural additional code/test surface, and adding an unrelated C1 seam would break cohesion. Recommend a parent-approved `size:exception` for this narrow leaf; no exception is assumed. No physical deletion, dependency mutation, stage, commit, or U07 service change occurred.
+- The persisted `tasks.md` checkbox state is unchanged by this leaf. The parent should provide fresh structured status and recount tasks before the next leaf; no completed broad C1/C2/C3/C4/A2 task is claimed. The prior exact unchecked-row list remains authoritative as task text, not as a status producer.
+
+### Remaining work and review focus
+
+- C1 is incomplete: this leaf removes one source fallback object and one browser entrypoint registration only. Walker's root product Copilot/default-chat values, other product/session fields, remaining workbench/window/server entrypoints, process/window-start paths, and whole-product startup assertions still need separate authorized leaves and verification.
+- C2 API/protocol/converter disconnection, C3 retained-feature integrations, C4 chat-tree manifest/deletion, and A2 auth/RPC/MCP cleanup have not been implemented in this continuation. No whole-product absence, parent deletion, or U05 completion is claimed.
+- Review next: verify only the approved two source changes; confirm web Agent Host client/fallback/enablement and common generic features still register; refresh the parent status/task count; then resume at the next authorized C1 seam. Preserve the A1 facade, Git/OS credential boundary, local data, generic diagnostics, and U07 Agent Host/SSH prerequisites.
+
+## U05 continuation — refreshed parent status and U05.a.003 desktop startup disconnection
+
+### Structured status and authorization consumed
+
+- The current parent prompt supplies authoritative status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready` (verify rounds 1–2 PASS), `syncState=blocked` because `sync-report` is missing, `archiveReady=false`, and `nextRecommended=sdd-apply`. Accounting is 108 total / 49 checked / 59 remaining / parent 0 / errors 0. A fresh task scan confirms those checkbox counts and 108 implementation-owned terminal markers with zero malformed rows.
+- `actionContext.mode=implement` (not remediate), workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat`, no commits. The parent prompt's status supersedes the stale status block in `parent-authorization.md` (101/39/62; verify report marked missing); that parent-owned file was not edited. The exact allowed surfaces remain those in `parent-authorization.md` plus its U05 stage/group additions.
+- Delivery is `feature-branch-chain`, maximum 400 additions+deletions per leaf. The parent's explicit size disposition supersedes U05.a.002's previous size-exception recommendation: **77 lines is accepted without any exception record**. `openspec/config.yaml` says strict TDD is false; this U05 work nevertheless follows the required RED → GREEN → TRIANGULATE → REFACTOR sequence.
+- Parent requests that the already-recorded `api-workspace` integration remain a parent-run verification request. It was not run here and this continuation does not alter that request.
+
+### U05.a.003 — Remove desktop Agent Host startup and Agents Window URL routing
+
+- **RED:** added an assertion to `build/lib/test/walkerProduct.test.ts` requiring `app.ts` to omit `ElectronAgentHostStarter`, `AgentHostProcessManager`, `parseExternalOpenSessionLinkUri`, `openAgentsWindow`, and `args['agents']`, while retaining ordinary `windowsMainService.open` and initial workspace/file URL handling. Before production edits, the selector failed **9 passed / 1 failed** on the Agent Host starter import.
+- **GREEN:** removed the Agent Host starter/manager construction from Electron main startup, removed the app's special `--agents` window route, and stopped routing external/initial Agent Session links to `openAgentsWindow`. Ordinary workbench windows, files/workspaces, generic protocol handling, and their `windowsMainService.open` path remain.
+- **TRIANGULATE / REFACTOR:** from `build/`, `node --test lib/test/walkerProduct.test.ts` passed **10/10**. `npm run compile-client` passed with zero errors; `npm run typecheck-client` passed; `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` passed **5/5**, preserving the A1 facade. Electron/Wayland and npm configuration/deprecation warnings were non-fatal.
+- Changed for this leaf: `src/vs/code/electron-main/app.ts`, `build/lib/test/walkerProduct.test.ts`, `removal-inventory.md`, and this progress file. No `tasks.md` checkbox changed because the broad C1.RED/GREEN/TRIANGULATE rows are not yet complete. No physical deletion, stage, or commit occurred.
+- The app-local startup and URL seams are disconnected, but C1 is not complete: source audit also found `openAgentsWindow` callers in `src/vs/platform/launch/electron-main/launchMainService.ts`, `src/vs/platform/native/electron-main/nativeHostMainService.ts`, and the `src/vs/platform/windows/electron-main/windows.ts` interface; `src/vs/platform/window/common/window.ts` holds its dedicated request/source types. These exact paths are outside the current U05 allowed edit surfaces. They remain untouched pending a separate path authorization; do not report all Agents Window startup/routes absent.
+- Exact C1 implementation rows remain unchecked in `tasks.md`:
+  - [ ] C1.RED: Add fresh/legacy product registration/window-restoration/process-start tests with no defaultChatAgent or account; require no chat/views/commands/Open in Agents/settings/session window/host IPC startup while normal workbench starts. <!-- sdd-owner: implementation -->
+  - [ ] C1.GREEN: Disconnect chat/agent/session activation from `workbench.{common,desktop,web}.main.ts`, `code/electron-main/app.ts` starter/manager/session-link opening, server registrations and main/window APIs. Remove product `defaultChatAgent`, Copilot IDs/URLs/commands/auth access/proposal/auto-update/session fields and fallback defaults in `platform/product/common/product.ts`; remove only exclusive product type/schema members and direct links. Entry/registration/constructor blocks are separate measured leaves. <!-- sdd-owner: implementation -->
+  - [ ] C1.TRIANGULATE → REFACTOR: Exercise old enabled chat/agent state and API requests without resurrecting a window/process/channel; keep normal workbench/local toolchain/onboarding/remote extension host usable. Do not call disconnection final source deletion. <!-- sdd-owner: implementation -->
+- Next focus: finish remaining authorized C1 product/settings/entrypoint seams; request exact authorization before changing any out-of-grant window/native/launch path. Preserve generic Agent Host/SSH prerequisites, ordinary protocol/window behavior, local state, Git/OS credentials, and diagnostics. C2/C3/C4/A2 remain untouched in this continuation so far.
+
+### U05.a.004 — Remove Chat-owned product auth, voice, and auto-update values
+
+- **RED:** added product-composition assertions requiring no product-level trusted extension-auth grant, no `voiceWsUrl` in Walker's root product or web-server product payload, an empty Copilot auto-update list, and preservation of the U07 `agentsTelemetryAppName`. Before edits the focused Node selector failed **10 passing / 1 failing** on `trustedExtensionAuthAccess`.
+- **GREEN:** removed the Copilot Chat `trustedExtensionAuthAccess` object, replaced `builtInExtensionsEnabledWithAutoUpdates` with the required generic empty list, removed Walker's Chat voice WebSocket endpoint, and removed its web-client serialization. Preserved `sessionsWindowAllowedExtensions` while out-of-grant Agents Window launch routes remain; retained `agentsTelemetryAppName` as a U07 prerequisite.
+- **TRIANGULATE / REFACTOR:** `node --test lib/test/walkerProduct.test.ts` from `build/` passed **11/11**. `npm run compile-client` passed with zero errors; `npm run typecheck-client` passed; `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` passed **5/5**. The Node fixture parses the edited root product JSON and verifies generic server identity remains.
+- Changed for this leaf: `product.json`, `src/vs/server/node/webClientServer.ts`, `build/lib/test/walkerProduct.test.ts`, `removal-inventory.md`, and this progress file. No broad C1 checkbox was marked complete; no physical deletion, task checkbox change, stage, or commit occurred.
+- The root `defaultChatAgent` object and product type remain. A direct `defaultChatAgent` reader in `src/vs/platform/extensionManagement/common/abstractExtensionManagementService.ts` is outside the exact grant and must be handled before safely removing the runtime value; other safe optional consumers and authorized extension-management branches remain for later C1/C3 work. The full C1 task is not complete.
+- The parent-run `api-workspace` request from U05.a.002 remains unchanged. No integration result is claimed. The parent status still points to `sdd-apply`; task accounting remains 108 / 49 checked / 59 remaining because no broad implementation row has completed.
+
+### Current C1 stop condition — exact additional path approval required
+
+The C1 task still requires disconnection of remaining Agents Window launch/native/window routes and removal of the unsafe direct product consumer. These exact repository paths were discovered as necessary but are outside the current U05 grant; no edits were made to them:
+
+- `src/vs/platform/launch/electron-main/launchMainService.ts` — `--agents` still routes to `openAgentsWindow`.
+- `src/vs/platform/native/electron-main/nativeHostMainService.ts` and `src/vs/platform/native/common/native.ts` — native host method and interface still expose the Agents Window API.
+- `src/vs/platform/windows/electron-main/windows.ts` and `src/vs/platform/window/common/window.ts` — window service method and Agents Window types remain.
+- `src/vs/platform/workspaces/electron-main/workspacesHistoryMainService.ts` — Windows Jump List still includes an Agents Window task.
+- `src/vs/platform/extensionManagement/common/abstractExtensionManagementService.ts` — extension-pack uninstall path still dereferences `productService.defaultChatAgent.extensionId` directly, so removing the root runtime product value before guarding this consumer is unsafe.
+
+The implementation was paused before these out-of-grant edits. Parent authorization of all seven exact paths (or a narrower approved subset) was required to continue C1; no candidate wildcard was requested. This is a historical stop condition superseded by the parent's later `approve-all-seven` grant. The subsequent C1 and C2 work below remains within the exact U05 roots in `parent-authorization.md`.
+
+## U05 continuation — approved C1 routes/settings and C2 public API facades
+
+### Structured status and action context consumed
+
+- Parent-supplied status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `syncState=blocked` because `sync-report` is missing, `archiveReady=false`, `nextRecommended=sdd-apply`; latest task accounting is 108 total / 49 checked / 59 remaining. This status supersedes stale counts in the cumulative historical records and the older status block in `parent-authorization.md`.
+- `actionContext.mode=implement` (default), workspace `/home/marialez/Work/walker`, branch `product-debloat`. Exact edit roots and C1 path approval are the parent-owned `Stage U05` entries in `parent-authorization.md`; no paths were inferred beyond them. The workload gate remains resolved to `feature-branch-chain`, 400 additions+deletions per leaf, no size exception. `openspec/config.yaml` declares `strict_tdd: false`; bounded leaves below still use RED → GREEN → TRIANGULATE → REFACTOR evidence where captured.
+- Ownership review: C1/C2/C3/C4/A2 rows are terminal `sdd-owner: implementation` markers; no malformed marker was found. `tasks.md` was not edited because no broad phase row is complete. Task count remains the parent-supplied 108 / 49 / 59.
+
+### C1 — approved routes, product fields, and settings
+
+- `U05.a.005` disconnected the approved `--agents`, native/main-window, and Windows Jump List routes. The legacy native method remains only as a deprecated signature that deterministically rejects; ordinary workbench window and protocol opening remain. Recent Agent Sessions workspaces are filtered from recent results without rewriting stored history.
+- `U05.a.006` removed the Walker `defaultChatAgent`/Agents Window extension allowlist product fields, Chat-specific extension gallery/management branches, Agents Window configuration overrides, Chat command-palette settings, and stale Agents Window setting prose. Generic extension management and workbench settings remain.
+- Inventory estimates are approximately 165 changed lines for a.005 and 205 for a.006, including focused tests and allocated artifact edits; both stay within the 120–400 target. These estimates and exact paths are recorded in `removal-inventory.md`.
+- The focused Node fixture now passes 17/17 and covers the relevant route/product/settings absence plus generic window/product and U07 retention. No separate baseline RED result for these already-existing route/product edits was captured by this continuation; no RED evidence is fabricated. The remaining C1 row is not checked: `extensionEnablementService.ts` still contains Sessions Window logic, product type members remain in `platform/product/common/product.ts`, and the legacy-state/ordinary-window behavior still needs the verifier's broader pass.
+
+### C2 — facade progress, not bridge completion
+
+- `U05.b.001` replaces the live `vscode.chat` object with an inert facade. Chat method calls throw `ChatUnsupported` / `WALKER_CHAT_UNSUPPORTED`; `onDid*` events are inert. Chat participant registration never calls the supplied handler.
+- `U05.b.002` replaces the live `vscode.lm` object with empty model/tool/embedding/MCP discovery, false proxy availability, inert events, and deterministic unsupported calls. The public declarations remain for compatibility.
+- `U05.b.003` makes `interactive.transferActiveChat`, window Chat status/session-resource APIs, and Agent Editor Comments APIs inert/unsupported. It removes the Agent Editor Comments main-thread customer import and stops constructing `ExtHostChatStatus`.
+- C2 remains incomplete: `ExtHostAgentEditorComments` still registers because the protocol retains it and `assertRegistered` expects current context actors; other Chat/language-model/tools/session/context/debug/quota actors and main-thread customer imports also remain. Public facades are not a substitute for removing those RPC/protocol/converter/type/proposal/test bridges. No `api-workspace` integration result is claimed.
+- C2 leaf estimates recorded in `removal-inventory.md`: b.001 ~235, b.002 ~190, b.003 ~125 additions+deletions including tests/artifact allocations. The b.003 RED selector failed 16/17 on the absent facade wiring; after GREEN the same Node selector passed 17/17.
+
+### Verification evidence
+
+| Command/evidence | Result |
+| --- | --- |
+| With Node 24.18.0, `cd build && node --test lib/test/walkerProduct.test.ts` | **17/17 PASS** after the C2.b.003 facade wiring. The recorded RED immediately before b.003 edits was **16 pass / 1 fail**, expected on missing interactive facade wiring. |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **8/8 PASS** after compilation, including no-provider-callback Chat registration and inert interactive/status/Agent Comments behaviors. A pre-compilation run exercised stale generated tests (7/7); it was rerun after compile and is not counted as final evidence. |
+| `npm run compile-client` | Initial run caught unused Chat API bindings after facade replacement; after removing the unused local bindings and ChatStatus construction, rerun **PASS**, zero compile errors. |
+| `npm run typecheck-client` | **PASS**, exit 0. |
+| `git diff --check` | **PASS** after the final source and artifact updates. |
+| `./scripts/test-integration.sh --suite api-workspace` | **Not run**. The parent-run request remains because runner cleanup uses prohibited `rm -rf`; no integration pass is claimed. |
+
+### Files, deletion ownership, and review focus
+
+- C1 source changes are the approved launch/native/window/history/product/extension-management/workbench-configuration files listed under U05.a.005/.006 in `removal-inventory.md`, plus `build/lib/test/walkerProduct.test.ts` and the extension-enablement test. C2 changed `src/vs/workbench/api/common/extHost.api.impl.ts`, `src/vs/workbench/api/browser/extensionHost.contribution.ts`, `src/vs/workbench/api/test/common/accountFreeApi.test.ts`, and `build/lib/test/walkerProduct.test.ts`. `removal-inventory.md` and this progress file were updated cumulatively; `tasks.md` was not changed.
+- Source modules remain physically present. No file was unlinked, staged, committed, or deleted. The Agent Editor Comments class/protocol and disconnected Chat trees are not declared physically absent. C4's parent-deletion manifest is not ready while C1/C2/C3 inbound consumers remain.
+- Review next: inspect residual product readers and `extensionEnablementService.ts`; verify old recent-workspace state without persistence writes; remove remaining main-thread/ext-host Chat, LM, tools, sessions, context and debug registrations/protocols/converters/types/proposal grants in measured C2 leaves; then start C3 only after its retained consumer map and C1/C2 prerequisites are verified. C4 and A2 remain dependency-gated; sync remains blocked on the missing report.
+
+## U05.a.007 — Remove Chat-specific extension enablement and product allowlist readers
+
+### Structured status and authorization
+
+- Consumed parent status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `syncState=blocked` because `sync-report` is missing, `archiveReady=false`, and `nextRecommended=sdd-apply`; task accounting is 108 total / 49 checked / 59 remaining. Action context is `mode=implement`, workspace `/home/marialez/Work/walker`, branch `product-debloat`. Exact surfaces were checked against the parent-owned U05 grant and include `src/vs/base/common/product.ts` and extension-management source/tests. The approved feature-branch-chain budget remains <=400 changed lines per leaf; no size exception.
+- `openspec/config.yaml` declares `strict_tdd: false`; this leaf nevertheless followed task-required RED → GREEN → TRIANGULATE → REFACTOR. The OpenSpec task checkboxes were not changed because the broad C1 rows remain incomplete.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added focused regression tests for (1) legacy `defaultChatAgent` metadata not changing an extension or writing `builtinChatExtensionEnablementMigration`, (2) `chat.extensionUnification.enabled` not disabling an ordinary extension, and (3) a legacy Sessions product allowlist not bypassing extension capability checks. After `npm run compile-client`, the focused selector failed as expected: 123 passed / 3 failed. Baseline failures were Chat migration disabling the extension/writing its flag, unification returning `DisabledByUnification`, and the Sessions product list bypassing capability checks.
+- **GREEN:** removed the Chat entitlement/settings imports and constructor injection, Chat profile migration and profile-switch hook, `defaultChatAgent` reads used for extension unification, and the `chat.extensionUnification.enabled` listener/disable branch. Removed `sessionsWindowAllowedExtensions` from the product type and stopped reading that product allowlist; removed the Chat-extension exception from Sessions filtering. No migration flag or other persisted profile state is read, rewritten, or cleared.
+- **TRIANGULATE / REFACTOR:** retained generic extension enablement and ordinary-window behavior. Preserved the Sessions-specific `isSessionsWindow` manifest-capability filtering while the Sessions application source still exists; existing tests for configured capability support and unsupported extensions continue to pass. The stale Walker product allowlist is not restored by old product metadata. `defaultChatAgent` remains in the product type because retained C3/C4 consumers still compile against it; its removal is deferred until those inbound references are disconnected.
+
+### Verification evidence
+
+| Exact command / evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` before RED selector | **PASS**, generated test output updated under authorized `out/**`. |
+| `./scripts/test.sh --run vs/workbench/services/extensionManagement/test/browser/extensionEnablementService.test` before production changes | **Expected RED:** 123 pass / 3 fail on the three Chat/Sessions-specific behaviors listed above. |
+| Node 24.18.0 `npm run compile-client` after GREEN | **PASS**, 0 compile errors. |
+| Same focused extension-enablement selector after GREEN | **126/126 PASS**, including ordinary extension activation and retained Sessions capability behavior. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0. |
+| `git diff --check` scoped to the product type and extension-enablement service/test | **PASS**. Static scans found no Chat entitlement, `defaultChatAgent`, unification-setting, or Sessions product-allowlist reader remaining in `extensionEnablementService.ts`, and no `sessionsWindowAllowedExtensions` member in `src/vs/base/common/product.ts`. |
+
+### Files, workload, and remaining scope
+
+- Changed: `src/vs/base/common/product.ts`, `src/vs/workbench/services/extensionManagement/browser/extensionEnablementService.ts`, its browser test, `removal-inventory.md`, and this progress file. The measured leaf is 208 additions+deletions: 174 source/test lines and 34 OpenSpec lines, within the 400-line ceiling. No `tasks.md` checkbox changed.
+- Generic Sessions Window gating remains intentionally until U06 disconnects/removes the Sessions application; this leaf removes only the Chat exception and product-specific allowlist field. No Sessions tree, generic extension capability logic, or ordinary window behavior was deleted.
+- C1 remains incomplete. The `defaultChatAgent` product type and other direct readers remain in retained inline-completions/SCM/editor features and disconnected chat/session modules; the compile graph requires further C3 disconnection and C4/C5 source removal before safe type deletion. C2 actor/protocol teardown is separately in progress; no API integration result or physical source absence is claimed here.
+- Review focus: confirm no extension-enablement DI path constructs `IChatEntitlementService`; verify legacy profile flags remain untouched, generic extension activation stays ordinary, and Sessions capability filtering stays until U06. The exact broad unchecked C1/C2/C3/C4/A2 task rows remain in the surrounding U05 progress record; no family or stage completion is implied.
+
+## U05.b.004 — Disconnect Chat and language-model API actors
+
+### Structured status, authorization, and workload
+
+- Consumed parent status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `syncState=blocked` due to missing `sync-report`, `archiveReady=false`, `nextRecommended=sdd-apply`; task accounting remains 108 total / 49 checked / 59 remaining. Action context is `mode=implement`, workspace `/home/marialez/Work/walker`, branch `product-debloat`; U05 paths are authorized by `parent-authorization.md`.
+- The actor-disconnection source was already present in the worktree at this continuation and had not yet been recorded in progress/inventory. `openspec/config.yaml` declares `strict_tdd: false`. No broad task checkbox was changed. The actor-only leaf is estimated at about 185 additions+deletions including its tests and allocated OpenSpec evidence, below the 400-line maximum; this estimate separates it from the earlier b.001–b.003 facade leaves.
+
+### Disconnection and retained boundary
+
+- Removed construction/registration of the Chat, language-model, tools, embeddings, code-mapper, session, context, debug, quota, output-renderer and Agent Editor Comments extension-host actors. The actor registration assertion now explicitly excludes only the named disconnected Chat/API contexts and continues asserting all other `ExtHostContext` registrations.
+- Removed the corresponding main-thread Chat/language-model/tools customer imports and stopped constructing `MainThreadChatOutputRenderer` in the webview manager. Removed the `IExtHostLanguageModels` singleton and extension-service injection. Extension contexts still receive `languageModelAccessInformation`, now an inert value with `Event.None` and `canSendRequest: () => false`.
+- Retained ordinary `ExtHostCommands`/`MainThreadCommands` registration and regular extension activation. Existing inert public `chat`, `lm`, interactive, Chat status/session-resource and Agent Editor Comments facades remain unchanged. Protocol identifiers and Chat/LM source modules are still present; this is a registration/construction disconnection, not physical deletion.
+- No separate pre-change RED transcript for the actor-registration assertions was available, so RED is not claimed. The focused absence/ordinary-API assertions and current post-disconnection passes provide GREEN/TRIANGULATE evidence without fabricating a baseline failure.
+
+### Verification evidence
+
+| Exact command / evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` | **PASS**, 0 compile errors; includes the already-present actor disconnections and U05.a.007 changes. |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10/10 PASS**, including actor/customer disconnection, retained ordinary command registration and inert language-model access. |
+| `./scripts/test.sh --run vs/workbench/api/test/common/extHostExtensionActivator.test` | **10/10 PASS**, ordinary extension activation remains operational. |
+| `./scripts/test.sh --run vs/workbench/api/test/browser/extHostCommands.test` | **5/5 PASS**. |
+| `./scripts/test.sh --run vs/workbench/api/test/browser/extHostApiCommands.test` | **52/52 PASS**, ordinary language/API commands remain operational. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0. |
+| Mistyped selector `./scripts/test.sh --run vs/workbench/api/test/common/extHostCommands.test` | **Harness path error**, exited 1 because the compiled test is under `api/test/browser/`; the corrected `browser/extHostCommands.test` selector above passed. |
+
+### Remaining C2 work and review focus
+
+- Changed for this bounded work: `src/vs/workbench/api/common/extHost.api.impl.ts`, `extHost.common.services.ts`, `extHostExtensionService.ts`, new `extHostLanguageModelAccessInformation.ts`, `src/vs/workbench/api/browser/extensionHost.contribution.ts`, `mainThreadWebviewManager.ts`, `src/vs/workbench/api/test/common/accountFreeApi.test.ts`, and the inventory/progress artifacts. The new helper file was present as an authorized untracked target. No physical source deletion, staging, or commit occurred.
+- C2 is not complete: protocol context declarations, Chat/LM implementation modules, type converters, proposed declarations/registry tails, test fixtures and remaining related AI customers remain. `api-workspace` integration remains unrun here because runner cleanup uses prohibited `rm -rf`; no integration result is claimed. C1 still awaits safe removal of the `defaultChatAgent` type after C3/C4 inbound consumers are handled.
+- Verifier focus: ensure the registration invariant excludes exactly the disconnected Chat/API actors; ensure ordinary command registration/activation and the inert public facades remain; inspect language-model context access for no event/request capability; distinguish disconnected RPC identifiers from physically deleted sources.
+
+### Exact unchecked implementation rows still assigned to this U05 slice
+
+- [ ] C1.RED: Add fresh/legacy product registration/window-restoration/process-start tests with no defaultChatAgent or account; require no chat/views/commands/Open in Agents/settings/session window/host IPC startup while normal workbench starts. <!-- sdd-owner: implementation -->
+- [ ] C1.GREEN: Disconnect chat/agent/session activation from `workbench.{common,desktop,web}.main.ts`, `code/electron-main/app.ts` starter/manager/session-link opening, server registrations and main/window APIs. Remove product `defaultChatAgent`, Copilot IDs/URLs/commands/auth access/proposal/auto-update/session fields and fallback defaults in `platform/product/common/product.ts`; remove only exclusive product type/schema members and direct links. Entry/registration/constructor blocks are separate measured leaves. <!-- sdd-owner: implementation -->
+- [ ] C1.TRIANGULATE → REFACTOR: Exercise old enabled chat/agent state and API requests without resurrecting a window/process/channel; keep normal workbench/local toolchain/onboarding/remote extension host usable. Do not call disconnection final source deletion. <!-- sdd-owner: implementation -->
+- [ ] C2.RED: Add empty-discovery/unsupported registration/execution tests for unavoidable public `chat`/`lm` members plus positive ordinary extension API activation; inventory every bridge/context/protocol/converter/type/proposal/test dependency before deleting it. <!-- sdd-owner: implementation -->
+- [ ] C2.GREEN: Remove `api/browser/mainThreadChat*`, `mainThreadLanguageModels.ts`, `mainThreadLanguageModelTools.ts`, `mainThreadAgentEditorComments.ts`, corresponding common `extHostChat*`/language-model/tools/comments modules, protocol/context/service registrations, `extHostTypeConverters` and internal type/test tails. Replace only unavoidable stable facade members with tiny empty/unsupported functions from design D4; no `extHostChat` or chat-service compatibility framework survives. Preserve non-chat converters and APIs. <!-- sdd-owner: implementation -->
+- [ ] C2.TRIANGULATE → REFACTOR: Exercise Node/worker ordinary APIs and public declaration checks; remove dead proposed-only grants/fixtures and document exact inert facade members/Error name/code. Re-scan to ensure converter/type tests no longer import deleted chat structures. <!-- sdd-owner: implementation -->
+- [ ] C3.RED: For each inbound consumer batch in M0, add/identify positive non-chat tests for notebook controllers, terminal/inline hints, editor/inline completions, SCM/debug/Search/accessibility/getting-started and ordinary test services; assert removed actions never register. <!-- sdd-owner: implementation -->
+- [ ] C3.GREEN: Remove only chat/agent portions of retained contributions and constructor/fixture imports; delete exclusively agent contributions such as `welcomeAgentSessions`/`agentsVoice` with source-use evidence. Clean `workbench/test/{browser,electron-browser}/workbenchTestServices.ts`, component snapshots and onboarding chat setup helper consumers. Extract a truly neutral helper only into the proper retained layer, with parity tests and no chat-shaped model/service copied elsewhere. <!-- sdd-owner: implementation -->
+- [ ] C3.TRIANGULATE → REFACTOR: Verify ordinary editor/notebook/terminal/debug/SCM/Search/diagnostic/toolchain behavior, disposable ownership and import/layer validity. Remove direct dead command links; list broader welcome-content follow-ups without editing onboarding copy/design beyond direct removal. <!-- sdd-owner: implementation -->
+- [ ] C4.RED → GREEN: Once retained inbound references are gone, assert source/import absence and remove **all `src/vs/workbench/contrib/chat/`** plus chat-only `workbench/services/chat/` source/tests/styles/assets. Expand the manifest into reverse-dependent member/file/test batches <=400; run the existing retained boundary/positive tests and add deletion assertions per leaf. No shadow chat subtree or inactive replacement models. <!-- sdd-owner: implementation -->
+- [ ] C4.TRIANGULATE → REFACTOR: Close chat ownership including mocks/component/API/test/asset and default-entitlement tails, credit telemetry deletion to T10, and rerun retained feature/API diagnostics. A physically present disconnected source file keeps the family open. <!-- sdd-owner: implementation -->
+- [ ] A2.RED: After A5/A6/A7 and C1/C2/C3 consumer disconnections, add no-auth-service/RPC/callback/loopback/device/XAA construction assertions; inventory residual `IAuthentication*`/defaultAccount/dynamic token references including `contrib/mcp` configuration/actions/language lenses and API implementations. <!-- sdd-owner: implementation -->
+- [ ] A2.GREEN: Remove `contrib/authentication/`, `services/authentication/`, `api/browser/mainThreadAuthentication.ts`, active common/node auth implementations and `extHostXaaAuthProvider`/loopback/token-storage helpers; delete main/ext-host auth RPC shapes/context/service registrations. Strip MCP account/OAuth enrollment/secret lenses/provider activation and unsupported auth-dependent operations without deleting independently used non-account behavior. Delete obsolete service/provider/OAuth tests in measured leaves while preserving A1 boundary tests. <!-- sdd-owner: implementation -->
+- [ ] A2.TRIANGULATE → REFACTOR: Re-scan callbacks/session restore/auth DI across all entrypoints, run API Node/worker fixtures and ordinary secret/URL/request tests; verify deterministic unsupported behavior and no broad secret wipe/remote revocation. Final residual auth types are public inert signatures or justified Git/generic transport semantics, never active account infrastructure. <!-- sdd-owner: implementation -->
+
+## U05.c.001 — Disconnect Chat integrations from retained Search
+
+### Structured status and authorization consumed
+
+- Parent status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `syncState=blocked` because `sync-report` is missing, `archiveReady=false`, `nextRecommended=sdd-apply`; parent accounting is 108 implementation rows / 49 checked / 59 remaining / parent 0 / errors 0.
+- Action context: `mode=implement`, workspace `/home/marialez/Work/walker`, branch `product-debloat`; no warnings. The exact Search source/test paths are in the parent-owned `approve-c3-cross-tree` grant. Delivery remains `feature-branch-chain`, 400 changed lines per leaf, no size exception. `openspec/config.yaml` sets strict TDD false; task-required RED → GREEN → TRIANGULATE → REFACTOR was followed.
+- Ownership review found terminal `sdd-owner: implementation` markers on the U05 task rows; no malformed or duplicate markers. `tasks.md` was not changed because this Search leaf does not complete the broad C3 tasks.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added a source-boundary regression to `searchChatContext.test.ts`. Before production edits, after `npm run compile-client`, the Search selector failed **1 failing / 2 passing** because `search.contribution.ts` still imported and registered `SearchChatContextContribution`. The assertion also requires ordinary Search widget/view registration and file/symbol quick access to remain.
+- **GREEN:** removed the Chat context-picker registration from Search contribution startup; removed the Quick Chat command-center item and Chat widget file-attachment callback/service injection from `anythingQuickAccess.ts`; removed Chat symbol attachment and Chat service/type injection from `symbolsQuickAccess.ts`. Normal Search view/model, quick access, and accept/open paths remain.
+- **TRIANGULATE:** the source-boundary test verifies the Chat registration/action/hooks are absent and the ordinary Search/quick-access paths remain. The existing file-completion helper and its 100-result limit remain available to Chat/Sessions callers.
+- **REFACTOR / diagnostics:** the first compile surfaced a now-unused `registerWorkbenchContribution2`/`WorkbenchPhase` import, which was removed. The first GREEN test run exposed an overly narrow `accept` regex for the existing `async` callback; the assertion was corrected to accept both ordinary and async handlers. These were implementation/test diagnostics, not unrelated failures.
+
+### Verification evidence
+
+| Exact command / evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` before source edits | **PASS**, 0 compile errors; authorized generated output only. |
+| `./scripts/test.sh --run vs/workbench/contrib/search/test/browser/searchChatContext.test` before source edits | **Expected RED:** 1 failing / 2 passing on the still-registered Search Chat context contribution. |
+| Node 24.18.0 `npm run compile-client` after source edits | **PASS**, 0 compile errors. An intermediate run caught only the unused contribution lifecycle import; it passed after that import was removed. |
+| Same Search Chat Context selector after GREEN | **3/3 PASS**, including retained completion limit and Search source boundary. |
+| `./scripts/test.sh --run vs/workbench/contrib/search/test/browser/searchModel.test` | **11/11 PASS**, positive non-chat Search model coverage. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0. |
+| Scoped `git diff --check` on the four Search source/test files | **PASS**. |
+
+### Files, workload, and remaining scope
+
+- Source/test files changed: `search.contribution.ts`, `anythingQuickAccess.ts`, `symbolsQuickAccess.ts`, and `searchChatContext.test.ts`; OpenSpec tracking is in `removal-inventory.md` and this progress file. No `tasks.md` checkbox changed. The parent-owned `api-workspace` integration was not run because its cleanup uses prohibited `rm -rf`.
+- This leaf disconnects Search-host Chat integrations only. `searchChatContext.ts` remains because workbench Chat and Sessions Chat code still imports its file/folder search helper; C4 source absence is not claimed. No Search model, search action, ordinary editor open, persisted state, or unrelated diagnostics behavior was changed.
+- **Measured leaf budget:** **147 additions+deletions** total: 28 source/test additions + 58 deletions and 61 OpenSpec inventory/progress additions. The 120–400 review budget is satisfied without an exception. No physical deletion, stage, or commit occurred.
+- C1/C2/C3/C4/A2 broad task rows remain incomplete. Current task checkbox accounting remains parent-supplied 108 / 49 / 59 because this leaf completed no persisted broad task row. C1 still has product/type/legacy-window boundaries; C2 protocol/converter/type/proposed-API tails remain; further C3 integration batches remain; C4 and A2 remain gated by those inbound consumer disconnections.
+
+### Exact unchecked implementation rows still in scope
+
+- [ ] C1.RED: Add fresh/legacy product registration/window-restoration/process-start tests with no defaultChatAgent or account; require no chat/views/commands/Open in Agents/settings/session window/host IPC startup while normal workbench starts. <!-- sdd-owner: implementation -->
+- [ ] C1.GREEN: Disconnect chat/agent/session activation from `workbench.{common,desktop,web}.main.ts`, `code/electron-main/app.ts` starter/manager/session-link opening, server registrations and main/window APIs. Remove product `defaultChatAgent`, Copilot IDs/URLs/commands/auth access/proposal/auto-update/session fields and fallback defaults in `platform/product/common/product.ts`; remove only exclusive product type/schema members and direct links. Entry/registration/constructor blocks are separate measured leaves. <!-- sdd-owner: implementation -->
+- [ ] C1.TRIANGULATE → REFACTOR: Exercise old enabled chat/agent state and API requests without resurrecting a window/process/channel; keep normal workbench/local toolchain/onboarding/remote extension host usable. Do not call disconnection final source deletion. <!-- sdd-owner: implementation -->
+- [ ] C2.RED: Add empty-discovery/unsupported registration/execution tests for unavoidable public `chat`/`lm` members plus positive ordinary extension API activation; inventory every bridge/context/protocol/converter/type/proposal/test dependency before deleting it. <!-- sdd-owner: implementation -->
+- [ ] C2.GREEN: Remove `api/browser/mainThreadChat*`, `mainThreadLanguageModels.ts`, `mainThreadLanguageModelTools.ts`, `mainThreadAgentEditorComments.ts`, corresponding common `extHostChat*`/language-model/tools/comments modules, protocol/context/service registrations, `extHostTypeConverters` and internal type/test tails. Replace only unavoidable stable facade members with tiny empty/unsupported functions from design D4; no `extHostChat` or chat-service compatibility framework survives. Preserve non-chat converters and APIs. <!-- sdd-owner: implementation -->
+- [ ] C2.TRIANGULATE → REFACTOR: Exercise Node/worker ordinary APIs and public declaration checks; remove dead proposed-only grants/fixtures and document exact inert facade members/Error name/code. Re-scan to ensure converter/type tests no longer import deleted chat structures. <!-- sdd-owner: implementation -->
+- [ ] C3.RED: For each inbound consumer batch in M0, add/identify positive non-chat tests for notebook controllers, terminal/inline hints, editor/inline completions, SCM/debug/Search/accessibility/getting-started and ordinary test services; assert removed actions never register. <!-- sdd-owner: implementation -->
+- [ ] C3.GREEN: Remove only chat/agent portions of retained contributions and constructor/fixture imports; delete exclusively agent contributions such as `welcomeAgentSessions`/`agentsVoice` with source-use evidence. Clean `workbench/test/{browser,electron-browser}/workbenchTestServices.ts`, component snapshots and onboarding chat setup helper consumers. Extract a truly neutral helper only into the proper retained layer, with parity tests and no chat-shaped model/service copied elsewhere. <!-- sdd-owner: implementation -->
+- [ ] C3.TRIANGULATE → REFACTOR: Verify ordinary editor/notebook/terminal/debug/SCM/Search/diagnostic/toolchain behavior, disposable ownership and import/layer validity. Remove direct dead command links; list broader welcome-content follow-ups without editing onboarding copy/design beyond direct removal. <!-- sdd-owner: implementation -->
+- [ ] C4.RED → GREEN: Once retained inbound references are gone, assert source/import absence and remove **all `src/vs/workbench/contrib/chat/`** plus chat-only `workbench/services/chat/` source/tests/styles/assets. Expand the manifest into reverse-dependent member/file/test batches <=400; run the existing retained boundary/positive tests and add deletion assertions per leaf. No shadow chat subtree or inactive replacement models. <!-- sdd-owner: implementation -->
+- [ ] C4.TRIANGULATE → REFACTOR: Close chat ownership including mocks/component/API/test/asset and default-entitlement tails, credit telemetry deletion to T10, and rerun retained feature/API diagnostics. A physically present disconnected source file keeps the family open. <!-- sdd-owner: implementation -->
+- [ ] A2.RED: After A5/A6/A7 and C1/C2/C3 consumer disconnections, add no-auth-service/RPC/callback/loopback/device/XAA construction assertions; inventory residual `IAuthentication*`/defaultAccount/dynamic token references including `contrib/mcp` configuration/actions/language lenses and API implementations. <!-- sdd-owner: implementation -->
+- [ ] A2.GREEN: Remove `contrib/authentication/`, `services/authentication/`, `api/browser/mainThreadAuthentication.ts`, active common/node auth implementations and `extHostXaaAuthProvider`/loopback/token-storage helpers; delete main/ext-host auth RPC shapes/context/service registrations. Strip MCP account/OAuth enrollment/secret lenses/provider activation and unsupported auth-dependent operations without deleting independently used non-account behavior. Delete obsolete service/provider/OAuth tests in measured leaves while preserving A1 boundary tests. <!-- sdd-owner: implementation -->
+- [ ] A2.TRIANGULATE → REFACTOR: Re-scan callbacks/session restore/auth DI across all entrypoints, run API Node/worker fixtures and ordinary secret/URL/request tests; verify deterministic unsupported behavior and no broad secret wipe/remote revocation. Final residual auth types are public inert signatures or justified Git/generic transport semantics, never active account infrastructure. <!-- sdd-owner: implementation -->
+
+### Review focus / next leaf
+
+- Verify no Chat service/context imports or Chat attachment affordances return to the Search contribution/quick-access providers, while normal file/symbol result acceptance and Search model behavior remain. Re-check direct Chat/Sessions helper consumers before C4; keep `searchChatContext.ts` intact until they are independently disconnected or parent-authorized for deletion.
+- Continue with the next measured C3/C2 leaf only within the parent-listed U05 surfaces. Preserve A1 facade semantics, generic Search/editor behavior, ordinary API activation, generic diagnostics, local user data, Git/OS credentials, and U07 Agent Host/SSH prerequisites.
+
+## U05.c.002 — Remove Chat-only accessibility integrations while preserving host behavior
+
+### Structured status and authorization
+
+- Parent status consumed: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `syncState=blocked` because `sync-report` is missing, `archiveReady=false`, `nextRecommended=sdd-apply`; accounting is 108 implementation rows / 49 checked / 59 remaining / parent 0 / errors 0.
+- Action context: `mode=implement`, workspace `/home/marialez/Work/walker`, branch `product-debloat`; exact accessibility and terminal-help paths are in `approve-c3-cross-tree`, and the boundary test is in the U05-authorized `src/vs/workbench/test/**` root. Review remains `feature-branch-chain`, <=400 additions+deletions per leaf, no size exception. `strict_tdd=false`; RED → GREEN → TRIANGULATE → REFACTOR was followed.
+- No broad task checkbox changed: C3 remains incomplete. No file was deleted, staged, or committed; `.pi/` and unrelated dirty files were preserved.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added a retained-boundary test covering the accessibility view/action/help paths. After compilation, it failed **1 failing / 1 passing** because Accessible View still imported the Chat code-block provider and Chat API types. Assertions also protect generic accessible-view actions, inline-completion acceptance, editor comment help, speech-provider dictation, and terminal accessible help.
+- **GREEN:** removed Chat code-block parsing and provider registration, Chat-only next/previous code-block actions, and Chat-specific accessibility-help text from editor and terminal help. Removed the now-unreferenced `accessibleViewContainsCodeBlocks` key. Generic accessible-view/navigation, inline-completion acceptance, editor comments, speech-provider dictation and terminal behavior remain.
+- The first compile identified that the out-of-scope platform `IAccessibleViewService` still requires `getCodeBlockContext` and `navigateToCodeBlock`, and that Accessible View actions still use the provider ID for inline-completion actions. Kept the platform contract with inert workbench stubs and restored the generic inline-completion imports. This is a compatibility constraint, not a Chat implementation.
+- **TRIANGULATE:** accessible-view's two existing lifecycle/disposal tests pass; static boundary assertions verify no Chat provider/action/help bridge and positive generic paths. The account-free API suite remains green. The Chat-owned `accessibleViewInCodeBlock` key is retained for current Chat callers but is no longer bound or set by the workbench AccessibleView.
+
+### Verification evidence
+
+| Exact command / evidence | Result |
+| --- | --- |
+| `npm run compile-client` (first post-edit attempt) | **Failed transiently** on the platform interface compatibility and removed inline-completion imports; both were corrected within the authorized workbench paths. |
+| Node 24.18.0 `npm run compile-client` after corrections | **PASS**, zero TypeScript compile errors. |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` before source edits | **Expected RED:** 1 failing / 1 passing. |
+| Same boundary selector after GREEN | **2 passing**, including generic accessibility and help-path assertions. |
+| `./scripts/test.sh --run vs/workbench/contrib/accessibility/test/browser/accessibleView.test` | **3 passing**, including retained Accessible View lifecycle/disposal behavior. |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing**; inert Chat/LM API behavior and ordinary extension-host actors remain intact. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0. |
+| Scoped `git diff --check` on accessibility/help sources and inventory | **PASS**. |
+
+### Files, workload, and residual work
+
+- Changed production paths: `src/vs/workbench/contrib/accessibility/browser/{accessibleView.ts,accessibleViewActions.ts,editorAccessibilityHelp.ts,accessibilityConfiguration.ts}` and `src/vs/workbench/contrib/terminalContrib/accessibility/browser/terminalAccessibilityHelp.ts`. Added `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`. Updated this file and `removal-inventory.md`; `tasks.md` is unchanged.
+- Production source diff is **8 additions / 195 deletions**; the 40-line new boundary test contributes 40 additions. Including the two inventory lines and 42 appended progress lines, this leaf is **287 additions+deletions**, within the 400-line ceiling. No comments/tests were compressed to meet the budget.
+- Out-of-scope `src/vs/platform/accessibility/browser/accessibleView.ts` still defines code-block methods on `IAccessibleViewService`; the workbench methods now return no code-block context and do not navigate. The `accessibleViewInCodeBlock` raw key remains solely for Chat-tree callsites; AccessibleView no longer binds it. Review/removal requires the platform owner grant and eventual Chat owner cleanup.
+- No integration selector was run. `./scripts/test-integration.sh --suite api-workspace` remains a parent-run request because its cleanup uses prohibited `rm -rf`; this leaf makes no integration claim.
+
+### Exact unchecked C3 task rows
+
+- [ ] C3.RED: For each inbound consumer batch in M0, add/identify positive non-chat tests for notebook controllers, terminal/inline hints, editor/inline completions, SCM/debug/Search/accessibility/getting-started and ordinary test services; assert removed actions never register. <!-- sdd-owner: implementation -->
+- [ ] C3.GREEN: Remove only chat/agent portions of retained contributions and constructor/fixture imports; delete exclusively agent contributions such as `welcomeAgentSessions`/`agentsVoice` with source-use evidence. Clean `workbench/test/{browser,electron-browser}/workbenchTestServices.ts`, component snapshots and onboarding chat setup helper consumers. Extract a truly neutral helper only into the proper retained layer, with parity tests and no chat-shaped model/service copied elsewhere. <!-- sdd-owner: implementation -->
+- [ ] C3.TRIANGULATE → REFACTOR: Verify ordinary editor/notebook/terminal/debug/SCM/Search/diagnostic/toolchain behavior, disposable ownership and import/layer validity. Remove direct dead command links; list broader welcome-content follow-ups without editing onboarding copy/design beyond direct removal. <!-- sdd-owner: implementation -->
+
+C1, C2, C4 and A2 remain incomplete as documented in their prior cumulative sections; no C3 family completion or C4 parent-deletion readiness is claimed. Next focus is another authorized retained-feature C3 leaf, preserving A1 facades, Search/editor/terminal behavior, local state, Git/OS credentials, generic diagnostics, and U07 Agent Host/SSH prerequisites.
+
+## U05.c.003 — Remove the Chat command-palette suggestion
+
+### Structured status and authorization
+
+- Parent-derived status consumed: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `syncState=blocked` because `sync-report` is missing, `archiveReady=false`, `nextRecommended=sdd-apply`; parent accounting in the current continuation is 108 implementation rows / 49 checked / 59 remaining. `actionContext.mode=implement`, workspace `/home/marialez/Work/walker`, branch `product-debloat`.
+- The source, boundary-test and OpenSpec paths are within the approved U05 C3 surfaces. `src/vs/workbench/browser/quickaccess.ts` is not authorized and was deliberately not edited despite containing unused Chat configuration fields. Delivery remains `feature-branch-chain`, 400 additions+deletions maximum per leaf, no exception. `strict_tdd=false`; no broad checkbox is complete.
+
+### Disconnection and retained behavior
+
+- Removed Chat action/location imports and `IChatAgentService` injection from `CommandsQuickAccessProvider`; removed the `showAskInChat` config read and the “Ask in Chat” pick/action from its additional-picks path.
+- Preserved normal editor/global command picks, keybinding configuration picks, and generic AI-related-information picks. This does not claim all Chat commands are absent from the broader command palette while Chat source remains.
+- The boundary test in `productDebloatChatIntegrations.test.ts` now asserts no Chat suggestion/action dependency in the provider while positively checking the provider class and generic editor/global/related-information paths.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** the boundary assertion was added and run before the production edit. The resumed transcript does not preserve its exact baseline result, so no failing count is claimed.
+- **GREEN:** removed the Chat-specific provider wiring and suggestion; the focused boundary suite passes after the edit.
+- **TRIANGULATE:** preserved the generic palette and previously retained accessibility/API contracts; reran their focused tests and compiler checks after the Chat removal.
+- **REFACTOR:** confirmed no Chat action/service/config identifiers remain in `commandsQuickAccess.ts`; `quickaccess.ts` configuration-type cleanup is a separate unauthorized path follow-up.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` | **3 passing**, including generic accessibility and command-palette assertions. |
+| `./scripts/test.sh --run vs/workbench/contrib/accessibility/test/browser/accessibleView.test` | **3 passing**. |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing**. |
+| Node 24.18.0 `npm run compile-client` | **PASS**, zero compile errors; regenerated authorized `out/**` and extension build outputs. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0. |
+| `git diff --check` | **PASS** after source and artifact updates. |
+| `./scripts/test-integration.sh --suite api-workspace` | Not run; its cleanup uses prohibited `rm -rf`, so parent-run evidence remains required. |
+
+### Files, workload, and review focus
+
+- Changed production path: `src/vs/workbench/contrib/quickaccess/browser/commandsQuickAccess.ts` (**1 addition / 33 deletions**); the incremental boundary assertion is in `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`. OpenSpec tracking is in this file and `removal-inventory.md`.
+- This is a small independently testable leaf below the usual 120-line target; it remains below the 400-line ceiling and was not padded with unrelated work.
+- No `tasks.md` checkbox changed: C3 remains incomplete. No source files were physically deleted, staged, or committed. Review the ordinary command-palette paths and the residual unauthorized configuration-type fields before declaring the broader C3 integration surface complete.
+
+## U05.c.004 — Disconnect terminal initial hints from Chat/Copilot
+
+### Structured status and authorization
+
+- Parent-derived status consumed: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `syncState=blocked` because `sync-report` is missing, `archiveReady=false`, `nextRecommended=sdd-apply`; parent accounting is 108 implementation rows / 49 checked / 59 remaining. `actionContext.mode=implement`, workspace `/home/marialez/Work/walker`, branch `product-debloat`.
+- Edited only the authorized terminal initial-hint production/test paths and the authorized product boundary test; progress/inventory are phase artifacts. `terminalInitialHintConfiguration.ts` was not edited. Delivery remains `feature-branch-chain`, 400 additions+deletions maximum per leaf, no exception. `strict_tdd=false`; no broad checkbox is complete.
+
+### Disconnection and retained behavior
+
+- Removed `IChatAgentService`, Chat location/action imports, Chat-driven event subscriptions, `IChatEntitlementService` and its Copilot CLI entitlement branch, the Copilot CLI hint/action/telemetry wiring, and Chat-specific terminal-inline-chat verbosity checks from the generic initial-hint contribution.
+- Retained initial hints from generic shell command-detection capability, using the existing terminal accessibility verbosity setting. If command-detection capability is present with empty prompt input, the hint is requested immediately; if input is active, it waits for the next input-start event. Existing hint visibility, dismissal, accessibility rendering, and Terminal Suggest command integration remain.
+- Added a shell-integration regression test that requests the hint without Chat. Extended the product boundary test to reject Chat/Copilot and Chat-only verbosity references while positively asserting generic command detection, terminal accessibility verbosity, and Terminal Suggest remain.
+- Scope deviation: `terminalInitialHintConfiguration.ts` still sets `agentsWindow: { default: false }`; this common configuration path is outside the granted leaf and was deliberately left unchanged.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** after adding the boundary assertion and before the production disconnection, the focused product boundary suite reported 3 passing / 1 failing due to Chat/Copilot references.
+- **GREEN:** removed the Chat/Copilot trigger and hint wiring. The first shell-integration runtime test exposed that an empty prompt input should request the hint immediately; waiting for an input-start event in that state did not satisfy the test. Updated the capability handler to request immediately for empty input and subscribe once when input is active.
+- **TRIANGULATE:** the terminal runtime test now exercises shell command-detection without Chat. The boundary test verifies positive generic command-detection, accessibility, and Terminal Suggest references, as well as absence of Chat/entitlement/Copilot paths.
+- **REFACTOR:** removed dead Chat-specific terminal verbosity use from the generic hint in favor of the registered terminal accessibility setting; no unrelated terminal-suggest implementation was changed.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` | **4 passing** after final edits. |
+| `./scripts/test.sh --run vs/workbench/contrib/terminalContrib/inlineHint/test/browser/terminalInitialHint.test` | **2 passing** after final edits, including no-Chat shell integration. |
+| Node 24.18.0 `npm run compile-client` | **PASS**, zero compile errors after final edits; regenerated build outputs. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0 after final edits. |
+| `git diff --check` | **PASS** after final source, inventory, and progress edits. |
+| `./scripts/test-integration.sh --suite api-workspace` | Not run; its cleanup uses prohibited `rm -rf`, so parent-run evidence remains required. |
+
+### Files, workload, and review focus
+
+- Changed production: `src/vs/workbench/contrib/terminalContrib/inlineHint/browser/terminal.initialHint.contribution.ts`; regression test: `src/vs/workbench/contrib/terminalContrib/inlineHint/test/browser/terminalInitialHint.test.ts`; static boundary assertion: `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`. Inventory records the leaf and focused evidence.
+- This leaf accounts for 137 tracked source/test additions+deletions (production 15+/54−; terminal test 5+/63−), 7 new boundary-test lines, 37 progress lines, and 1 inventory row: approximately 182 additions+deletions total, below 400 with no exception or padding.
+- No `tasks.md` checkbox changed: broad C3 remains incomplete. No physical deletion, staging, or commit. Review the generic terminal hint lifecycle/verbosity and the separate Agents Window configuration follow-up; do not infer broader C3 or C4 completion.
+
+## U05.c.005 — Remove the approved Chat/Agents Window configuration residues
+
+### Structured status and authorization
+
+- Parent-supplied status consumed: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`, `actionContext.mode=implement`, workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat`; no blocked reasons were supplied. The two exact paths were approved in the latest user direction and added to `parent-authorization.md`. Delivery remains `feature-branch-chain`, <=400 changed lines per leaf, no exception. `strict_tdd=false`; no broad checkbox is complete.
+- Preserved pre-existing dirty files and `.pi/` output. This leaf edits only `src/vs/workbench/browser/quickaccess.ts`, `src/vs/workbench/contrib/terminalContrib/inlineHint/common/terminalInitialHintConfiguration.ts`, the authorized product boundary test, and OpenSpec tracking.
+
+### Residue removal and retained behavior
+
+- Removed the unused `showAskInChat` and `askChatLocation` fields from the Quick Access configuration interface; retained history/preserve-input, generic command suggestions, and natural-language search fields.
+- Removed the Agents Window-only default override from terminal initial-hint configuration; the generic initial-hint setting and `default: true` remain.
+- The parent-approved REFACTOR residue cleanup is now complete. Other Agents Window configuration and product defaults remain owned by their separate C5/C1 work.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added assertions for both residues and positive retained config fields. An initial selector run used stale compiled `out/**` tests and reported 4 passing; after refreshing outputs with Node 24.18.0 `npm run compile-client`, the focused selector correctly reported **2 failing / 2 passing** on the Chat fields and Agents Window override.
+- **GREEN:** deleted only the two obsolete interface fields and the terminal setting's `agentsWindow` override.
+- **TRIANGULATE:** the refreshed product boundary selector passes 4/4 and asserts generic Quick Access configuration and enabled terminal hints remain.
+- **REFACTOR:** removed the approved residue paths after their main C3 disconnections, without touching other configuration owners.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` before the RED selector refresh | **PASS**, zero compile errors. |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` after fresh compile and before production cleanup | **Expected RED:** 2 failing / 2 passing, each named test found its approved residue. |
+| Node 24.18.0 `npm run compile-client` after GREEN | **PASS**, zero compile errors. |
+| Same product boundary selector after GREEN | **4 passing**. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0. |
+| `git diff --check` | **PASS** after source changes. |
+
+### Files, workload, and remaining scope
+
+- Production changes: `quickaccess.ts` (2 deletions) and `terminalInitialHintConfiguration.ts` (1 deletion); added 7 static boundary assertions/lines. Including 1 inventory row and 37 lines of progress, this leaf is approximately **48 additions+deletions**, below budget.
+- No task checkbox changed because C3's three implementation rows still cover many remaining integrations. No source files were physically deleted, staged, or committed; `api-workspace` remains unrun under the standing safety restriction.
+- Review focus moves to the authorized retained editor/codeEditor integrations; preserve generic editor actions, inline completion behavior and dictation host features while removing only Chat/agent-specific links.
+
+## U05.c.006 — Disconnect editor dictation from Chat-owned speech sessions
+
+### Structured status and authorization
+
+- Parent-supplied status consumed: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`, `actionContext.mode=implement`, workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat`. The exact `editorDictation.ts` source and `workbench/test/**` boundary-test paths are authorized by `approve-c3-cross-tree`. Delivery remains `feature-branch-chain`, <=400 changes per leaf, no exception; `strict_tdd=false`.
+- This leaf changes only `src/vs/workbench/contrib/codeEditor/browser/dictation/editorDictation.ts`, the authorized boundary test, and OpenSpec artifacts. No task ownership marker changed; no broad task checkbox was completed.
+
+### Disconnection and retained behavior
+
+- Removed Chat context/service/dictation-session imports and constructor injection, Chat-backed built-in dictation lifecycle and state, and Chat-specific action availability gate.
+- Retained the editor dictation action and keybindings when a generic speech provider is available; `ISpeechService.createSpeechToTextSession` still handles preview/recognized text insertion, stop/cancel disposal, and widget lifecycle. Editor read-only restrictions and empty-hint dismissal remain.
+- The Chat-owned in-box dictation session was not transplanted into a shadow helper. Editor dictation now uses the independent speech-provider path; this leaf does not remove or alter the host `ISpeechService` provider.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added a boundary regression that rejects Chat context/service/session imports and positively checks speech-provider availability, speech-session creation, and recognized text handling. After compile refresh, the selector reported **1 failing / 4 passing** on the Chat-backed dictation references.
+- **GREEN:** removed the Chat-backed branch and retained the existing speech-provider implementation as the editor's generic path.
+- **TRIANGULATE:** after final compilation, the boundary suite passes **5/5**, including its clean-state test and generic speech-provider assertions; `typecheck-client` passes.
+- **REFACTOR:** removed now-unused window, logging, and Chat session dependencies and adjusted toggle comments to describe generic editor dictation.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` before RED | **PASS**, zero compile errors; refreshed authorized test output. |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` before source edit | **Expected RED:** 1 failing / 4 passing on Chat dictation imports. |
+| Node 24.18.0 `npm run compile-client` after GREEN | **PASS**, zero compile errors. |
+| Same product boundary selector after GREEN | **5 passing**, including speech-provider dictation boundary. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0. |
+| Focused source scan for Chat service/context/session identifiers | No matches in `editorDictation.ts`. |
+
+### Files, workload, and remaining scope
+
+- Production diff: `editorDictation.ts` **5 additions / 78 deletions**; the new boundary assertion is 7 lines. Together with this progress section and one inventory row, the leaf remains well below 400 additions+deletions.
+- No feature files were physically deleted; no staging or commits. Parent-owned `api-workspace` integration remains unrun because its cleanup uses prohibited `rm -rf`.
+- Review focus: confirm editor dictation remains gated by `HasSpeechProvider` and uses the host speech session/widget/decoration lifecycle; broader empty-editor hint and symbol navigation disconnections are separate leaves.
+
+## U05.c.007 — Remove Chat dependencies from empty-editor hints
+
+### Structured status and authorization
+
+- Consumed the parent authorization status: active change `product-debloat`, OpenSpec store, `applyState=ready`, `verifyState=ready`, `syncState=blocked` on the missing `sync-report`, `archiveReady=false`, and `nextRecommended=sdd-apply`; task accounting there is 101 total / 39 checked / 62 remaining. The action context is the `/home/marialez/Work/walker` `product-debloat` workspace and branch, with the resolved `feature-branch-chain` 400-line ceiling and no size exception. This is implement mode, not bounded remediation.
+- The exact base hint, notebook-cell hint, and workbench boundary-test paths are listed in the parent `approve-c3-cross-tree` grant. No task ownership markers or broad checkboxes were changed; C3 remains incomplete.
+
+### Disconnection and retained behavior
+
+- Removed `IChatAgentService`, `ChatAgentLocation`, and `IInlineChatSessionService` from the retained text-editor hint, including agent/session event listeners and Chat availability/session suppression checks.
+- The generic empty untitled plaintext editor still renders a language-selection hint. Its change-language action, telemetry, accessibility label, settings opt-out, model/read-only/decorations guards, and ordinary editor events remain. The Chat-only “Generate code” path and copy are gone.
+- Removed Chat/inline-chat dependencies from the notebook empty-cell subclass and disconnected its contribution registration: `ChangeLanguageAction` is not available when the notebook editor is focused, so reusing the text-editor language hint there would expose an invalid action.
+- `notebook.contribution.ts` still side-effect imports the now-inert module. That file is outside this grant, so it was left untouched; removing this importer is a parent authorization seam before the notebook source can be physically removed.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** the earlier assertion run from the compacted continuation has no retained result and is not claimed. After the service-removal edits, added a specific assertion requiring the notebook hint not to be registered; a fresh-compiled boundary selector failed exactly that assertion (5 passing / 1 failing) before the registration line was removed.
+- **GREEN:** removed the registration call and now-unused editor-contribution imports. The generic text-editor language hint remains asserted, while the Chat and inline-chat services are absent from both hint sources.
+- **TRIANGULATE:** checked the `ChangeLanguageAction` notebook-focused precondition, scanned both hint sources for Chat/session identifiers (no matches), and ran the notebook editor selector; ordinary notebook editor tests passed.
+- **REFACTOR:** removed the stale trailing blank line and reran scoped diff validation. The initial `git diff --check` caught the blank line; the corrected diff check passes.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` after the new registration assertion and after GREEN | **PASS** both runs, zero compile errors. |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` before unregister | **Expected RED:** 5 pass / 1 fail on the notebook registration assertion. |
+| Same product boundary selector after GREEN | **6/6 PASS**, including generic language setup, no Chat/inline-chat dependency and no notebook hint registration. |
+| `./scripts/test.sh --run vs/workbench/contrib/notebook/test/browser/notebookEditor.test.ts` | **2/2 PASS**. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0. |
+| Scoped Chat/session identifier scan and `git diff --check` | **PASS** after the trailing blank line was removed. |
+
+### Files, workload, and remaining scope
+
+- Changed `emptyTextEditorHint.ts`, `emptyCellEditorHint.ts`, and the product boundary test; updated this progress record and the C3 inventory. The production source diff is 76 additions+deletions, plus the new targeted test assertion and required phase evidence; no unrelated notebook/editor behavior was refactored to inflate the leaf.
+- The notebook module source and its side-effect importer remain physically present. The importer is an explicit out-of-grant seam; parent approval is needed to remove `notebook.contribution.ts` before claiming source absence. No task row was checked, no file was physically deleted/staged/committed, and no `api-workspace` integration result is claimed.
+- Review focus: verify the generic untitled-editor hint and opt-out/accessibility paths remain; confirm notebook cells no longer register the Chat-only hint; follow up on the inert module import under a narrowly authorized notebook integration leaf.
+
+## U05.c.008 — Disconnect Chat from editor symbol navigation
+
+### Structured status and authorization
+
+- Continued under the parent-authored `product-debloat` OpenSpec status (`applyState=ready`; implement, not remediate), the authorized U05 C3 cross-tree surfaces, and `feature-branch-chain` with no leaf over 400 additions+deletions. No broad task checkbox changed.
+- The exact code-editor symbol provider, editor-level symbol provider, generic symbol navigation helper, and workbench boundary-test files are present in the parent `approve-c3-cross-tree` grant. No path outside that grant was edited.
+
+### Disconnection and retained behavior
+
+- Removed the Chat outline branch from Go to Symbol, its chat-widget focus/service/model imports, and the symbol-pick callback that attached code symbols to Chat context. The existing editor-pane `IOutlineService` route remains for non-text editor outlines; text-editor symbol picks and the regular Go to Symbol command remain.
+- Removed the Chat-specific `attach` hook from `IGotoSymbolQuickPickItem` and its shift-to-attach branch. The generic Quick Access attachment mechanism is separate and remains covered by the normal quick-access tests.
+- `goToSymbol.ts` still filters walkthrough-snippet locations but no longer names Chat-owned code-block schemes. Non-Chat language-provider results, symbol filtering, navigation, and side-by-side opening remain.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** after compiling the new boundary assertions, the product integration selector failed 1 assertion (6 passing / 1 failing) on Chat imports/provider behavior still present in the symbol provider.
+- **GREEN:** removed Chat-specific widget outline and attachment behavior, the now-exclusive symbol-item attach hook, and Chat URI-scheme exclusions while preserving the ordinary outline and editor navigation paths.
+- **TRIANGULATE:** static scans found no Chat identifiers or attachment hooks in the three editor symbol sources. The retained `doGetOutlinePicks`, `getSymbolPicks`, normal quick-access provider registration, and walkthrough-snippet filter are asserted; the generic Quick Access attach API remains behaviorally tested.
+- **REFACTOR:** the first compile exposed an unused `IKeyMods` import after deleting the attach hook. Removed that import and reran compile successfully; no unrelated formatting/refactoring was performed.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` before source edits | **PASS**, fresh-compiled the RED boundary test. |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` before source edits | **Expected RED:** 6 pass / 1 fail on Chat symbol-navigation references. |
+| Node 24.18.0 `npm run compile-client` after GREEN/REFACTOR | First run found one unused import; after removing it, rerun **PASS**, zero compile errors. |
+| Product integration boundary selector after GREEN | **7/7 PASS**. |
+| `./scripts/test.sh --run vs/workbench/test/browser/quickAccess.test.ts` | **11/11 PASS**, including generic attach dispatch behavior. |
+| Node 24.18.0 `npm run typecheck-client` and scoped `git diff --check` | **PASS**, exit 0. |
+
+### Files, workload, and remaining scope
+
+- Changed `contrib/codeEditor/browser/quickaccess/gotoSymbolQuickAccess.ts`, `editor/contrib/quickAccess/browser/gotoSymbolQuickAccess.ts`, `editor/contrib/gotoSymbol/browser/goToSymbol.ts`, the authorized workbench boundary test, this progress record, and the C3 inventory. Production source delta is 93 additions+deletions; the test and required evidence keep this cohesive leaf below the 400-line limit.
+- The general Quick Access attachment facility, ordinary editor symbols, outline-service navigation, and walkthrough filtering remain. No file was physically deleted, staged, or committed; C3 remains incomplete and no `api-workspace` integration result is claimed.
+- Review focus: verify the Chat-only outline/attach paths are absent while text-editor symbol picks, non-text editor outline picks, side-by-side navigation, and generic Quick Access attach behavior remain.
+
+## U05.c.009 — Disconnect Chat context from debug actions
+
+### Structured status and authorization
+
+- Continued under the latest parent-derived OpenSpec status: `activeChange=product-debloat`, `applyState=ready`, `verifyState=ready`, `syncState=blocked` because `sync-report` is missing, `archiveReady=false`, and `nextRecommended=sdd-apply`. The parent status reports 101 tasks / 39 checked / 62 remaining; prior summaries had conflicting counts, so only the latest status is relied on here. The status file's `actionContext.mode=apply` is not workspace-planning; this executor's phase mode is implement. Delivery is the approved `feature-branch-chain`, with no size exception and a 400-line leaf ceiling.
+- The debug contribution, debug command/action sources, workbench boundary test, and OpenSpec artifact paths are within `approve-c3-cross-tree`. This is not authorization to remove unrelated debug behavior or physically delete files.
+
+### Disconnection and retained behavior
+
+- Removed `DebugChatContextContribution` registration and Chat entitlement/context-key gates from debug command/editor actions. Ordinary debug actions and editor behavior remain.
+- The Chat-owned `debugChatIntegration.ts` implementation is retained but unregistered; this records a disconnection, not physical deletion or C2 module/protocol cleanup.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` | **PASS**, zero compile errors. |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` (current compiled boundary suite) | **9/9 PASS**, including absence of the debug Chat contribution and positive ordinary debug contribution assertion. |
+| `./scripts/test.sh --run vs/workbench/contrib/debug/test/browser/debugViewModel.test.ts` | **4/4 PASS**. |
+| Node 24.18.0 `npm run typecheck-client` | **PASS**, exit 0. |
+| Scoped source scan of the three retained debug files | No Chat/entitlement references remain. |
+
+### Files, workload, and remaining scope
+
+- Changed only the three authorized debug integration sources, the shared boundary test and OpenSpec evidence. The contribution module remains on disk and may still require separate ownership/deletion review; no source file was physically deleted, staged or committed.
+- No task checkbox changed because the broad C3 implementation row still covers multiple outstanding integrations. `api-workspace` remains parent-owned and unrun. Review focus: confirm ordinary debug contribution/action routes remain and that Chat integration modules are only disconnected, not misreported as deleted.
+
+## U05.c.010 — Remove Chat entitlement gates from inline completions
+
+### Structured status and authorization
+
+- Consumed the parent-derived status and action context recorded above: active `product-debloat`, OpenSpec store, `applyState=ready`, workspace `/home/marialez/Work/walker`, approved chained delivery, and 400-line maximum per leaf. The inline-completions model, workbench language-status contribution, boundary test, and OpenSpec evidence are explicitly authorized under `approve-c3-cross-tree`.
+
+### Disconnection and retained behavior
+
+- Removed the `defaultChatAgent.completionsEnablementSetting` product lookup from `InlineCompletionsModel`; the retained source is now constructed without Chat's product setting, leaving provider-driven editor completion behavior intact.
+- Removed `IChatEntitlementService` injection, sentiment-based hiding, and Copilot-branded labels from the inline-completion language-status contribution. Generic inline completion/edit statuses and their status-service registration remain.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added boundary assertions against the product Chat completion setting, Chat entitlement/sentiment dependency and Copilot-branded status labels. The fresh-compiled product boundary selector failed on the inline-completion Chat gate (8 passing / 1 failing).
+- **GREEN:** removed the Chat product lookup and entitlement/sentiment gate while retaining ordinary provider and status-service paths.
+- **TRIANGULATE:** the boundary suite passes 9/9; the retained editor inline-completion suite passes 29/29; compile and typecheck both pass.
+- **REFACTOR:** removed now-unused product, entitlement, sentiment field and related constructor/state code without changing editor completion/provider logic.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` before production edits | **Expected RED:** 8 passing / 1 failing on the inline-completion Chat gates. |
+| Node 24.18.0 `npm run compile-client` after GREEN | **PASS**, zero compile errors. |
+| Same product boundary selector after GREEN | **9/9 PASS**. |
+| `./scripts/test.sh --run vs/editor/contrib/inlineCompletions/test/browser/inlineCompletions.test.ts` | **29/29 PASS**, covering retained provider-driven editor completion behavior. |
+| Node 24.18.0 `npm run typecheck-client` and scoped `git diff --check` | **PASS**, exit 0. |
+
+### Files, workload, and remaining scope
+
+- Changed only `inlineCompletionsModel.ts`, `inlineCompletionLanguageStatusBarContribution.ts`, the authorized workbench boundary test, and OpenSpec progress/inventory. The Chat/Copilot gates are disconnected; no file was physically deleted, staged or committed, and the broad C3 task remains unchecked.
+- Review focus: verify ordinary editor completions stay provider-driven and generic language status remains visible without account sentiment or Chat product settings. Continue with the other authorized C3 host integrations; dedicated-tree manifests, C2/C4 closure and A2 tails remain outstanding. `api-workspace` and physical deletion are parent-owned.
+
+## U05.c.011 — Disconnect inline Chat affordances from generic code actions
+
+### Structured status and authorization
+
+- Continued under the parent-derived `product-debloat` OpenSpec status (`applyState=ready`, `nextRecommended=sdd-apply`) and approved `feature-branch-chain` with a 400-line leaf ceiling. The exact editor code-action/controller, code-action command, marker-hover participant, workbench boundary test, and OpenSpec evidence paths are listed in `approve-c3-cross-tree`.
+
+### Disconnection and retained behavior
+
+- Removed the `inlineChat.start` argument rewrite from the generic AI lightbulb path; single AI fixes still use the ordinary `applyCodeAction` flow.
+- Removed only Quick Fix's `InlineChatEditorAffordance` menu contribution. The normal command, keybinding, F1 entry and provider preconditions remain.
+- Removed the Chat-specific example from the marker-hover comment while retaining `MenuId.MarkerHoverStatusBar` menu lookup and ordinary problem/quick-fix actions. The menu is a generic extension contribution surface, so its dispatch behavior was intentionally preserved.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** after compiling the new boundary assertion, the product integration selector failed 1 test (9 passing / 1 failing) on the `inlineChat.start` special case.
+- **GREEN:** removed the Chat argument mutation and inline-chat-only Quick Fix menu placement.
+- **TRIANGULATE:** product boundary suite passes 10/10; focused code-action tests pass 8/8; focused content-hover tests pass 3/3; compile and typecheck pass.
+- **REFACTOR:** removed the now-unused `MenuId` import and replaced the Chat-only hover comment; retained all generic menu dispatch and normal code-action routes.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` before source edits | **PASS**, fresh-compiled the RED boundary test. |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` before source edits | **Expected RED:** 9 passing / 1 failing on Chat's inline command handling. |
+| Node 24.18.0 `npm run compile-client` after GREEN | **PASS**, zero compile errors. |
+| Same product boundary selector after GREEN | **10/10 PASS**. |
+| `./scripts/test.sh --run vs/editor/contrib/codeAction/test/browser/codeAction.test.ts` | **8/8 PASS**. |
+| `./scripts/test.sh --run vs/editor/contrib/hover/test/browser/contentHover.test.ts` | **3/3 PASS**. |
+| Node 24.18.0 `npm run typecheck-client` and scoped `git diff --check` | **PASS**, exit 0. |
+
+### Files, workload, and remaining scope
+
+- Changed only the three authorized editor integration sources, the authorized workbench boundary test, and OpenSpec progress/inventory. The dynamic marker-hover menu service and generic code-action application remain; no file was physically deleted, staged or committed.
+- No persisted task checkbox changed: C3's three batch rows still include outstanding SCM, notebook, terminal, onboarding and test-fixture integrations. C3, dedicated-tree deletion manifests, C2/C4 closure, and A2 tails remain incomplete; physical deletion and `api-workspace` remain parent-owned.
+- Verifier focus: confirm Quick Fix remains available by keybinding/F1 and via generic menu contributions, AI fixes still apply through the generic command path, and marker hovers retain normal marker navigation and extensible menu actions.
+
+## U05.c.012 — Disconnect Chat edit sessions from SCM Quick Diff
+
+### Structured status and authorization
+
+- Continued under the parent-derived `product-debloat` OpenSpec status (`applyState=ready`, `nextRecommended=sdd-apply`) and approved `feature-branch-chain`, with 400 additions+deletions per leaf. `quickDiffModel.ts`, the workbench boundary test and OpenSpec artifacts are listed in the C3 grant.
+
+### Disconnection and retained behavior
+
+- Removed the Chat-editing service injection, observable subscriptions and dirty-diff suppression from the SCM Quick Diff model. The model now refreshes from retained text-model edits, configuration, SCM repository events and quick-diff provider changes only.
+- Generic provider-backed quick diffs, SCM repository tracking and dirty-diff computation remain unchanged. No Git authentication, repository data or local state was modified.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** compiled a boundary assertion requiring the Chat-edit service/state dependency to be absent while quick-diff provider events and retrieval remain; the product boundary selector reported 10 passing / 1 failing on the Chat service dependency.
+- **GREEN:** removed the Chat-only injection, subscription and state-based dirty-diff suppression.
+- **TRIANGULATE:** boundary selector passes 11/11; the retained SCM history graph suite passes 12/12; compile and typecheck pass.
+- **REFACTOR:** removed the now-unused `autorun` import and kept all generic SCM/model/provider update listeners intact.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` before source edits | **PASS**, fresh-compiled the RED boundary test. |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` before source edits | **Expected RED:** 10 passing / 1 failing on Chat edit-session coordination. |
+| Node 24.18.0 `npm run compile-client` after GREEN | **PASS**, zero compile errors. |
+| Same product boundary selector after GREEN | **11/11 PASS**. |
+| `./scripts/test.sh --run vs/workbench/contrib/scm/test/browser/scmHistory.test.ts` | **12/12 PASS**. |
+| Node 24.18.0 `npm run typecheck-client` and scoped `git diff --check` | **PASS**, exit 0. |
+
+### Files, workload, and remaining scope
+
+- Changed only `src/vs/workbench/contrib/scm/browser/quickDiffModel.ts`, the authorized boundary test and OpenSpec evidence. This is one cohesive leaf below the 400-line budget; no SCM data or physical source files were deleted.
+- SCM Chat history context, commit-message/setup actions and product routing are separate authorized integrations that remain. No broad C3 task checkbox changed; `api-workspace` and physical deletion are parent-owned.
+- Review focus: verify SCM Quick Diff continues to follow Git/other providers, repository changes and ordinary text-model edits without observing Chat sessions.
+
+## U05.c.013 — Disconnect Chat setup and history contribution links from SCM
+
+### Structured status and authorization
+
+- Continued under the latest parent-derived OpenSpec status (`activeChange=product-debloat`, `applyState=ready`, `nextRecommended=sdd-apply`), approved `feature-branch-chain` delivery and the 400-line leaf limit. The SCM contribution/input sources, boundary test and OpenSpec artifacts are covered by the parent C3 surfaces.
+
+### Disconnection and retained behavior
+
+- Removed the Chat history-context workbench contribution registration, the SCM editor's Chat setup/merge-resolution action, and SCM input's Chat-backed Generate Commit Message action and product command mapping.
+- Preserved generic SCM view/repository/working-set contributions, SCM input action runner and Cancel action. The input widget continues storing the most recent generic action ID. Git operations and repository/history data are unchanged.
+- `scmHistoryChatContext.ts` remains as a present module with consumers in the still-present Chat tree; this is contribution disconnection only, not physical deletion or proof of complete SCM-to-Chat source absence.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** the fresh-compiled product boundary test reported 11 passing / 1 failing on remaining SCM Chat setup/history contribution references.
+- **GREEN:** removed the Chat-specific registration/actions and defaultChatAgent routing while retaining generic SCM contributions and input state.
+- **TRIANGULATE:** product boundary suite passes 12/12; retained SCM history suite passes 12/12; compile and typecheck pass.
+- **REFACTOR:** the first compile caught six now-unused imports after removing the action blocks. Removed those imports and reran `compile-client`, which then passed with zero errors.
+
+### Verification evidence
+
+| Exact command/evidence | Result |
+| --- | --- |
+| Node 24.18.0 `npm run compile-client` before source edits | **PASS**, fresh-compiled the RED boundary test. |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` before source edits | **Expected RED:** 11 passing / 1 failing on SCM Chat action/contribution links. |
+| Node 24.18.0 `npm run compile-client` after GREEN | First run found six unused imports; after cleanup, rerun **PASS**, zero compile errors. |
+| Same product boundary selector after GREEN | **12/12 PASS**. |
+| `./scripts/test.sh --run vs/workbench/contrib/scm/test/browser/scmHistory.test.ts` | **12/12 PASS**. |
+| Node 24.18.0 `npm run typecheck-client` and scoped `git diff --check` | **PASS**, exit 0. |
+
+### Files, workload, and remaining scope
+
+- Changed only `scm.contribution.ts`, `scmInput.ts`, the authorized boundary test and OpenSpec evidence. This cohesive contribution/input leaf remains below 400 additions+deletions; no Git credential, profile, repository or history data was modified, and no file was physically deleted/staged/committed.
+- Other SCM Chat seams, including source-history attachment helpers still referenced by Chat sources, remain for subsequent bounded work or C4 deletion. No broad C3 task checkbox changed; physical deletion and `api-workspace` remain parent-owned.
+- Review focus: ensure Source Control views and generic SCM input actions remain active, the Chat setup/action registrations are absent, and no claim of deleting the still-present history helper is made.
+
+## Remaining implementation-owned C3 task rows
+
+The following task checkboxes were re-read and remain unchecked; these leaves do not complete the broad C3 batches:
+
+- [ ] C3.RED: For each inbound consumer batch in M0, add/identify positive non-chat tests for notebook controllers, terminal/inline hints, editor/inline completions, SCM/debug/Search/accessibility/getting-started and ordinary test services; assert removed actions never register. <!-- sdd-owner: implementation -->
+- [ ] C3.GREEN: Remove only chat/agent portions of retained contributions and constructor/fixture imports; delete exclusively agent contributions such as `welcomeAgentSessions`/`agentsVoice` with source-use evidence. Clean `workbench/test/{browser,electron-browser}/workbenchTestServices.ts`, component snapshots and onboarding chat setup helper consumers. Extract a truly neutral helper only into the proper retained layer, with parity tests and no chat-shaped model/service copied elsewhere. <!-- sdd-owner: implementation -->
+- [ ] C3.TRIANGULATE → REFACTOR: Verify ordinary editor/notebook/terminal/debug/SCM/Search/diagnostic/toolchain behavior, disposable ownership and import/layer validity. Remove direct dead command links; list broader welcome-content follow-ups without editing onboarding copy/design beyond direct removal. <!-- sdd-owner: implementation -->
+
+## U05.c.014 — Remove the now-inert notebook empty-cell hint import
+
+### Structured status, ownership and authorization
+
+- Parent-supplied status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; `actionContext.mode=implement`, workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat`. Delivery is `feature-branch-chain`, 400 additions+deletions per leaf, no size exception. Strict TDD is false; the leaf protocol requires RED → GREEN → TRIANGULATE → REFACTOR.
+- Parent approved the four exact paths: `src/vs/workbench/contrib/notebook/browser/notebook.contribution.ts`, `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`, this file, and `removal-inventory.md`. The test file was a pre-existing untracked target. The dirty worktree and `.pi/` harness output were preserved.
+- Ownership scan of `tasks.md` found no malformed or duplicate `sdd-owner` markers. Broad C3 task rows remain unchecked because this leaf alone does not complete them.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added a boundary assertion that the retained notebook contribution omits the inert `emptyCellEditorHint` import while keeping the ordinary notebook clipboard contribution. After Node 24 `npm run compile-client`, the boundary selector failed as expected: 11 passing / 1 failing on the stale side-effect import.
+- **GREEN:** removed only the side-effect import of `./contrib/editorHint/emptyCellEditorHint.js` from `notebook.contribution.ts`. The separate Chat notebook contribution and all generic notebook registrations remain.
+- **TRIANGULATE:** after a fresh compile, the product boundary suite passed 12/12 and `notebookCellDiagnostics.test.ts` passed 3/3 (two notebook assertions plus the runner setup check). `npm run typecheck-client` passed.
+- **REFACTOR:** no further production cleanup was warranted; the tested one-line importer removal was the whole approved seam.
+
+### Files, workload and remaining scope
+
+- Source/test changes: one import deleted from `notebook.contribution.ts`, three boundary assertion lines added. No notebook controller/editor implementation, generic registration, local data, Git behavior, or A1 facade changed.
+- Measured leaf: **29 additions+deletions** including this progress record and the inventory row/note; below the 400-line ceiling. No task checkbox was changed, no file was physically deleted, staged, or committed, and no `api-workspace` result is claimed.
+- Review focus: confirm the empty-cell hint importer is absent while clipboard, cell diagnostics, execution, and other notebook contribution behavior remains. Next authorized work is the remaining bounded C3 integrations; dedicated-tree deletion, C2/C4 closure, A2 auth tails, physical deletion, and `api-workspace` remain parent-owned or separately gated.
+
+## U05.c.015 — Retain notebook execution diagnostics without Chat
+
+### Structured status and authorization
+
+- Continued under parent status `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; `actionContext.mode=implement` at `/home/marialez/Work/walker`, branch `product-debloat`. The feature-branch-chain/400-line limit applies; strict TDD is false but leaf RED → GREEN → TRIANGULATE → REFACTOR is required.
+- Exact source/test surfaces were listed in the parent prompt: the three notebook cellDiagnostics implementations, `notebookCellDiagnostics.test.ts`, and the workbench product boundary test. Broad C3 checkboxes remain open.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added positive and negative boundary assertions for generic notebook diagnostics, status-bar Quick Actions, and absence of Chat action IDs/service fixtures. After compile-client, the boundary suite reported 12 passing / 1 failing on the existing `IChatAgentService` dependency.
+- **GREEN:** removed notebook-agent gating from execution diagnostics and the failure status item; diagnostics now follow the existing setting and preserve marker creation/cleanup. Removed Chat-only Fix/Explain commands and their inline-chat/widget service paths, retaining the generic Open Cell Failure Actions code-action command. Removed the Chat service mock from the retained diagnostics tests.
+- **TRIANGULATE:** boundary suite passed 13/13; `notebookCellDiagnostics.test.ts` passed 3/3 (two diagnostics cases and runner setup); compile-client and typecheck-client passed.
+- **REFACTOR:** unused Chat-only imports, constructor injections and agent-presence helpers were removed; no generic diagnostic/marker lifecycle behavior changed.
+
+### Files, workload and remaining scope
+
+- Changed the three cellDiagnostics sources, their notebook diagnostics test, and workbench boundary assertions. The tracked source/test diff is 111 lines; the new untracked boundary assertion adds 18 lines, for **129 source/test additions+deletions**.
+- Measured leaf: **151 additions+deletions** including this progress record and inventory update; below 400. No task checkbox was changed, no file was physically deleted/staged/committed, and no `api-workspace` result is claimed.
+- Review focus: verify cell failure diagnostics still create/clear markers under the existing setting without requiring a notebook Chat agent; generic failure Quick Actions still dispatch Quick Fix. Distinct notebook Chat registration, editor focus guards, diff/render integrations and remaining C3 families are separate leaves.
+
+## U05.c.016 — Disconnect notebook execution/edit/navigation from inline Chat
+
+### Structured status and authorization
+
+- Parent authorization records `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `nextRecommended=sdd-apply`, and the approved `feature-branch-chain`/400-line ceiling with no size exception. The current broad C3 implementation rows remain unchecked. `openspec/config.yaml` declares `strict_tdd: false`; the required leaf sequence is still RED → GREEN → TRIANGULATE → REFACTOR.
+- Exact edited source/test paths are all in the Stage U05 C3 grant: `notebook.contribution.ts`, notebook `controller/executeActions.ts`, `controller/editActions.ts`, `contrib/navigation/arrow.ts`, and `productDebloatChatIntegrations.test.ts`. The progress and inventory artifacts are also authorized. No other paths were edited for this leaf.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added the source boundary assertions for the notebook Chat contribution import and inline-Chat execution/edit/navigation guards, then ran the boundary selector before production edits. That command's pre-edit output was truncated in the compacted session, so its failure count/result is not retained and is not claimed as observed evidence.
+- **GREEN:** removed the notebook Chat contribution side-effect import. Removed the `CTX_INLINE_CHAT_FOCUSED` keybinding guard from notebook execute-and-select, the inline-Chat editor refocus after notebook cell edit, and both inline-Chat focus/refocus branches from arrow navigation. Generic focus, execution, cell selection, and navigation paths remain.
+- **TRIANGULATE:** a first `npm run compile-client` identified an unused `focusEditorLine` local after the next-cell Chat branch was removed; that now-unneeded local was removed. A fresh compile passed with zero errors. `productDebloatChatIntegrations.test.ts` passed 14/14 (including harness setup); notebook diagnostics passed 3/3; `npm run typecheck-client` passed. Scoped `git diff --check` passed.
+- **REFACTOR:** removed only imports made obsolete by these disconnections; no ordinary notebook behavior or feature-neutral helper was refactored.
+
+### Files, workload, remaining tasks and review focus
+
+- Changed production paths: `src/vs/workbench/contrib/notebook/browser/notebook.contribution.ts`, `controller/executeActions.ts`, `controller/editActions.ts`, and `contrib/navigation/arrow.ts`. Added 18 boundary-test lines in `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`. This leaf's scoped source/test delta is **61 additions+deletions** (43 production + 18 test); including 22 progress lines, one inventory-row addition, and the inventory-note replacement, the full leaf is **86 changed lines**, below the 400-line maximum. It is an intentionally narrow importer/consumer seam and was not padded with unrelated changes.
+- Re-read task ownership markers: no malformed marker found. No task checkbox changed because this leaf does not complete the broader C3 rows; no implementation task is reported complete. Exact remaining C3 task lines:
+  - [ ] C3.RED: For each inbound consumer batch in M0, add/identify positive non-chat tests for notebook controllers, terminal/inline hints, editor/inline completions, SCM/debug/Search/accessibility/getting-started and ordinary test services; assert removed actions never register. <!-- sdd-owner: implementation -->
+  - [ ] C3.GREEN: Remove only chat/agent portions of retained contributions and constructor/fixture imports; delete exclusively agent contributions such as `welcomeAgentSessions`/`agentsVoice` with source-use evidence. Clean `workbench/test/{browser,electron-browser}/workbenchTestServices.ts`, component snapshots and onboarding chat setup helper consumers. Extract a truly neutral helper only into the proper retained layer, with parity tests and no chat-shaped model/service copied elsewhere. <!-- sdd-owner: implementation -->
+  - [ ] C3.TRIANGULATE → REFACTOR: Verify ordinary editor/notebook/terminal/debug/SCM/Search/diagnostic/toolchain behavior, disposable ownership and import/layer validity. Remove direct dead command links; list broader welcome-content follow-ups without editing onboarding copy/design beyond direct removal. <!-- sdd-owner: implementation -->
+- No files were physically deleted, staged, or committed. Parent-owned physical deletion and `api-workspace` integration verification remain unclaimed. Review next: confirm the notebook Chat contribution is not imported while clipboard, execution selection, ordinary edit/navigation, and notebook diagnostics remain available; proceed with the next separately bounded authorized C3 integration.
+
+## U05.c.017 — Disconnect Chat problem-marker context picking
+
+### Structured status and authorization
+
+- Parent status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; action context is implementation at `/home/marialez/Work/walker` on `product-debloat`. The parent-approved U05 C3 scope explicitly adds `src/vs/workbench/contrib/markers/browser/markers.contribution.ts`; the bounded change removes only the Chat contribution import and registration. Feature-chain review remains capped at 400 changed lines; no size exception. Strict TDD is false; leaf order remains RED → GREEN → TRIANGULATE → REFACTOR.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added a retained-boundary assertion that the marker contribution does not import/register `MarkerChatContextContribution`, while the ordinary Markers status contribution and Problems view remain. With Node 24, `npm run compile-client` succeeded before source edits; the focused boundary selector then failed **1 failing / 14 passing** on the active Chat import.
+- **GREEN:** removed `MarkerChatContextContribution` and the now-unused `registerWorkbenchContribution2`/`WorkbenchPhase` imports and registration from `markers.contribution.ts`. Generic marker views, status, accessibility, and Quick Fix registrations were not changed.
+- **TRIANGULATE:** fresh `npm run compile-client` and `npm run typecheck-client` passed. The product boundary suite passed **15/15**; `markersFilterOptions.test` passed **35/35**; `markersModel.test` passed **10/10**. A source-reference scan after the change found no remaining workbench imports of `MarkerChatContextContribution` or `markersChatContext`.
+- **REFACTOR:** left the now-unregistered 131-line `markersChatContext.ts` in place for parent-owned deletion; no marker model/filter implementation was removed. The test explicitly retains generic Problems view/status markers.
+
+### Files, workload, remaining tasks and review focus
+
+- Changed files: `src/vs/workbench/contrib/markers/browser/markers.contribution.ts`, `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`, `removal-inventory.md`, and this progress record. The scoped production/test delta is **10 additions+deletions** (4 production + 6 test); allocated progress/inventory changes keep this leaf well below 400 lines. No task checkbox changed because the broad C3 RED/GREEN/TRIANGULATE rows remain incomplete; their exact unchecked lines are recorded in the preceding U05.c.016 section.
+- `markersChatContext.ts` has no remaining importer but remains physically present (131 lines) for a later parent-owned deletion manifest. No file was physically deleted, staged, or committed. Review next: verify generic Problems view/status/Quick Fix behavior remains and include the disconnected marker context helper in the later dedicated-tree/integration deletion manifest. `api-workspace` remains parent-owned and was not run.
+
+## U05.c.018 — Disconnect Inline Chat from the Interactive Window
+
+### Structured status and authorization
+
+- Parent status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; `actionContext={mode: implement, workspace/cwd: /home/marialez/Work/walker, branch: product-debloat}`. Delivery is `feature-branch-chain`, <=400 changed lines per leaf, no size exception. Strict TDD is false; RED → GREEN → TRIANGULATE → REFACTOR is required. The parent explicitly approved all three paths: `interactiveEditor.ts`, `interactive.contribution.ts`, and the workbench product boundary test.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** with the boundary test added, Node 24 `npm run compile-client` passed and the focused product-boundary selector reported **15 passing / 1 failing**, detecting the remaining `INLINE_CHAT_ID` contribution. The test also asserts the generic contribution allowlist, marker controller, interactive history, and notebook-cell edit path remain.
+- **GREEN:** removed `INLINE_CHAT_ID` from the Interactive editor contribution allowlist and removed the InlineChatController import/session-acceptance call from interactive input execution. No generic input/history/notebook-cell execution behavior changed.
+- **TRIANGULATE:** the boundary suite passed **16/16**; post-edit `npm run compile-client` and `npm run typecheck-client` passed.
+- **REFACTOR:** no further cleanup was needed in the approved files. The acceptance call was Chat-only and had no other Interactive consumer.
+
+### Files, workload, remaining tasks and review focus
+
+- Changed files: the two approved Interactive source files and `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`. Production diff is 8 deletions; the added boundary test is 10 assertion lines plus spacing, comfortably below 400 lines for the leaf including evidence updates.
+- Broad C3 task checkboxes remain unchecked; this leaf alone does not complete C3.RED/GREEN/TRIANGULATE. No task checkbox changed. No file was physically deleted, staged, or committed. Review next: confirm ordinary Interactive execution/history/cell insertion remain available without registering Inline Chat. Continue with the approved imageCarousel integration leaf.
+
+## U05.c.019 — Remove Chat entrypoint from the Images Preview contribution
+
+### Structured status and authorization
+
+- Parent status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; `actionContext={mode: implement, workspace/cwd: /home/marialez/Work/walker, branch: product-debloat}`. The parent-approved remaining C3 surfaces include the image-carousel contribution and `src/vs/workbench/test/**`. Delivery remains `feature-branch-chain`, <=400 changed lines per leaf, no size exception; strict TDD is false and the leaf protocol is RED → GREEN → TRIANGULATE → REFACTOR.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added a boundary assertion for absence of `imageCarousel.chat.enabled`, `workbench.action.chat.openImageInCarousel`, and the Chat-only action class, while requiring the ordinary Images Preview editor registration and Explorer context-menu action/configuration to remain. Node 24 `npm run compile-client` passed; the focused boundary selector reported **16 passing / 1 failing** on the Chat setting/action.
+- **GREEN:** removed the Chat-only setting, action, argument guards/types, and their unused `VSBuffer` import from `imageCarousel.contribution.ts`. The Explorer's `workbench.action.openImagesInCarousel`, editor pane, serializer, media collection, and filesystem behavior remain.
+- **TRIANGULATE:** product boundary suite passed **17/17**; existing `imageCarousel.contribution.test.ts` passed **12/12**; fresh `npm run compile-client` and `npm run typecheck-client` passed.
+- **REFACTOR:** a repository scan found no Chat feature references inside the retained contribution. Remaining command-ID literals are in `src/vs/workbench/contrib/chat/browser/chatImageCarouselService.ts` and `src/vs/sessions/contrib/chat/browser/sessionArtifacts.ts`, both deleted-feature owners scheduled for later C4/C5 removal. `src/vs/workbench/contrib/imageCarousel/AGENTS.md` also contains outdated Chat integration guidance; it was outside the approved edit surfaces and was left unchanged.
+
+### Files, workload, remaining tasks and review focus
+
+- Changed files: `src/vs/workbench/contrib/imageCarousel/browser/imageCarousel.contribution.ts` and `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`, plus this record and `removal-inventory.md`. Source/test delta is **86 additions+deletions** (79 production deletions + 7 boundary assertions); artifact accounting keeps the full leaf below 400.
+- C3 task rows remain unchecked because this leaf does not close the multi-family C3 batches; no task checkbox changed. No files were physically deleted, staged, or committed. Review next: verify Images Preview still opens for Explorer selections/folders and its stale Chat command callers remain isolated to source trees assigned for later deletion; consider whether parent wants the out-of-scope `imageCarousel/AGENTS.md` guidance corrected when that path is authorized.
+
+## U05.c.020 — Remove Chat and Agent settings integration
+
+### Structured status and authorization
+
+- Parent-authored status in `parent-authorization.md`: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; `actionContext={mode: apply, workspace: /home/marialez/Work/walker, branch: product-debloat}`. The Stage U05 C3 grant explicitly includes the three Preferences source files and `src/vs/workbench/test/**`. Delivery remains the resolved `feature-branch-chain`, 400 changed lines per leaf, `size:exception` declined. Strict TDD is false; RED → GREEN → TRIANGULATE → REFACTOR is followed. All paths changed were inside the grant.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added a boundary test requiring no Chat entitlement/Agent suggestion gates, no Chat settings category or Chat-only commonly-used settings, and a retained generic MCP settings category. With Node 24.18.0, `npm run compile-client` passed and the focused boundary selector reported **17 passing / 1 failing** on existing Chat integration.
+- **GREEN:** removed `IChatEntitlementService` from the Settings Editor and experimental-extension recommendation helper, including the entitlement-based AI-search/recommendation hide gates. Removed the Chat preferences category and Chat-only commonly-used settings; removed Chat/Agent filter suggestions. Preserved ordinary AI-search availability and extension recommendations. Rehomed only `mcp` / `mcp.*` settings under Features > MCP and excluded `chat.mcp.*`, so the existing non-Chat MCP setting surface remains discoverable.
+- **TRIANGULATE:** the product-boundary suite passed **18/18**; `settingsEditor2.test.ts` passed **16/16**; `npm run compile-client` and `npm run typecheck-client` passed; scoped `git diff --check` passed.
+- **REFACTOR:** left `AGENTS_WINDOW_SETTING_TAG` parsing in `settingsTreeModels.ts` and its exported constant untouched because that separate consumer/path is outside this C3 leaf; only its Preferences suggestion was removed. No generic settings search, AI Search behavior, extension-gallery recommendation or MCP runtime was removed.
+
+### Files, workload, remaining tasks and review focus
+
+- Changed files: `settingsEditor2.ts`, `settingsLayout.ts`, `preferences.ts`, and the new Preferences boundary case in `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`, plus this progress record and `removal-inventory.md`. Source/test delta is **158 additions+deletions** (141 source + 17 boundary-test lines); allocated artifact changes keep this feature-chain leaf below 400.
+- Persisted task artifact was inspected: the broad implementation-owned C3 rows remain unchecked because Preferences is one of multiple C3 batches. No C3 completion checkbox was advanced. Exact unchecked C3 rows:
+  - [ ] C3.RED: For each inbound consumer batch in M0, add/identify positive non-chat tests for notebook controllers, terminal/inline hints, editor/inline completions, SCM/debug/Search/accessibility/getting-started and ordinary test services; assert removed actions never register. <!-- sdd-owner: implementation -->
+  - [ ] C3.GREEN: Remove only chat/agent portions of retained contributions and constructor/fixture imports; delete exclusively agent contributions such as `welcomeAgentSessions`/`agentsVoice` with source-use evidence. Clean `workbench/test/{browser,electron-browser}/workbenchTestServices.ts`, component snapshots and onboarding chat setup helper consumers. Extract a truly neutral helper only into the proper retained layer, with parity tests and no chat-shaped model/service copied elsewhere. <!-- sdd-owner: implementation -->
+  - [ ] C3.TRIANGULATE → REFACTOR: Verify ordinary editor/notebook/terminal/debug/SCM/Search/diagnostic/toolchain behavior, disposable ownership and import/layer validity. Remove direct dead command links; list broader welcome-content follow-ups without editing onboarding copy/design beyond direct removal. <!-- sdd-owner: implementation -->
+- No files were physically deleted, staged, or committed. Review next: verify Settings keeps generic search/AI-search and recommended extensions, MCP settings remain under Features, and no Chat/Agent suggestions or category remain. Continue with the separately scoped Tasks integration.
+
+## U05.c.021 — Remove Chat troubleshooting from task notifications
+
+### Structured status and authorization
+
+- Parent-derived status remains `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; the Stage U05 C3 grant explicitly covers both task-service source paths and `src/vs/workbench/test/**`. `actionContext={mode: apply, workspace: /home/marialez/Work/walker, branch: product-debloat}`; the resolved feature-branch chain and 400-line cap remain in force, with no size exception. Strict TDD is false; the leaf RED/GREEN/TRIANGULATE/REFACTOR protocol was followed.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added boundary assertions for no Chat service/action imports, Chat-agent completion suppression or Chat troubleshooting prompt, while requiring the generic `Show Output` action and task-error notification remain. After compiling the fixture with Node 24, the focused suite reported **18 passing / 1 failing** against the baseline Chat task integration.
+- **GREEN:** removed Chat service injections/constructor forwarding, the `TaskRunSource.ChatAgent` notification skip, and the Chat-only “Fix with AI” action/prompt. Removed its now-unused error-message argument while preserving task error logging, generic output-channel action and generic warning prompt.
+- **TRIANGULATE:** the focused product-boundary suite passed **19/19**; subsequent `npm run compile-client` and `npm run typecheck-client` passed with this task-service change included.
+- **REFACTOR:** retained ordinary task lifecycle, execution, configuration-error logging and user/configuration-change output behavior; no task-runner or terminal behavior was changed.
+
+### Files, workload, remaining tasks and review focus
+
+- Changed files: `src/vs/workbench/contrib/tasks/browser/abstractTaskService.ts`, `src/vs/workbench/contrib/tasks/electron-browser/taskService.ts`, and the Tasks boundary case in `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`, plus this progress record and `removal-inventory.md`. Source/test delta is **76 additions+deletions** (65 production + 11 boundary assertions); the leaf is below 400 with no padding or exception.
+- The persisted broad C3 checkbox rows remain unchecked; this task-service leaf does not close all C3 test/contribution batches. Their exact unchecked lines are recorded in U05.c.020 above and remain the task artifact's current state. No task checkbox changed.
+- No files were physically deleted, staged, or committed. Review next: confirm task execution and output still work for ordinary tasks, and that task failures expose only generic output rather than Chat actions.
+
+## U05.c.022 — Disconnect Chat setup from Getting Started
+
+### Structured status and authorization
+
+- Parent-derived status remains `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; the Stage U05 C3 grant covers the four `welcomeGettingStarted` source paths plus the boundary test. `actionContext={mode: apply, workspace: /home/marialez/Work/walker, branch: product-debloat}`; feature-branch-chain, 400-line cap, and no-exception decision are unchanged. Strict TDD is false; the leaf RED/GREEN/TRIANGULATE/REFACTOR protocol was followed.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added assertions that Getting Started no longer routes to the Agent Sessions welcome page or Chat setup command, no longer contributes the Agent banner or Chat entitlement gate, removes Chat-only setup steps, and retains the ordinary Welcome action, startup options, first-run onboarding and theme step. Node 24 `npm run compile-client` passed for the new fixture; the boundary selector reported **19 passing / 1 failing** against the existing Agent/Chat routes.
+- **GREEN:** removed the Agent Sessions welcome-page route and startup option, Chat workspace-generation command and Copilot setup walkthrough, Chat-backed Agents banner, and Chat entitlement gate on generic onboarding. Standard walkthrough selection, Welcome page/footer controls, first-run onboarding, theme/personalization content and generic startup settings remain.
+- **TRIANGULATE:** product-boundary suite passed **20/20**; authorized `onboardingVariationA.test` passed **19/19** including its generic onboarding/personalization paths; `npm run compile-client` and `npm run typecheck-client` passed.
+- **REFACTOR:** left general welcome/help copy that merely mentions Chat among other features untouched, in keeping with the no-redesign instruction. `gettingStartedService.ts` still compares legacy `workbench.startupEditor='agentSessionsWelcomePage'` when deciding whether to auto-open an installed walkthrough; that file is outside the grant, so the stale legacy-value check was not edited. The persisted value itself was not migrated or cleared.
+
+### Files, workload, remaining tasks and review focus
+
+- Changed files: `gettingStarted.contribution.ts`, `gettingStarted.ts`, `startupPage.ts`, `common/gettingStartedContent.ts`, and the Getting Started boundary case in `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`, plus this record and `removal-inventory.md`. Source/test delta is **181 additions+deletions** (160 production + 21 boundary assertions); allocated artifact changes keep the leaf under 400.
+- The broad implementation-owned C3 rows remain unchecked because Preferences, Tasks and Getting Started are only parts of C3; no task checkbox changed. Their exact unchecked lines are recorded in U05.c.020 above. No file was physically deleted, staged, or committed.
+- Review next: verify ordinary Welcome/walkthrough/onboarding behavior remains, `gettingStartedService.ts`'s legacy value handling is reviewed after exact-path authorization, and dedicated `welcomeAgentSessions` source is included in the later parent-owned deletion manifest.
+
+## U05.c.023 — Keep terminal dictation speech-provider driven
+
+### Structured status, authorization and ownership
+
+- Parent-supplied status: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`; action context is `mode=implement`, workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat`, no commits. Delivery is `feature-branch-chain`, maximum 400 changed lines per leaf, small leaves accepted. `openspec/config.yaml` sets `strict_tdd: false`; U05 still requires RED → GREEN → TRIANGULATE → REFACTOR. Exact voice/menu/test paths are in the supplied remaining-C3 grant. No malformed ownership markers were found on the C3 implementation rows.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** the terminal boundary regression was added before the voice edits. With Node 24.18.0, `npm run compile-client` passed for the fixture, then `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` reported **22 passing / 1 failing** on the retained Chat speech-service coupling.
+- **GREEN:** removed the terminal Chat speech-service injection/built-in dictation path and related action/session plumbing. Terminal dictation continues through the retained speech provider, uses the existing terminal session lifecycle and post-processing, and remains available from ordinary speech-provider-gated actions.
+- **TRIANGULATE:** the expanded product boundary suite now passes **24/24**. `./scripts/test.sh --run vs/workbench/contrib/terminalContrib/voice/test/browser/terminalVoice.test` passes **7/7**; the provider-backed session test passes without a Chat speech service.
+- **REFACTOR:** generic speech-provider registration and editor dictation remain separate; no Chat speech implementation was copied into terminal code. Non-fatal npm/Electron/Wayland/deprecation warnings were observed during compile/test harness startup.
+
+### Files, workload and review focus
+
+- Files: `src/vs/workbench/contrib/terminalContrib/voice/{browser/terminalVoice.ts,browser/terminalVoiceActions.ts,test/browser/terminalVoice.test.ts}`, `src/vs/workbench/contrib/terminal/browser/terminalMenus.ts`, and the terminal dictation boundary case in `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`.
+- The tracked voice/menu source and unit-test delta is **299 additions+deletions**; the voice boundary assertions add 15 lines. Including this leaf's 20 apply-progress lines and one inventory row gives **335 additions+deletions**, below the 400-line ceiling. This excludes unrelated C3 leaves and pre-existing product-boundary cases.
+- Persisted C3 task checkboxes remain unchanged and unchecked; no task was claimed complete. No file was deleted, staged, or committed.
+- Review focus: confirm ordinary terminal dictation still uses `ISpeechService` and transcript post-processing, that no `IChatSpeechToTextService`/Chat context returns, and that editor speech-provider dictation remains intact.
+
+## U05.c.024 — Disconnect Chat terminal tabs and Testing tool registration
+
+### Structured status and authorization
+
+- Continued under the parent-provided `product-debloat` OpenSpec status and `mode=implement`; the four exact additional files in the parent's corrected C3 grant are approved. Node 24.18.0 was used. The `ITerminalChatService` interface and its `agentHostTerminalService` consumer are preserved as the accepted U07 prerequisite.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added boundary checks for the Chat terminal-tab view/hidden-terminal context, the testing Chat-agent-tool registration, and the Chat-only terminal `OutputLocation` telemetry setting reference. The compiled boundary suite failed **22 passing / 2 failing** against the pre-edit terminal tab integration and stale onboarding check.
+- **GREEN:** `TerminalTabbedView` no longer constructs `TerminalTabsChatEntry`, injects `ITerminalChatService`, reads hidden Chat terminals, or listens for Chat-only context changes. It retains generic terminal/group change events, tab sizing/layout, and ordinary terminal behavior. The generic terminal inline-action expression no longer depends on `ChatHasHiddenTerminals`. Testing retains its ordinary test services and registers no `TestingChatAgentToolContribution`. Removed only the Chat `OutputLocation` branch from `ConfigurationTelemetryContribution`; the telemetry contribution and generic Suggest/AgentSandbox setting handling remain.
+- **TRIANGULATE:** `npm run compile-client` passes with zero source compile errors; `npm run typecheck-client` passes. The product boundary suite passes **24/24**. Positive focused selectors pass: terminal service **9/9**, `AgentHostTerminalService` **7/7**, generic testing service **9/9**, terminal voice **7/7**, and decoration addon **6/6**. `git diff --check` passes for the scoped sources/tests.
+- **REFACTOR:** preserved the `ITerminalChatService` contract and `agentHostTerminalService` usage for U07; ordinary terminal change/disposal events still refresh tabs. No telemetry machinery was removed beyond the approved `OutputLocation` setting reference.
+
+### Files, workload, remaining edge and review focus
+
+- Files edited in this continuation: `src/vs/workbench/contrib/terminal/browser/terminalTabbedView.ts`, `src/vs/workbench/contrib/terminal/common/terminalContextKey.ts`, `src/vs/workbench/contrib/testing/browser/testing.contribution.ts`, `src/vs/workbench/contrib/telemetry/browser/telemetry.contribution.ts`, and the terminal/testing boundary case in `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`. Prior terminal decoration/menu work remains present from the preceding continuation.
+- The authorized terminal-tab/testing/telemetry and terminal-decoration source/test delta is approximately **142 additions+deletions** before allocated progress, inventory, and compatibility evidence; this is a small cohesive leaf under the 400-line ceiling. No broad C3 checkbox changed.
+- **Outstanding export bridge:** compiled `out/vs/workbench/contrib/terminal/terminalContribExports.js` still imports `TerminalChatCommandId`, `TerminalChatContextKeyStrings`, and `TerminalChatAgentToolsSettingId`. The existing bridge source is actually `src/vs/workbench/contrib/terminal/terminalContribExports.ts`; the parent grant spells a nonexistent `src/vs/workbench/contrib/terminal/browser/terminalContribExports.ts`. It was not edited in this continuation. Its Chat aliases still serve Chat-tree consumers and need an exact corrected path grant plus dependency-ordered C4 work; do not describe generic terminal exports as Chat-import-free. The `terminal.all.ts` source also exists at `src/vs/workbench/contrib/terminal/terminal.all.ts`, while the recorded grant spells it under `terminal/browser/`; its earlier disconnection remains present but is not modified here.
+- The disconnected `terminalTabsChatEntry.ts` and `testingChatAgentTool.ts` sources/tests remain for parent-owned deletion-manifest review; no physical deletion was attempted. Review generic terminal tab behavior and ensure Agent Host PTY disposal/attachment remains available.
+
+## U05.c.025 — Ignore the legacy Agent Sessions startup-editor value
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** after the parent approved `src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedService.ts`, added a boundary assertion that the stale `agentSessionsWelcomePage` comparison is absent while the generic walkthrough `openOnInstall` setting remains. The compiled boundary selector failed before the edit (the aggregate run reported **22 passing / 2 failing**, including this finding).
+- **GREEN:** removed only the startup-editor read/comparison that prevented generic walkthrough auto-open when the stored startup-editor value equaled `agentSessionsWelcomePage`. Ordinary last-focus, walkthrough selection, and user open-on-install preference still gate the behavior.
+- **TRIANGULATE:** the product boundary suite passes **24/24**; `onboardingVariationA.test` passes **19/19**; and `npm run compile-client` plus `npm run typecheck-client` pass. This continuation does not migrate or clear the stored preference.
+- **REFACTOR:** preserved other uses of `IConfigurationService`; unknown legacy profile values remain untouched.
+
+### Files, workload, remaining work and review focus
+
+- Files: `src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedService.ts` and the focused boundary case in `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`.
+- This legacy-value leaf changes fewer than 10 source/test lines before allocated artifact evidence; it is intentionally small and cohesive, with no padding or size exception.
+- No task checkbox changed. Exact remaining implementation rows are still unchecked in `tasks.md`:
+  - [ ] C3.RED: For each inbound consumer batch in M0, add/identify positive non-chat tests for notebook controllers, terminal/inline hints, editor/inline completions, SCM/debug/Search/accessibility/getting-started and ordinary test services; assert removed actions never register. <!-- sdd-owner: implementation -->
+  - [ ] C3.GREEN: Remove only chat/agent portions of retained contributions and constructor/fixture imports; delete exclusively agent contributions such as `welcomeAgentSessions`/`agentsVoice` with source-use evidence. Clean `workbench/test/{browser,electron-browser}/workbenchTestServices.ts`, component snapshots and onboarding chat setup helper consumers. Extract a truly neutral helper only into the proper retained layer, with parity tests and no chat-shaped model/service copied elsewhere. <!-- sdd-owner: implementation -->
+  - [ ] C3.TRIANGULATE → REFACTOR: Verify ordinary editor/notebook/terminal/debug/SCM/Search/diagnostic/toolchain behavior, disposable ownership and import/layer validity. Remove direct dead command links; list broader welcome-content follow-ups without editing onboarding copy/design beyond direct removal. <!-- sdd-owner: implementation -->
+- Next review: finish remaining generic test-fixture/onboarding seams; then prepare measured dedicated-tree manifests. Preserve legacy user data and keep all physical deletions and `api-workspace` integration execution parent-owned.
+
+## U05.c.026 — Remove the generic terminal-to-Chat export bridge
+
+### Structured status and authorization
+
+- Parent approved the corrected C3 source paths `src/vs/workbench/contrib/terminal/terminalContribExports.ts` and `src/vs/workbench/contrib/terminal/terminal.all.ts` in the binding authorization. The earlier `terminal.all.ts` disconnection is acknowledged; no new change to that file was needed here. `src/vs/workbench/contrib/chat/**` is authorized for its Chat-only consumers. Shared Chat test-service/fixture extraction is explicitly deferred to C4 so current Chat tests retain their setup. Status remains `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `mode=implement`; delivery remains `feature-branch-chain`, 400 changed lines per leaf. Strict TDD is false in `openspec/config.yaml`; RED-first remains required by the task.
+
+### RED → GREEN → TRIANGULATE → REFACTOR
+
+- **RED:** added source-boundary checks requiring the generic terminal export facade to have no Chat/Agent Tools imports or identifiers and requiring its four Chat-tree consumers to stop importing that facade. The first selector run used stale `out/` test JavaScript and passed 24/24 without exercising the new assertions. After `npm run compile-client` refreshed generated output, the selector correctly failed **23 passing / 1 failing** at the remaining `TerminalChatCommandId`/context/settings bridge, before production edits.
+- **GREEN:** removed Chat command, context, auto-approval, and terminal file-system setting aliases from `terminalContribExports.ts`, keeping generic accessibility/developer commands, sticky-scroll/suggest settings, generic sandbox settings, and non-Chat configuration. Moved four Chat-tree consumers onto their owner modules (`TerminalChatCommandId` and `TerminalChatAgentToolsSettingId`) so the generic terminal layer no longer imports Chat.
+- **TRIANGULATE:** `npm run compile-client` and `npm run typecheck-client` pass. The expanded product boundary selector passes **24/24**; `terminalChatActions.test` passes **2/2**. Compiled `out/vs/workbench/contrib/terminal/terminalContribExports.js` has no Chat/Chat Agent Tools imports or bridge identifiers. Non-fatal npm configuration, Electron/Wayland, and Node deprecation warnings occurred during the harness/build.
+- **REFACTOR:** direct Chat imports now remain only inside Chat-owned consumers; generic terminal behavior uses the retained generic IDs/settings. No Chat tree was physically deleted and no stored setting was migrated.
+
+### Files, workload and remaining work
+
+- Files: `src/vs/workbench/contrib/terminal/terminalContribExports.ts`; Chat consumer imports in `src/vs/workbench/contrib/chat/browser/{actions/chatAccessibilityHelp.ts,agentSessions/agentHost/agentHostModePickerPresentation.ts,widget/chatContentParts/toolInvocationParts/chatTerminalToolConfirmationSubPart.ts,widget/chatContentParts/toolInvocationParts/chatTerminalToolProgressPart.ts}`; and terminal bridge assertions in `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`.
+- This leaf allocates **66 additions+deletions**: 27 removed Chat bridge lines, 9 Chat-consumer import changes, 9 boundary assertions, 20 apply-progress lines, and one removal-inventory row. It remains well below the 400-line ceiling.
+- The earlier `terminal.all.ts` change remains present and was authorized by the corrected path; its Chat-contribution registration disconnection is documented under U05.c.024. Shared `workbenchTestServices.ts` Chat stubs and Chat component fixtures remain intentionally unchanged until the approved C4 extraction. The C3 implementation checkboxes remain unchecked because the parent-approved shared-fixture work, dedicated-tree manifests, and remaining broad triangulation are still pending.
+- Fresh C3 positive selectors after the regenerated compile: image carousel **12/12**, generic testing service **9/9**, task terminal status **5/5**, and account-free onboarding **19/19**. The first fresh `settingsEditor2.test` run was **15/16** because one assertion still expected the removed Chat preference category; the test path is in the existing exact grant and U05.c.027 supersedes that result with a generic MCP category assertion passing **16/16**.
+- Review focus: generic compiled terminal exports have no imports from `terminalContrib/chat` or `chatAgentTools`, generic IDs/configuration remain available, Chat consumers compile directly against their own feature modules, and U07 Agent Host terminal host behavior remains separately preserved. Preferences advanced-assignment filtering now uses a retained non-Chat category; C3 still has the out-of-grant TaskRunSource enum and deferred shared Chat fixtures to resolve.
+
+## U05 parent-owned manifest inventory and remaining gates
+
+- **Status consumed:** parent-selected `mode=implement`; `activeChange=product-debloat`, OpenSpec store, `applyState=ready`, `nextRecommended=sdd-apply`; workspace `/home/marialez/Work/walker`, branch `product-debloat`, Node 24.18.0 via mise, feature-branch-chain, 400 changed lines per authored leaf. Corrected C3 terminal paths are now binding-authorized. No todo/goal was touched.
+- **Manifest prepared:** `deletion-review.md` now has measured tracked file/line inventories for C4 Chat browser/common/tests/services and dedicated inlineChat/agentsVoice/welcomeAgentSessions/terminal trees; isolated Testing and terminal Chat leaves; component fixtures; C2 main/ext-host bridges, Chat/LM API tests and mixed-owner protocol/converter files; and gated A2 auth/MCP tails. Counts are current worktree snapshots, not source deletion or authored diff totals; parent must revalidate and perform all physical deletion in bounded review batches.
+- **C3 remaining edges:** terminal → generic Chat export bridge is removed and compiled output is clean. Testing/welcome/tasks/imageCarousel positive tests pass. The stale Chat-category assertion in the explicitly authorized `settingsEditor2.test.ts` was migrated to retained generic MCP TOC/category filtering; fresh compile and the focused suite now pass 16/16. `TaskRunSource.ChatAgent` remains in unapproved `src/vs/workbench/contrib/tasks/common/tasks.ts`; the parent was notified. Shared Chat stubs in common/browser `workbenchTestServices.ts` and Chat fixtures remain per parent direction until C4 removes their Chat test consumers. No C3 broad checkbox is complete.
+- **C2/A2 gates:** C2 actor registrations and inert public Chat/LM facades are disconnected and `accountFreeApi` remains green. U05.c.028–c.029 removed the disconnected `AgentEditorComments` and ChatQuota RPC shape/context pairs and emptied their bridge modules; remaining internal Chat/LM modules and tests still reference mixed-owner `extHost.protocol.ts`/`extHostTypeConverters.ts`, which are not whole-file deletion candidates. No API file was physically deleted and `api-workspace` remains parent-owned/unrun. A2 auth RPC/services and MCP authentication constructors are still present; A2 is not claimed complete and remains ordered after C1/C2/C3 consumer cleanup.
+- **Boundary:** no file was physically deleted, staged, committed, or published. Do not mark any broad C1/C2/C3/C4/A2 checkbox complete from this manifest; `tasks.md` remains unchanged. Review next should resolve the remaining task-enum exact path or explicitly defer it, run parent-owned C4 deletions, then resume C2 protocol cleanup and A2 tails only after their declared prerequisites.
+
+## U05.c.027 — Keep preference assignment filtering generic
+
+- **RED:** With the authorized fresh `npm run compile-client`, `settingsEditor2.test` ran against current output and failed 1/16 because its assignment-filter category case still looked for removed `chat` / `chat/context` groups. This confirms the earlier 16/16 claim had been stale-output evidence, not current-source verification.
+- **GREEN:** In the exact-granted `src/vs/workbench/contrib/preferences/test/browser/settingsEditor2.test.ts`, replaced the Chat-specific `chat.detectParticipant.enabled` test fixture/group lookup with retained `mcp.serverDiscovery.enabled` under the existing generic `features/mcp` TOC category. The case still asserts advanced assigned setting visibility, category filtering, counts, and restoration; no production logic or `AGENTS_WINDOW_SETTING_TAG` parsing changed.
+- **TRIANGULATE:** An intermediate synthetic TOC category fixture failed to survive the editor's `onConfigUpdate`; using the actual retained `features/mcp` category resolved that fixture issue. `PATH="$HOME/.local/share/mise/installs/node/24.18.0/bin:$PATH" npm run compile-client` passed with zero compile errors; `PATH=".../node/24.18.0/bin:$PATH" ./scripts/test.sh --run src/vs/workbench/contrib/preferences/test/browser/settingsEditor2.test.ts` passed **16/16**. Electron emitted only the existing Wayland/WASI/deprecation warnings.
+- **REFACTOR / preservation:** Test-only migration, 17 authored source/test additions+deletions; production paths remain unchanged. This leaf is well under 400 lines including allocated evidence. Generic preferences category filtering and the separate Agent Window setting tag path remain preserved.
+- **Files changed:** `src/vs/workbench/contrib/preferences/test/browser/settingsEditor2.test.ts`, `openspec/changes/product-debloat/apply-progress.md`, and `openspec/changes/product-debloat/removal-inventory.md`.
+- **Persisted task state:** No checkbox changed; no implementation task is claimed complete. Exact unchecked implementation gates remain:
+  - [ ] C3.RED: For each inbound consumer batch in M0, add/identify positive non-chat tests for notebook controllers, terminal/inline hints, editor/inline completions, SCM/debug/Search/accessibility/getting-started and ordinary test services; assert removed actions never register. <!-- sdd-owner: implementation -->
+  - [ ] C3.GREEN: Remove only chat/agent portions of retained contributions and constructor/fixture imports; delete exclusively agent contributions such as `welcomeAgentSessions`/`agentsVoice` with source-use evidence. Clean `workbench/test/{browser,electron-browser}/workbenchTestServices.ts`, component snapshots and onboarding chat setup helper consumers. Extract a truly neutral helper only into the proper retained layer, with parity tests and no chat-shaped model/service copied elsewhere. <!-- sdd-owner: implementation -->
+  - [ ] C3.TRIANGULATE → REFACTOR: Verify ordinary editor/notebook/terminal/debug/SCM/Search/diagnostic/toolchain behavior, disposable ownership and import/layer validity. Remove direct dead command links; list broader welcome-content follow-ups without editing onboarding copy/design beyond direct removal. <!-- sdd-owner: implementation -->
+  - [ ] C2.RED: Add empty-discovery/unsupported registration/execution tests for unavoidable public `chat`/`lm` members plus positive ordinary extension API activation; inventory every bridge/context/protocol/converter/type/proposal/test dependency before deleting it. <!-- sdd-owner: implementation -->
+  - [ ] C2.GREEN: Remove `api/browser/mainThreadChat*`, `mainThreadLanguageModels.ts`, `mainThreadLanguageModelTools.ts`, `mainThreadAgentEditorComments.ts`, corresponding common `extHostChat*`/language-model/tools/comments modules, protocol/context/service registrations, `extHostTypeConverters` and internal type/test tails. Replace only unavoidable stable facade members with tiny empty/unsupported functions from design D4; no `extHostChat` or chat-service compatibility framework survives. Preserve non-chat converters and APIs. <!-- sdd-owner: implementation -->
+  - [ ] C2.TRIANGULATE → REFACTOR: Exercise Node/worker ordinary APIs and public declaration checks; remove dead proposed-only grants/fixtures and document exact inert facade members/Error name/code. Re-scan to ensure converter/type tests no longer import deleted chat structures. <!-- sdd-owner: implementation -->
+  - [ ] C4.RED → GREEN: Once retained inbound references are gone, assert source/import absence and remove **all `src/vs/workbench/contrib/chat/`** plus chat-only `workbench/services/chat/` source/tests/styles/assets. Expand the manifest into reverse-dependent member/file/test batches <=400; run the existing retained boundary/positive tests and add deletion assertions per leaf. No shadow chat subtree or inactive replacement models. <!-- sdd-owner: implementation -->
+  - [ ] C4.TRIANGULATE → REFACTOR: Close chat ownership including mocks/component/API/test/asset and default-entitlement tails, credit telemetry deletion to T10, and rerun retained feature/API diagnostics. A physically present disconnected source file keeps the family open. <!-- sdd-owner: implementation -->
+  - [ ] A2.RED: After A5/A6/A7 and C1/C2/C3 consumer disconnections, add no-auth-service/RPC/callback/loopback/device/XAA construction assertions; inventory residual `IAuthentication*`/defaultAccount/dynamic token references including `contrib/mcp` configuration/actions/language lenses and API implementations. <!-- sdd-owner: implementation -->
+  - [ ] A2.GREEN: Remove `contrib/authentication/`, `services/authentication/`, `api/browser/mainThreadAuthentication.ts`, active common/node auth implementations and `extHostXaaAuthProvider`/loopback/token-storage helpers; delete main/ext-host auth RPC shapes/context/service registrations. Strip MCP account/OAuth enrollment/secret lenses/provider activation and unsupported auth-dependent operations without deleting independently used non-account behavior. Delete obsolete service/provider/OAuth tests in measured leaves while preserving A1 boundary tests. <!-- sdd-owner: implementation -->
+  - [ ] A2.TRIANGULATE → REFACTOR: Re-scan callbacks/session restore/auth DI across all entrypoints, run API Node/worker fixtures and ordinary secret/URL/request tests; verify deterministic unsupported behavior and no broad secret wipe/remote revocation. Final residual auth types are public inert signatures or justified Git/generic transport semantics, never active account infrastructure. <!-- sdd-owner: implementation -->
+- **Review focus:** Generic feature category filtering stays present without restoring a Chat category; advanced assignment changes remain visible only under the intended generic category and disappear/restore with filtering. Next code review should focus on the out-of-grant `src/vs/workbench/contrib/tasks/common/tasks.ts` `TaskRunSource.ChatAgent` member, deferred shared Chat fixture extraction, and mixed-owner C2 protocols before parent-owned C4 physical deletion.
+
+## U05.c.028 — Remove disconnected Agent Editor Comments RPC pair
+
+- **RED:** Extended `accountFreeApi.test` to require the protocol, main-thread bridge, and ext-host bridge to contain no Agent Editor Comments RPC. After a fresh compile the new assertion failed (**9 passing / 1 failing**) on the still-declared `extHost.protocol.ts` actor/shape. Existing runtime API behavior remained inert.
+- **GREEN:** Removed `IAgentEditorCommentDto`, `MainThreadAgentEditorCommentsShape`, `ExtHostAgentEditorCommentsShape`, and both proxy identifiers from mixed-owner `extHost.protocol.ts`; removed its dead context from `extHost.api.impl.ts`; replaced the two inactive bridge implementations with license-preserving `export {}` placeholders for parent-owned physical deletion. The public proposed `createAgentEditorComments` call remains a deterministic `ChatUnsupported` facade, and Chat-local `IAgentEditorCommentsBridge` consumers remain untouched pending C4.
+- **TRIANGULATE:** Node 24.18.0 `npm run compile-client` passed with zero source errors; `./scripts/test.sh --run src/vs/workbench/api/test/common/accountFreeApi.test.ts` passed **10/10**, including ordinary extension-API registrations and the stable unsupported facade behavior. The updated C2 manifest now records 3,188 lines in the main-thread batch, 5,114 in the ext-host batch, and 8,528 in the mixed protocol/converter pair.
+- **REFACTOR / preservation:** Removed only this disconnected Agent Comments RPC path. Generic extension-host contexts, converters, and Chat plan-review's internal comment bridge remain. The two module paths remain tracked as six-line placeholders; no physical file deletion is claimed. Leaf estimated at approximately **223 additions+deletions including allocated evidence**, below the 400-line ceiling.
+- **Files changed:** `src/vs/workbench/api/browser/mainThreadAgentEditorComments.ts`, `src/vs/workbench/api/common/extHostAgentEditorComments.ts`, `src/vs/workbench/api/common/extHost.protocol.ts`, `src/vs/workbench/api/common/extHost.api.impl.ts`, `src/vs/workbench/api/test/common/accountFreeApi.test.ts`, `openspec/changes/product-debloat/deletion-review.md`, `removal-inventory.md`, and this progress file.
+- **Persisted task state:** `tasks.md` remains unchanged; all C2 RED/GREEN/TRIANGULATE checkboxes remain unchecked because other Chat/LM shapes, bridges, converter/type/proposal/test tails and parent-owned source deletions remain. The exact unchecked lines are preserved in the U05.c.027 list above; no broad C2/C3/C4/A2 completion is claimed.
+- **Review focus:** Confirm the public Chat/LM facades remain passive-empty/unsupported, the Agent Comments protocol identifiers/classes are absent, ordinary extension APIs still register, and parent physically removes the two 6-line bridge placeholders only after reconciling its file deletion batch.
+
+## U05.c.029 — Disconnect ChatQuota RPC seam (C2, implement)
+
+- **RED:** The existing `accountFreeApi.test.ts` source-boundary assertion required the ChatQuota DTO, actor shapes/IDs, and bridge classes to be absent while the quota bridge implementation and protocol remained. The prior broad protocol replacement did not match the actual checked-in `IQuotaSnapshotsDto` shape; re-reading its exact definition exposed the remaining quota-only DTOs.
+- **GREEN:** Removed ChatQuota's snapshot DTOs, RPC shapes and proxy identifiers from mixed-owner `extHost.protocol.ts`; removed its context from the intentionally disconnected-context set; replaced `extHostChatQuota.ts` and `mainThreadChatQuota.ts` implementations with license-preserving `export {}` placeholders for parent-owned physical deletion. Expanded the absence assertion to cover both snapshot and rate-limit DTOs.
+- **TRIANGULATE:** With Node 24.18.0, fresh `npm run compile-client` passed with zero source errors; `./scripts/test.sh --run src/vs/workbench/api/test/common/accountFreeApi.test.ts` passed **10/10**, including ordinary extension-host registrations and inert public facades. `ChatQuotaExceeded` error-name semantics still appear in Chat-local modules pending C4; this leaf removes only the extension-host RPC seam.
+- **REFACTOR / preserved behavior:** A source scan confirmed no remaining API references to the removed quota DTOs, proxy IDs or bridge classes. Ordinary APIs/converters remain; the mixed protocol file remains. No source file was physically deleted.
+- **Workload / PR boundary:** Approximately **100 additions + deletions** across source, focused assertions and evidence (no binary changes), below 400. This is a feature-branch-chain C2 leaf; parent retains physical deletion and `api-workspace` integration verification.
+- **Files changed:** `src/vs/workbench/api/common/extHost.protocol.ts`, `src/vs/workbench/api/common/extHost.api.impl.ts`, `src/vs/workbench/api/common/extHostChatQuota.ts`, `src/vs/workbench/api/browser/mainThreadChatQuota.ts`, `src/vs/workbench/api/test/common/accountFreeApi.test.ts`, and the three OpenSpec progress/inventory/review artifacts.
+- **Persisted task state / remaining:** `tasks.md` was not changed. C2 remains incomplete; its three implementation-owned rows remain unchecked:
+  - [ ] C2.RED: Add empty-discovery/unsupported registration/execution tests for unavoidable public `chat`/`lm` members plus positive ordinary extension API activation; inventory every bridge/context/protocol/converter/type/proposal/test dependency before deleting it. <!-- sdd-owner: implementation -->
+  - [ ] C2.GREEN: Remove `api/browser/mainThreadChat*`, `mainThreadLanguageModels.ts`, `mainThreadLanguageModelTools.ts`, `mainThreadAgentEditorComments.ts`, corresponding common `extHostChat*`/language-model/tools/comments modules, protocol/context/service registrations, `extHostTypeConverters` and internal type/test tails. Replace only unavoidable stable facade members with tiny empty/unsupported functions from design D4; no `extHostChat` or chat-service compatibility framework survives. Preserve non-chat converters and APIs. <!-- sdd-owner: implementation -->
+  - [ ] C2.TRIANGULATE → REFACTOR: Exercise Node/worker ordinary APIs and public declaration checks; remove dead proposed-only grants/fixtures and document exact inert facade members/Error name/code. Re-scan to ensure converter/type tests no longer import deleted chat structures. <!-- sdd-owner: implementation -->
+- **Structured status consumed:** `activeChange=product-debloat`, `applyState=ready`, `verifyState=ready`, `syncState=blocked` (sync report missing), `archiveReady=false`, `nextRecommended=sdd-apply`; no actionContext warning was supplied. `openspec/config.yaml` confirms Node 24.18.0 and `strict_tdd: false`; the leaf nevertheless used the requested RED → GREEN → TRIANGULATE → REFACTOR evidence.
+- **Review focus:** Inspect the exact remaining Chat/LM members in `extHost.protocol.ts` and `extHostTypeConverters.ts`; keep ordinary RPC channels and converters, and account for Chat-local quota error semantics until their C4 owners are removed. Parent-owned physical deletion and independent `api-workspace` verification remain outstanding.
+
+## U05.c.030 — Execute the approved C3 residue batch and verify it
+
+- **RED / state on arrival:** The parent's launch addendum approved a four-item C3 residue batch: `tasks/common/tasks.ts` (`TaskRunSource.ChatAgent` only), `preferences/browser/settingsTreeModels.ts` (chat-feature-filter block only, `AGENTS_WINDOW_SETTING_TAG` consumers preserved), `imageCarousel/browser/imageCarouselEditor.ts` (stale chat-attachment comment only), and a compile/run of the already-converted generic TOC-category case in `preferences/test/browser/settingsEditor2.test.ts`. On arrival those three production edits and the test conversion were present as uncommitted worktree changes from the predecessor's final pass but had no verification record and no post-batch compile. This leaf completed the authorized verification instead of duplicating the edits.
+- **GREEN:** No additional production edit was required. Fresh Node 24.18.0 `npm run compile-client` regenerated `out/**` and passed with **0 errors**. Source scans confirmed the batch is complete: zero `TaskRunSource.ChatAgent`/`ChatAgent` references remain under `contrib/tasks/`, the removed Chat filter block leaves zero `chat` matches in `settingsTreeModels.ts`, and `AGENTS_WINDOW_SETTING_TAG` parsing remains present (import, tag assignment, query expansion) as required.
+- **TRIANGULATE:** `./scripts/test.sh --run src/vs/workbench/contrib/preferences/test/browser/settingsEditor2.test.ts` passed **16/16**, including `assignment filter includes advanced settings in a generic TOC category` against retained `features/mcp`. `./scripts/test.sh --run src/vs/workbench/contrib/tasks/test/browser/taskTerminalStatus.test.ts` passed **5/5**. The aggregate C3 boundary suite `productDebloatChatIntegrations.test.ts` passed **25/25**, one above the U05.c.026 baseline of 24/24. Electron emitted only existing Wayland/WASI/deprecation warnings.
+- **REFACTOR / preserved behavior:** The residue batch is minimal and host-preserving: generic task run-source typing (the enum still keeps User/FolderOpen/ConfigurationChange/Reconnect), generic settings assignment filtering with the separate Agents Window tag path, Images Preview comment text, and the retained preferences test behavior all remain. No file was physically deleted, staged, or committed.
+- **Workload / PR boundary:** Approximately **35 source/test additions+deletions** (three production edits plus the test conversion) with allocated OpenSpec evidence, well below the 400-line feature-chain budget. Small leaf, no exception.
+- **Files changed (batch):** `src/vs/workbench/contrib/tasks/common/tasks.ts`, `src/vs/workbench/contrib/preferences/browser/settingsTreeModels.ts`, `src/vs/workbench/contrib/imageCarousel/browser/imageCarouselEditor.ts`, `src/vs/workbench/contrib/preferences/test/browser/settingsEditor2.test.ts`; evidence updates in `apply-progress.md` and `removal-inventory.md`.
+- **Persisted task state:** `tasks.md` is unchanged. The three broad C3 implementation rows remain unchecked because the dedicated-tree manifest follow-up, remaining broad triangulation and parent-owned physical deletion are still pending. The exact unchecked lines are recorded in U05.c.027 above.
+- **Structured status consumed:** `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `syncState=blocked`, `archiveReady=false`, `nextRecommended=sdd-apply`, `actionContext.mode=implement`; no actionContext warning was supplied.
+- **Review focus:** Confirm the Chat feature-filter block is gone without changing generic category filtering or the separate `AGENTS_WINDOW_SETTING_TAG` path, that no task run-source consumer regressed to a numeric ChatAgent value, and that the converted settings test exercises a retained generic category rather than a recreated Chat one.
+
+## U05.c.031 — Decouple retained test fixtures from Chat-tree paths (C3 finish, implement)
+
+- **RED / inventory:** A reverse-path scan found five retained test files outside `contrib/chat/` that referenced Chat-tree files: the aggregate C3 boundary suite (read four Chat terminal consumers), the A5 Sync-boundary sentinel (read `newPromptFileActions.ts`), the extension-scope sentinel (`chatSetupController.ts`), the Chat-owned `aiCustomizationManagementSectionRegistry.test.ts`, and `accountPolicyService.test.ts` (active imports of Chat session-type helpers). The first three would fail the moment the parent performs C4 physical deletion; the fourth is a C4 test tail; the fifth is an A2/A3-owned ordering constraint recorded in the manifest.
+- **GREEN:** In `productDebloatChatIntegrations.test.ts` the four redirected Chat terminal consumers are now checked only while they exist (`existsSync` guard, import added) and the conditional is commented as a temporary C4-deletion-safe check; the exporter-level absence assertions stay unconditional. Removed the `newPromptFileActions.ts` entry from `userDataProfileSyncBoundary.test.ts` and the `chatSetupController.ts` entry from `ignoredExtensionsManagementService.test.ts`, keeping their remaining sentinels. No production source changed.
+- **TRIANGULATE:** Fresh Node 24.18.0 `npm run compile-client` passed; `productDebloatChatIntegrations.test.ts` **25/25**, `userDataProfileSyncBoundary.test.ts` **19/19**, `ignoredExtensionsManagementService.test.ts` **2/2**, and `searchChatContext.test.ts` **3/3** (Search retention). The existing Electron warnings were unchanged.
+- **REFACTOR / preserved behavior:** Only test-read surfaces were decoupled; no assertion about retained product behavior was weakened, and no Chat source was edited or deleted. `deletion-review.md` now records the additional C4 test tail and the account-policy ordering constraint so the parent does not delete the Chat tree while `accountPolicyService.test.ts` still imports it.
+- **Workload / PR boundary:** Approximately **25 source-test additions+deletions** across three test files plus allocated OpenSpec evidence; well below 400.
+- **Files changed:** `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts`, `src/vs/workbench/services/userDataProfile/test/browser/userDataProfileSyncBoundary.test.ts`, `src/vs/workbench/services/extensionManagement/test/common/ignoredExtensionsManagementService.test.ts`; evidence in `apply-progress.md` and `deletion-review.md`.
+- **Persisted task state:** `tasks.md` unchanged. C3's three broad implementation rows remain unchecked: the dedicated feature trees and `workbenchTestServices.ts` Chat stubs are still present, so the family cannot close until parent C4 deletion and the deferred shared-fixture extraction complete.
+- **Structured status consumed:** `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `verifyState=ready`, `syncState=blocked`, `archiveReady=false`, `nextRecommended=sdd-apply`, `actionContext.mode=implement`; no actionContext warning supplied.
+- **Review focus:** Confirm the boundary suite still guards the exporter while tolerating C4 deletion, the two sentinels keep their retained-path coverage, and the parent honors the account-policy ordering constraint before unlinking Chat sources.
+
+## U05.c.032 — Retire the orphaned ChatStatus RPC pair (C2, implement)
+
+- **RED / inventory:** A reverse-import scan found eleven Chat/LM bridge files with zero inbound imports. The smallest complete pair was `api/browser/mainThreadChatStatus.ts` (34 lines) and `api/common/extHostChatStatus.ts` (108 lines): no source or test imported either module, `ChatStatusItemDto` was referenced only by the protocol shape that declared it, and only one `MainContext.MainThreadChatStatus` proxy identifier existed (no ext-host actor).
+- **GREEN:** Replaced both bridge modules with license-preserving `export {}` placeholders for parent-owned physical deletion; removed `ChatStatusItemDto`, `MainThreadChatStatusShape` and the `MainThreadChatStatus` proxy identifier from the mixed-owner `extHost.protocol.ts`. The inert public `createChatStatusItem` facade in `extHost.api.impl.ts` is unchanged and still throws the stable `ChatUnsupported` error.
+- **TRIANGULATE:** Fresh Node 24.18.0 `npm run compile-client` passed with 0 errors and a residual-reference scan found no `MainThreadChatStatus`/`ExtHostChatStatus`/`ChatStatusItemDto` usages outside the boundary test. `./scripts/test.sh --run src/vs/workbench/api/test/common/accountFreeApi.test.ts` passed **10/10**, including ordinary extension-API registration and the inert-facade cases. The boundary test gained four source-boundary assertions for the removed protocol identifiers and classes.
+- **REFACTOR / preserved behavior:** No generic RPC channel or converter was touched; only the disconnected status-item actor's shape and two dead bridge modules went. No Chat-local status UI, no physics of the retired actor was replaced, and no shadow service was introduced.
+- **Workload / PR boundary:** Approximately **190 additions+deletions** (142 bridge lines replaced by 12 placeholder lines, 14 protocol lines, 8 boundary-test lines), below 400.
+- **Files changed:** `src/vs/workbench/api/browser/mainThreadChatStatus.ts`, `src/vs/workbench/api/common/extHostChatStatus.ts`, `src/vs/workbench/api/common/extHost.protocol.ts`, `src/vs/workbench/api/test/common/accountFreeApi.test.ts`, plus progress/inventory evidence.
+- **Persisted task state:** `tasks.md` unchanged; C2's three broad rows remain unchecked because the remaining orphaned bridges, their protocol members, converters and API test tails are still pending, and the parent still owns physical deletion.
+- **Review focus:** Verify the placeholder modules export nothing, the protocol file keeps all ordinary channels (visible in the unchanged `accountFreeApi` registration assertions), and the public `chatWindow.createChatStatusItem` facade remains deterministically unsupported.
+
+## U05.c.033 — Retire the orphaned ChatOutputRenderer RPC pair (C2, implement)
+
+- **RED / inventory:** The second zero-inbound pair was `api/browser/mainThreadChatOutputRenderer.ts` (68 lines) and `api/common/extHostChatOutputRenderer.ts` (57 lines). Its `IChatOutputRenderContextDto` was referenced only by the shape that declared it and the module being retired; `chatMarkdownContentPart.ts` has an unrelated private `renderChatOutputCodeBlock` helper that stays. The only live reference to the actor was the `disconnectedChatApiContexts` set in `extHost.api.impl.ts`, which kept the actor out of `assertRegistered` while it still had a proxy identifier.
+- **GREEN:** Replaced both bridge modules with license-preserving `export {}` placeholders; removed `MainThreadChatOutputRendererShape`, `IChatOutputRenderContextDto`, `ExtHostChatOutputRendererShape`, its two proxy identifiers, and the now-invalid `ExtHostContext.ExtHostChatOutputRenderer` set entry (the enum member no longer exists, so the exclusion was no longer expressible). The existing `mainThreadWebviewManager` absence assertion stays.
+- **TRIANGULATE:** First compile correctly failed on the stale set entry (`extHost.api.impl.ts(355,18)`), which located the last live reference; after the fix, fresh Node 24.18.0 `npm run compile-client` exited 0 with no errors and `./scripts/test.sh --run src/vs/workbench/api/test/common/accountFreeApi.test.ts` passed **10/10**. An operational note: the earlier chained compile+test invocation had hung after the failed compile and was killed by timeout; subsequent runs used `timeout` and explicit exit-code checks (no source impact).
+- **REFACTOR / preserved behavior:** Only the disconnected output-renderer actor and its DTO were removed; webview handling, profile content handlers, UriOpeners and all ordinary RPC channels remain. The public chat output-renderer API facade remains the inert unsupported one.
+- **Workload / PR boundary:** Approximately **165 additions+deletions** (125 bridge lines replaced by 12 placeholder lines, ~20 protocol lines, 8 boundary-test lines plus the set entry), below 400.
+- **Files changed:** `src/vs/workbench/api/browser/mainThreadChatOutputRenderer.ts`, `src/vs/workbench/api/common/extHostChatOutputRenderer.ts`, `src/vs/workbench/api/common/extHost.protocol.ts`, `src/vs/workbench/api/common/extHost.api.impl.ts`, `src/vs/workbench/api/test/common/accountFreeApi.test.ts`, plus progress evidence.
+- **Persisted task state:** `tasks.md` unchanged; C2's broad rows remain unchecked for the remaining orphaned bridges, protocol/converter tails and API test tails, plus parent-owned physical deletion.
+- **Review focus:** Confirm the two placeholders and the removed protocol block, that ordinary proxy identifiers around the removals are intact, and that `assertRegistered` still validates every remaining actor.
+
+## U05.c.034 — Retire the ChatCodeMapper RPC pair (C2, implement)
+
+- **RED / inventory:** The code-mapper pair is `api/browser/mainThreadChatCodeMapper.ts` (75 lines) and `api/common/extHostCodeMapper.ts` (81 lines); the first reverse-import scan had missed the ext-host file because its name lacks a Chat token. Neither module had inbound imports, `ExtHostContext.ExtHostCodeMapper` was registration-disconnected, and `ICodeMapperRequestDto`/`ICodeMapperProgressDto`/`ICodeMapperTextEdit`/`ICodeMapperNotebookEditDto` were referenced only by the pair and the protocol shapes themselves.
+- **GREEN:** Replaced both modules with license-preserving `export {}` placeholders; removed the four code-mapper DTOs, `MainThreadCodeMapperShape`, `ExtHostCodeMapperShape`, both proxy identifiers, the now-unused `ICodeMapperRequest`/`ICodeMapperResult` protocol import, and the stale `ExtHostContext.ExtHostCodeMapper` entry from the disconnected set. Ordinary notebook edit DTOs (`ICellEditOperationDto`) remain.
+- **TRIANGULATE:** Fresh Node 24.18.0 `npm run compile-client` exited **0** with no errors (verified by explicit exit code after the earlier chained-run lesson) and `./scripts/test.sh --run src/vs/workbench/api/test/common/accountFreeApi.test.ts` passed **10/10**. Boundary assertions now cover the code-mapper protocol identifiers and both retired classes.
+- **REFACTOR / preserved behavior:** Only the disconnected code-mapper actor went; the Chat-local `ICodeMapperService` consumers and `NotebookDto` remain for C4, and no generic RPC channel changed.
+- **Workload / PR boundary:** Approximately **205 additions+deletions** (156 bridge lines replaced by 12 placeholder lines, ~37 protocol lines, set entry, and boundary-test lines), below 400.
+- **Files changed:** `src/vs/workbench/api/browser/mainThreadChatCodeMapper.ts`, `src/vs/workbench/api/common/extHostCodeMapper.ts`, `src/vs/workbench/api/common/extHost.protocol.ts`, `src/vs/workbench/api/common/extHost.api.impl.ts`, `src/vs/workbench/api/test/common/accountFreeApi.test.ts`, plus progress evidence.
+- **Persisted task state:** `tasks.md` unchanged; C2's broad rows stay unchecked for the remaining bridges/converter/test tails and parent-owned deletion.
+- **Review focus:** Confirm all four code-mapper DTOs and both shapes are absent, the boundary test reads both placeholder modules, and no ordinary notebook/cell-edit protocol member was disturbed.
+
+## U05.c.035 — Retire the ChatContext RPC pair (C2, implement; measured over-budget obstacle reported)
+
+- **RED / inventory and split attempt:** The ChatContext pair is `api/common/extHostChatContext.ts` (319 lines) and `api/browser/mainThreadChatContext.ts` (100 lines). The pair is **bidirectionally coupled**: each module both implements one shape and proxies to the other (`ExtHostChatContextShape` + `MainThreadChatContextShape` referenced from both sides), so removing either shape requires emptying both modules. A first attempt that emptied only the ext-host side and the ext-host shape failed compile on `mainThreadChatContext.ts(10,10)` and `(38,56)`; the shape/proxy/set-entry edits were restored before proceeding. The least indivisible unit measures ~460 authored additions+deletions (325 + 106 placeholder conversions, ~21 protocol lines, 1 set entry, ~13 boundary-test lines); the best alternative split (empty both modules but keep the dead shapes) still measures ~436, and every smaller split would require a forbidden inert compatibility shim or an unsafe non-compiling half-leaf. This is reported as the concrete split obstacle rather than iterating to hide it.
+- **GREEN:** Replaced both modules with license-preserving `export {}` placeholders; removed `ExtHostChatContextShape`, `MainThreadChatContextShape`, `IChatContextItemDto`, the now-unused `IChatContextItem` protocol import, both proxy identifiers, and the `ExtHostContext.ExtHostChatContext` disconnected-set entry. The boundary test now asserts all four identifiers are absent and neither class remains.
+- **TRIANGULATE:** Fresh Node 24.18.0 `npm run compile-client` exited **0** with no errors; `./scripts/test.sh --run src/vs/workbench/api/test/common/accountFreeApi.test.ts` passed **10/10**.
+- **REFACTOR / preserved behavior:** Only the disconnected context-provider actor went; generic context keys, chat-context Chat-local consumers and all ordinary RPC channels remain for their own owners.
+- **Workload / PR boundary:** **~460 authored additions+deletions**, above the 400 review budget for this single unit. Cause: the pair's mutual shape references make the two placeholder conversions plus both shape removals one mechanically coherent review unit. Recommendation to the parent: review this batch as one bounded mechanical placeholder conversion (like the earlier c.028 AgentEditorComments pair) or supply an explicit size disposition; no code was compressed or omitted to fit the number.
+- **Files changed:** `src/vs/workbench/api/common/extHostChatContext.ts`, `src/vs/workbench/api/browser/mainThreadChatContext.ts`, `src/vs/workbench/api/common/extHost.protocol.ts`, `src/vs/workbench/api/common/extHost.api.impl.ts`, `src/vs/workbench/api/test/common/accountFreeApi.test.ts`, plus progress evidence.
+- **Persisted task state:** `tasks.md` unchanged; C2's broad rows remain unchecked for the other bridges/converter/test tails, the parent-owned physical deletion, and the size disposition above.
+- **Review focus:** Confirm the pair is fully placeholder-based, both shapes/proxies and the DTO are absent, ordinary proxy identifiers around the removals are intact, and decide the one-batch vs split disposition for the measured size.

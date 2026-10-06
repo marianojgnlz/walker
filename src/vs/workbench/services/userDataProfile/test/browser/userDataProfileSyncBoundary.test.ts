@@ -187,7 +187,6 @@ suite('User data profile Sync boundary', () => {
 
 	test('prompt creation and Getting Started do not offer Sync actions', () => {
 		for (const path of [
-			'workbench/contrib/chat/browser/promptSyntax/newPromptFileActions.ts',
 			'workbench/contrib/welcomeGettingStarted/browser/gettingStartedService.ts',
 			'workbench/contrib/welcomeGettingStarted/common/gettingStartedContent.ts',
 		]) {

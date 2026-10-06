@@ -19,9 +19,7 @@ import { terminalStrings } from '../common/terminalStrings.js';
 import { ACTIVE_GROUP, AUX_WINDOW_GROUP, SIDE_GROUP } from '../../../services/editor/common/editorService.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { HasSpeechProvider } from '../../speech/common/speechService.js';
-import { ChatContextKeys } from '../../chat/common/actions/chatContextKeys.js';
 import { hasKey } from '../../../../base/common/types.js';
-import { TerminalContribContextKeyStrings } from '../terminalContribExports.js';
 
 export const enum TerminalContextMenuGroup {
 	Chat = '0_chat',
@@ -40,15 +38,10 @@ export const enum TerminalMenuBarGroup {
 }
 
 /**
- * True when a dictation engine is available for the terminal: either the
- * built-in on-device engine (with AI features enabled) or the speech
- * extension's provider. Used to gate the "Start Dictation" context menu entry
- * so it only shows when dictation can actually be started.
+ * True when the speech extension provides terminal dictation. Used to gate the
+ * "Start Dictation" context menu entry so it only shows when dictation can start.
  */
-const TerminalDictationAvailable = ContextKeyExpr.or(
-	HasSpeechProvider,
-	ContextKeyExpr.and(ChatContextKeys.enabled, ChatContextKeys.speechToTextConfigured)
-);
+const TerminalDictationAvailable = HasSpeechProvider;
 
 export function setupTerminalMenus(): void {
 	MenuRegistry.appendMenuItems(
@@ -447,7 +440,6 @@ export function setupTerminalMenus(): void {
 					group: 'navigation',
 					order: 0,
 					when: ContextKeyExpr.and(
-						ContextKeyExpr.not(TerminalContribContextKeyStrings.ChatHasHiddenTerminals),
 						ContextKeyExpr.equals('view', TERMINAL_VIEW_ID),
 						ContextKeyExpr.has(`config.${TerminalSettingId.TabsEnabled}`),
 						ContextKeyExpr.or(

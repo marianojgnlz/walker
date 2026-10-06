@@ -53,7 +53,7 @@ import { EditorPool } from '../chatContentCodePools.js';
 import { DetachedTerminalCommandMirror, DetachedTerminalSnapshotMirror, type IDetachedTerminalCommandMirrorRenderResult } from '../../../../../terminal/browser/chatTerminalCommandMirror.js';
 import { TerminalLocation } from '../../../../../../../platform/terminal/common/terminal.js';
 import { Codicon } from '../../../../../../../base/common/codicons.js';
-import { TerminalContribCommandId } from '../../../../../terminal/terminalContribExports.js';
+import { TerminalChatCommandId as TerminalContribCommandId } from '../../../../../terminalContrib/chat/browser/terminalChat.js';
 import { ITelemetryService } from '../../../../../../../platform/telemetry/common/telemetry.js';
 import { isNumber } from '../../../../../../../base/common/types.js';
 import { removeAnsiEscapeCodes } from '../../../../../../../base/common/strings.js';

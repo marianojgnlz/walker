@@ -19,7 +19,7 @@ import { IConfigurationService } from '../../../../../platform/configuration/com
 import { URI } from '../../../../../base/common/uri.js';
 import { Schemas } from '../../../../../base/common/network.js';
 import { TestConfigurationService } from '../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { productService, TestLifecycleService } from '../../../../test/browser/workbenchTestServices.js';
+import { TestLifecycleService } from '../../../../test/browser/workbenchTestServices.js';
 import { GlobalExtensionEnablementService } from '../../../../../platform/extensionManagement/common/extensionEnablementService.js';
 import { ILifecycleService } from '../../../lifecycle/common/lifecycle.js';
 import { INotificationService } from '../../../../../platform/notification/common/notification.js';
@@ -29,7 +29,7 @@ import { mock } from '../../../../../base/test/common/mock.js';
 import { IExtensionBisectService } from '../../browser/extensionBisect.js';
 import { IWorkspaceTrustManagementService, IWorkspaceTrustRequestService, WorkspaceTrustRequestOptions } from '../../../../../platform/workspace/common/workspaceTrust.js';
 import { EXTENSIONS_SUPPORT_AGENTS_WINDOW, ExtensionManifestPropertiesService, IExtensionManifestPropertiesService } from '../../../extensions/common/extensionManifestPropertiesService.js';
-import { TestChatEntitlementService, TestContextService, TestProductService, TestWorkspaceTrustEnablementService, TestWorkspaceTrustManagementService } from '../../../../test/common/workbenchTestServices.js';
+import { TestContextService, TestProductService, TestWorkspaceTrustEnablementService, TestWorkspaceTrustManagementService } from '../../../../test/common/workbenchTestServices.js';
 import { TestWorkspace } from '../../../../../platform/workspace/test/common/testWorkspace.js';
 import { ExtensionManagementService } from '../../common/extensionManagementService.js';
 import { ILogService, NullLogService } from '../../../../../platform/log/common/log.js';
@@ -40,8 +40,6 @@ import { FileService } from '../../../../../platform/files/common/fileService.js
 import { IProductService } from '../../../../../platform/product/common/productService.js';
 import { AllowedExtensionsService } from '../../../../../platform/extensionManagement/common/allowedExtensionsService.js';
 import { IStringDictionary } from '../../../../../base/common/collections.js';
-import { ChatEntitlementContext, IChatEntitlementService } from '../../../chat/common/chatEntitlementService.js';
-import { Lazy } from '../../../../../base/common/lazy.js';
 
 function createStorageService(instantiationService: TestInstantiationService, disposableStore: DisposableStore): IStorageService {
 	let service = instantiationService.get(IStorageService);
@@ -59,7 +57,7 @@ function createStorageService(instantiationService: TestInstantiationService, di
 }
 
 export class TestExtensionEnablementService extends ExtensionEnablementService {
-	constructor(instantiationService: TestInstantiationService, chatEntitlementService?: IChatEntitlementService) {
+	constructor(instantiationService: TestInstantiationService) {
 		const disposables = new DisposableStore();
 		const storageService = createStorageService(instantiationService, disposables);
 		const extensionManagementServerService = instantiationService.get(IExtensionManagementServerService) ||
@@ -95,10 +93,8 @@ export class TestExtensionEnablementService extends ExtensionEnablementService {
 			workspaceTrustManagementService,
 			new class extends mock<IWorkspaceTrustRequestService>() { override requestWorkspaceTrust(options?: WorkspaceTrustRequestOptions): Promise<boolean> { return Promise.resolve(true); } },
 			instantiationService.get(IExtensionManifestPropertiesService) || instantiationService.stub(IExtensionManifestPropertiesService, disposables.add(new ExtensionManifestPropertiesService(TestProductService, instantiationService.get(IConfigurationService), new TestWorkspaceTrustEnablementService(), new NullLogService()))),
-			chatEntitlementService ?? new TestChatEntitlementService(),
 			instantiationService,
-			new NullLogService(),
-			productService
+			new NullLogService()
 		);
 		this._register(disposables);
 	}
@@ -1149,35 +1145,40 @@ suite('ExtensionEnablementService Test', () => {
 		assert.deepStrictEqual((<IExtension>target.args[0][0][0]).identifier, { id: 'pub.a' });
 	});
 
-	test('test chat extension is disabled on profile switch when setup is not completed', async () => {
-		const chatExtensionId = productService.defaultChatAgent!.chatExtensionId;
-		const chatExtension = aLocalExtension(chatExtensionId, undefined, ExtensionType.System);
+	test('legacy Chat product metadata does not migrate extension enablement', async () => {
+		const defaultChatAgent = {
+			extensionId: 'GitHub.copilot',
+			chatExtensionId: 'GitHub.copilot-chat',
+		} as IProductService['defaultChatAgent'];
+		const legacyProductService = { ...TestProductService, defaultChatAgent } as IProductService;
+		instantiationService.stub(IProductService, legacyProductService);
+		const chatExtension = aLocalExtension(defaultChatAgent.chatExtensionId, undefined, ExtensionType.System);
 		installed.push(chatExtension);
 
-		// Clear migration flag set by the setup() instance so the migration runs fresh
-		let storageService = instantiationService.get(IStorageService);
+		const storageService = instantiationService.get(IStorageService);
 		storageService.store('builtinChatExtensionEnablementMigration', false, StorageScope.PROFILE, StorageTarget.MACHINE);
 
-		// Create a chat entitlement service with context where setup is not completed
-		const chatEntitlementService = new TestChatEntitlementService();
-		chatEntitlementService.context = new Lazy(() => ({ state: { completed: false }, onDidChange: Event.None })) as unknown as Lazy<ChatEntitlementContext>;
-
-		testObject = disposableStore.add(new TestExtensionEnablementService(instantiationService, chatEntitlementService));
+		testObject = disposableStore.add(new TestExtensionEnablementService(instantiationService));
 		await testObject.waitUntilInitialized();
 
-		// Chat extension should be disabled after initial setup
-		assert.strictEqual(testObject.getEnablementState(chatExtension), EnablementState.DisabledGlobally);
-
-		// Enable the chat extension to simulate it being enabled in a previous profile
-		await testObject.setEnablement([chatExtension], EnablementState.EnabledGlobally);
 		assert.strictEqual(testObject.getEnablementState(chatExtension), EnablementState.EnabledGlobally);
+		assert.strictEqual(storageService.getBoolean('builtinChatExtensionEnablementMigration', StorageScope.PROFILE), false);
+	});
 
-		// Simulate switching to a fresh profile by clearing the migration flag
-		storageService = instantiationService.get(IStorageService);
-		storageService.store('builtinChatExtensionEnablementMigration', false, StorageScope.PROFILE, StorageTarget.MACHINE);
+	test('legacy Chat extension-unification setting does not disable ordinary extensions', async () => {
+		const defaultChatAgent = {
+			extensionId: 'pub.completions',
+			chatExtensionId: 'pub.chat',
+		} as IProductService['defaultChatAgent'];
+		const legacyProductService = { ...TestProductService, defaultChatAgent } as IProductService;
+		instantiationService.stub(IProductService, legacyProductService);
+		const configurationService = instantiationService.get(IConfigurationService) as TestConfigurationService;
+		await configurationService.setUserConfiguration('chat.extensionUnification.enabled', true);
+		instantiationService.stub(IWorkbenchEnvironmentService, { remoteAuthority: 'ssh-remote+test' });
 
-		// Chat extension should be disabled again after computing enablement state
-		assert.strictEqual(testObject.getEnablementState(chatExtension), EnablementState.DisabledGlobally);
+		testObject = disposableStore.add(new TestExtensionEnablementService(instantiationService));
+
+		assert.strictEqual(testObject.getEnablementState(aLocalExtension('pub.completions')), EnablementState.EnabledGlobally);
 	});
 
 	test('test extension is disabled by allowed list', async () => {
@@ -1255,6 +1256,16 @@ suite('ExtensionEnablementService Test', () => {
 			EnablementState.EnabledGlobally,
 			EnablementState.DisabledByEnvironment,
 		]);
+	});
+
+	test('legacy product sessions allowlist does not bypass extension capability checks', () => {
+		const legacyProductService = { ...TestProductService, sessionsWindowAllowedExtensions: ['pub.withMain'] } as IProductService;
+		instantiationService.stub(IProductService, legacyProductService);
+		instantiationService.stub(IWorkbenchEnvironmentService, { isSessionsWindow: true });
+		testObject = disposableStore.add(new TestExtensionEnablementService(instantiationService));
+
+		const withMain = aLocalExtension2('pub.withMain', { main: 'main.js' });
+		assert.strictEqual(testObject.getEnablementState(withMain), EnablementState.DisabledByEnvironment);
 	});
 
 	test('test extensions declaring agents window support are enabled in sessions window', async () => {

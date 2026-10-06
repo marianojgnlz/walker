@@ -10,7 +10,6 @@ import { Emitter, Event as CommonEvent } from '../../../base/common/event.js';
 import { normalizeDriveLetter, splitRecentLabel } from '../../../base/common/labels.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { Schemas } from '../../../base/common/network.js';
-import { join } from '../../../base/common/path.js';
 import { isMacintosh, isWindows } from '../../../base/common/platform.js';
 import { basename, dirname, extUriBiasedIgnorePathCase, isEqual, originalFSPath } from '../../../base/common/resources.js';
 import { URI } from '../../../base/common/uri.js';
@@ -23,7 +22,6 @@ import { StorageScope, StorageTarget } from '../../storage/common/storage.js';
 import { IApplicationStorageMainService } from '../../storage/electron-main/storageMainService.js';
 import { IRecent, IRecentFile, IRecentFolder, IRecentlyOpened, IRecentWorkspace, isRecentFile, isRecentFolder, isRecentWorkspace, restoreRecentlyOpened, toStoreData } from '../common/workspaces.js';
 import { IWorkspaceIdentifier, WORKSPACE_EXTENSION } from '../../workspace/common/workspace.js';
-import { getWorkspaceIdentifier } from '../common/workspaceIdentifier.js';
 import { IWorkspacesManagementMainService } from './workspacesManagementMainService.js';
 import { ResourceMap } from '../../../base/common/map.js';
 import { IDialogMainService } from '../../dialogs/electron-main/dialogMainService.js';
@@ -118,7 +116,7 @@ export class WorkspacesHistoryMainService extends Disposable implements IWorkspa
 		}
 
 		const mergedEntries = await this.mergeEntriesFromStorage({ workspaces, files });
-		workspaces = this.canonicalizeAgentSessionsWorkspaces(mergedEntries.workspaces);
+		workspaces = mergedEntries.workspaces;
 		files = mergedEntries.files;
 
 		if (workspaces.length > WorkspacesHistoryMainService.MAX_TOTAL_RECENT_ENTRIES) {
@@ -200,30 +198,10 @@ export class WorkspacesHistoryMainService extends Disposable implements IWorkspa
 		const recentlyOpened = await this.mergeEntriesFromStorage();
 
 		return {
-			workspaces: this.canonicalizeAgentSessionsWorkspaces(recentlyOpened.workspaces),
+			// Ignore legacy session workspaces without deleting persisted recent entries.
+			workspaces: recentlyOpened.workspaces.filter(recent => !isRecentWorkspace(recent) || !this.isAgentSessionsWorkspace(recent.workspace)),
 			files: recentlyOpened.files
 		};
-	}
-
-	private canonicalizeAgentSessionsWorkspaces(workspaces: Array<IRecentWorkspace | IRecentFolder>): Array<IRecentWorkspace | IRecentFolder> {
-		const result: Array<IRecentWorkspace | IRecentFolder> = [];
-		let agentsWindowAdded = false;
-
-		for (const recent of workspaces) {
-			if (isRecentWorkspace(recent) && this.isAgentSessionsWorkspace(recent.workspace)) {
-				if (!agentsWindowAdded) {
-					agentsWindowAdded = true;
-					result.push({
-						workspace: getWorkspaceIdentifier(this.environmentMainService.agentSessionsWorkspace),
-						label: localize('agentsWindowRecentWorkspace', "Agents Window")
-					});
-				}
-			} else {
-				result.push(recent);
-			}
-		}
-
-		return result;
 	}
 
 	private isAgentSessionsWorkspace(workspace: IWorkspaceIdentifier): boolean {
@@ -388,15 +366,6 @@ export class WorkspacesHistoryMainService extends Disposable implements IWorkspa
 					iconPath: process.execPath,
 					iconIndex: 0
 				},
-				{
-					type: 'task',
-					title: localize('agentsWindow', "Agents Window"),
-					description: localize('openAgentsWindowDesc', "Opens the Agents Window"),
-					program: process.execPath,
-					args: '--agents',
-					iconPath: join(this.environmentMainService.appRoot, 'resources/win32/sessions.ico'),
-					iconIndex: 0
-				}
 			]
 		});
 
