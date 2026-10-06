@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { observableValue } from '../../../../../base/common/observable.js';
-import { ContributionEnablementState, IEnablementModel } from '../../../chat/common/enablement.js';
+import { ContributionEnablementState, IEnablementModel } from '../../../../../platform/mcp/common/contributionEnablement.js';
 import { IAutostartResult, IMcpServer, IMcpService, LazyCollectionState } from '../../common/mcpTypes.js';
 
 export class TestEnablementModel implements IEnablementModel {

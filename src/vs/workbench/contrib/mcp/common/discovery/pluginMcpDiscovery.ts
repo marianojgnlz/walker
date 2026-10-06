@@ -17,7 +17,7 @@ import {
 	IAgentPluginMcpServerDefinition,
 	IAgentPluginService
 } from '../../../chat/common/plugins/agentPluginService.js';
-import { isContributionEnabled } from '../../../chat/common/enablement.js';
+import { isContributionEnabled } from '../../../../../platform/mcp/common/contributionEnablement.js';
 import { IMcpRegistry } from '../mcpRegistryTypes.js';
 import { MCP_PLUGIN_COLLECTION_ID_PREFIX, McpCollectionProvenance, McpCollectionSortOrder, McpServerDefinition, McpServerLaunch, McpServerTrust } from '../mcpTypes.js';
 import { IMcpDiscovery } from './mcpDiscovery.js';

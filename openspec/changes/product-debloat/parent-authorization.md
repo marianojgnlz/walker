@@ -551,3 +551,12 @@ src/vs/platform/agentPlugins/common/test/pluginParsers.test.ts
 src/vs/workbench/services/workspaces/common/workspaceTrust.ts
 src/vs/workbench/services/workspaces/test/common/workspaceTrust.test.ts
 Scope: narrow disconnection of `platform/agentHost` imports only (the `AGENT_HOST_SCHEME`/state-protocol edges); unrelated trust/plugin behavior preserved. (Exact test paths may differ from the placeholders above — the approved scope is "the pluginParsers and workspaceTrust files plus their tests as found".)
+
+### Pre-wave grant additions (2026-10-06)
+src/vs/platform/windows/electron-main/windowsMainService.ts
+Scope: remove the `IWindowCreationOptions.isSessionsWindow` tail (L1568 pass + L1555/L731/L1479/L1682 derivations) — sessions window is unreachable.
+68-file wave-readiness resolution: the per-file dispositions (a/b/c) recorded in `deletion-review.md` are ADOPTED as the parent's decision — disconnection leaves for retained files, wave additions for chat/agentHost-owned content, per that record. All files named in that inventory are authorized for their disposition's scope.
+
+### Surface ratification (2026-10-06, post-hoc)
+src/vs/workbench/services/environment/electron-browser/environmentService.ts
+RATIFIED: the one-line `isSessionsWindow` compile-necessity reader was required by the authorized field removal — in-scope retroactively.

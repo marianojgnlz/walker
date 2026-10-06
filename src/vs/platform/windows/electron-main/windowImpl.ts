@@ -52,7 +52,6 @@ export interface IWindowCreationOptions {
 	readonly state: IWindowState;
 	readonly extensionDevelopmentPath?: string[];
 	readonly isExtensionTestHost?: boolean;
-	readonly isSessionsWindow?: boolean;
 }
 
 interface ITouchBarSegment extends electron.SegmentedControlSegment {

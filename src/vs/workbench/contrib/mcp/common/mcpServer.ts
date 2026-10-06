@@ -34,8 +34,7 @@ import { IEditorService } from '../../../services/editor/common/editorService.js
 import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
 import { IExtensionService } from '../../../services/extensions/common/extensions.js';
 import { IOutputService } from '../../../services/output/common/output.js';
-import { chatSessionResourceToId } from '../../chat/common/model/chatUri.js';
-import { ToolProgress } from '../../chat/common/tools/languageModelToolsService.js';
+import { ToolProgress } from '../../../../platform/mcp/common/mcpToolTypes.js';
 import { mcpActivationEvent } from './mcpConfiguration.js';
 import { McpDevModeServerAttache } from './mcpDevMode.js';
 import { McpIcons, parseAndValidateMcpIcon, StoredMcpIcons } from './mcpIcons.js';
@@ -44,7 +43,7 @@ import { IMcpSandboxService } from './mcpSandboxService.js';
 import { McpServerRequestHandler } from './mcpServerRequestHandler.js';
 import { McpTaskManager } from './mcpTaskManager.js';
 import { ElicitationKind, extensionMcpCollectionPrefix, IMcpElicitationService, IMcpIcons, IMcpPotentialSandboxBlock, IMcpPrompt, IMcpPromptMessage, IMcpResource, IMcpResourceTemplate, IMcpSamplingService, IMcpServer, IMcpServerConnection, IMcpServerStartOpts, IMcpTool, IMcpToolCallContext, McpCapability, McpCollectionDefinition, McpCollectionReference, McpConnectionFailedError, McpConnectionState, McpDefinitionReference, mcpPromptReplaceSpecialChars, McpResourceURI, McpServerCacheState, McpServerDefinition, McpServerLaunch, McpServerStaticToolAvailability, McpServerTransportType, McpToolName, McpToolVisibility, MpcResponseError, UserInteractionRequiredError } from './mcpTypes.js';
-import { ContributionEnablementState, IEnablementModel } from '../../chat/common/enablement.js';
+import { ContributionEnablementState, IEnablementModel } from '../../../../platform/mcp/common/contributionEnablement.js';
 import { MCP } from './modelContextProtocol.js';
 import { McpApps } from './modelContextProtocolApps.js';
 import { UriTemplate } from '../../../../base/common/uriTemplate.js';
@@ -1372,9 +1371,6 @@ export class McpTool implements IMcpTool {
 			}
 
 			const meta: Record<string, unknown> = { progressToken };
-			if (context?.chatSessionResource) {
-				meta['vscode.conversationId'] = chatSessionResourceToId(context.chatSessionResource);
-			}
 			if (context?.chatRequestId) {
 				meta['vscode.requestId'] = context.chatRequestId;
 			}

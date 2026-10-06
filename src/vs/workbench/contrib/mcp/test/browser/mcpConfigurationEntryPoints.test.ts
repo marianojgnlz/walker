@@ -33,9 +33,6 @@ import { ActiveEditorContext, ResourceContextKey } from '../../../../common/cont
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
 import { IWorkbenchEnvironmentService } from '../../../../services/environment/common/environmentService.js';
 import { IWorkbenchLocalMcpServer, IWorkbenchMcpManagementService, IWorkbencMcpServerInstallOptions, LocalMcpServerScope, WorkspaceMcpConfigKind } from '../../../../services/mcp/common/mcpWorkbenchManagementService.js';
-import { IAgentHostCustomizationService } from '../../../chat/browser/agentSessions/agentHost/agentHostCustomizationService.js';
-import { IChatWidgetService } from '../../../chat/browser/chat.js';
-import { ChatContextKeys } from '../../../chat/common/actions/chatContextKeys.js';
 import { TEXT_FILE_EDITOR_ID } from '../../../files/common/files.js';
 import { AddConfigurationAction, OpenWorkspaceFolderMcpResourceCommand } from '../../browser/mcpCommands.js';
 import { McpConfigurationDestination } from '../../browser/mcpConfigurationDestination.js';
@@ -126,8 +123,6 @@ suite('MCP configuration entry points', () => {
 		instantiation.stub(IOpenerService, {});
 		instantiation.stub(INotificationService, { error: error => errors.push(error) });
 		instantiation.stub(ILabelService, {});
-		instantiation.stub(IAgentHostCustomizationService, {});
-		instantiation.stub(IChatWidgetService, {});
 		instantiation.stub(ITelemetryService, NullTelemetryService);
 		instantiation.stub(IMcpService, { servers });
 		instantiation.stub(IMcpRegistry, { collections });
@@ -437,16 +432,14 @@ suite('MCP configuration entry points', () => {
 		});
 	}
 
-	test('editor menu retains AI gates and only offers root additions when enabled', () => {
+	test('editor menu only offers root additions when enabled', () => {
 		const menu = new AddConfigurationAction().desc.menu;
 		assert.ok(menu && !Array.isArray(menu) && menu.when);
-		const visible = (file: string, enabled: boolean, hidden = false) => {
+		const visible = (file: string, enabled: boolean) => {
 			const values: Record<string, ContextKeyValue> = {
 				[ResourceContextKey.Path.key]: `/project/${file}`,
 				[ActiveEditorContext.key]: TEXT_FILE_EDITOR_ID,
 				[`config.${mcpWorkspaceRootConfig}`]: enabled,
-				[ChatContextKeys.Setup.hidden.key]: hidden,
-				[ChatContextKeys.Setup.disabledInWorkspace.key]: false,
 			};
 			return menu.when!.evaluate({ getValue: <T extends ContextKeyValue>(key: string) => values[key] as T });
 		};
@@ -455,16 +448,12 @@ suite('MCP configuration entry points', () => {
 			rootOn: visible(rootFile, true),
 			legacyOff: visible(legacyFile, false),
 			legacyOn: visible(legacyFile, true),
-			hiddenRoot: visible(rootFile, true, true),
-			hiddenLegacy: visible(legacyFile, true, true),
 			otherFile: visible('settings.json', true),
 		}, {
 			rootOff: false,
 			rootOn: true,
 			legacyOff: true,
 			legacyOn: true,
-			hiddenRoot: false,
-			hiddenLegacy: false,
 			otherFile: false,
 		});
 	});

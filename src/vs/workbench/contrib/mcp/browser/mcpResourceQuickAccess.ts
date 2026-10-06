@@ -5,11 +5,9 @@
 
 import { DeferredPromise, disposableTimeout, RunOnceScheduler } from '../../../../base/common/async.js';
 import { CancellationToken, CancellationTokenSource } from '../../../../base/common/cancellation.js';
-import { Codicon } from '../../../../base/common/codicons.js';
 import { Event } from '../../../../base/common/event.js';
 import { DisposableStore, IDisposable, toDisposable, Disposable } from '../../../../base/common/lifecycle.js';
 import { autorun, derived, observableValue, IObservable } from '../../../../base/common/observable.js';
-import { ThemeIcon } from '../../../../base/common/themables.js';
 import { URI } from '../../../../base/common/uri.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { localize } from '../../../../nls.js';
@@ -19,17 +17,10 @@ import { INotificationService } from '../../../../platform/notification/common/n
 import { DefaultQuickAccessFilterValue, IQuickAccessProvider, IQuickAccessProviderRunOptions } from '../../../../platform/quickinput/common/quickAccess.js';
 import { IQuickInputService, IQuickPick, IQuickPickItem, IQuickPickSeparator } from '../../../../platform/quickinput/common/quickInput.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
-import { IViewsService } from '../../../services/views/common/viewsService.js';
-import { IChatWidgetService } from '../../chat/browser/chat.js';
-import { IChatAttachmentResolveService } from '../../chat/browser/attachments/chatAttachmentResolveService.js';
-import { IChatRequestVariableEntry } from '../../chat/common/attachments/chatVariableEntries.js';
 import { IMcpResource, IMcpResourceTemplate, IMcpServer, IMcpService, isMcpResourceTemplate, McpCapability, McpConnectionState, McpResourceURI } from '../common/mcpTypes.js';
 import { McpIcons } from '../common/mcpIcons.js';
 import { IUriTemplateVariable } from '../../../../base/common/uriTemplate.js';
-import { openPanelChatAndGetWidget } from './openPanelChatAndGetWidget.js';
 import { LinkedList } from '../../../../base/common/linkedList.js';
-import { ChatContextPickAttachment } from '../../chat/browser/attachments/chatContextPickService.js';
-import { asArray } from '../../../../base/common/arrays.js';
 
 export class McpResourcePickHelper extends Disposable {
 	private _resources = observableValue<{ picks: Map<IMcpServer, (IMcpResourceTemplate | IMcpResource)[]>; isBusy: boolean }>(this, { picks: new Map(), isBusy: true });
@@ -112,8 +103,7 @@ export class McpResourcePickHelper extends Disposable {
 		@IMcpService private readonly _mcpService: IMcpService,
 		@IFileService private readonly _fileService: IFileService,
 		@IQuickInputService private readonly _quickInputService: IQuickInputService,
-		@INotificationService private readonly _notificationService: INotificationService,
-		@IChatAttachmentResolveService private readonly _chatAttachmentResolveService: IChatAttachmentResolveService
+		@INotificationService private readonly _notificationService: INotificationService
 	) {
 		super();
 	}
@@ -164,20 +154,6 @@ export class McpResourcePickHelper extends Disposable {
 		return false;
 	}
 
-	public toAttachment(resource: IMcpResource | IMcpResourceTemplate, server: IMcpServer): Promise<ChatContextPickAttachment> | 'noop' {
-		const noop = 'noop';
-		if (this._isDirectoryResource(resource)) {
-			//Check if directory
-			this.checkIfDirectoryAndPopulate(resource, server);
-			return noop;
-		}
-		if (isMcpResourceTemplate(resource)) {
-			return this._resourceTemplateToAttachment(resource).then(val => val || noop);
-		} else {
-			return this._resourceToAttachment(resource).then(val => val || noop);
-		}
-	}
-
 	public async checkIfDirectoryAndPopulate(resource: IMcpResource | IMcpResourceTemplate, server: IMcpServer): Promise<boolean> {
 		try {
 			return !await this.navigate(resource, server);
@@ -196,31 +172,6 @@ export class McpResourcePickHelper extends Disposable {
 	}
 
 	public checkIfNestedResources = () => !this._pickItemsStack.isEmpty();
-
-	private async _resourceToAttachment(resource: { uri: URI; name: string; mimeType?: string }): Promise<IChatRequestVariableEntry | undefined> {
-		const asImage = await this._chatAttachmentResolveService.resolveImageEditorAttachContext(resource.uri, undefined, resource.mimeType);
-		if (asImage) {
-			return asImage;
-		}
-
-		return {
-			id: resource.uri.toString(),
-			kind: 'file',
-			name: resource.name,
-			value: resource.uri,
-		};
-	}
-
-	private async _resourceTemplateToAttachment(rt: IMcpResourceTemplate) {
-		const maybeUri = await this._resourceTemplateToURI(rt);
-		const uri = maybeUri && await this._verifyUriIfNeeded(maybeUri);
-		return uri && this._resourceToAttachment({
-			uri,
-			name: rt.name,
-			mimeType: rt.mimeType,
-		});
-
-	}
 
 	private async _verifyUriIfNeeded({ uri, needsVerification }: { uri: URI; needsVerification: boolean }): Promise<URI | undefined> {
 		if (!needsVerification) {
@@ -461,8 +412,6 @@ export abstract class AbstractMcpResourceAccessPick {
 		private readonly _scopeTo: IMcpServer | undefined,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
 		@IEditorService private readonly _editorService: IEditorService,
-		@IChatWidgetService protected readonly _chatWidgetService: IChatWidgetService,
-		@IViewsService private readonly _viewsService: IViewsService,
 	) {
 	}
 
@@ -474,8 +423,6 @@ export abstract class AbstractMcpResourceAccessPick {
 		const goBackId = '_goback_';
 
 		type ResourceQuickPickItem = IQuickPickItem & { resource: IMcpResource | IMcpResourceTemplate; server: IMcpServer };
-
-		const attachButton = localize('mcp.quickaccess.attach', "Attach to chat");
 
 		const helper = store.add(this._instantiationService.createInstance(McpResourcePickHelper));
 		if (this._scopeTo) {
@@ -490,7 +437,6 @@ export abstract class AbstractMcpResourceAccessPick {
 				items.push(McpResourcePickHelper.sep(server));
 				for (const resource of resources) {
 					const pickItem = McpResourcePickHelper.item(resource);
-					pickItem.buttons = [{ iconClass: ThemeIcon.asClassName(Codicon.attach), tooltip: attachButton }];
 					items.push({ ...pickItem, resource, server });
 				}
 			}
@@ -505,23 +451,6 @@ export abstract class AbstractMcpResourceAccessPick {
 			}
 			picker.items = items;
 			picker.busy = isBusy;
-		}));
-
-		store.add(picker.onDidTriggerItemButton(event => {
-			if (event.button.tooltip === attachButton) {
-				picker.busy = true;
-				const resourceItem = event.item as ResourceQuickPickItem;
-				const attachment = helper.toAttachment(resourceItem.resource, resourceItem.server);
-				if (attachment instanceof Promise) {
-					attachment.then(async a => {
-						if (a !== 'noop') {
-							const widget = await openPanelChatAndGetWidget(this._viewsService, this._chatWidgetService);
-							widget?.attachmentModel.addContext(...asArray(a));
-						}
-						picker.hide();
-					});
-				}
-			}
 		}));
 
 		store.add(picker.onDidHide(() => {
@@ -564,11 +493,9 @@ export class McpResourceQuickPick extends AbstractMcpResourceAccessPick {
 		scopeTo: IMcpServer | undefined,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IEditorService editorService: IEditorService,
-		@IChatWidgetService chatWidgetService: IChatWidgetService,
-		@IViewsService viewsService: IViewsService,
 		@IQuickInputService private readonly _quickInputService: IQuickInputService,
 	) {
-		super(scopeTo, instantiationService, editorService, chatWidgetService, viewsService);
+		super(scopeTo, instantiationService, editorService);
 	}
 
 	public async pick(token = CancellationToken.None) {
@@ -590,10 +517,8 @@ export class McpResourceQuickAccess extends AbstractMcpResourceAccessPick implem
 	constructor(
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IEditorService editorService: IEditorService,
-		@IChatWidgetService chatWidgetService: IChatWidgetService,
-		@IViewsService viewsService: IViewsService
 	) {
-		super(undefined, instantiationService, editorService, chatWidgetService, viewsService);
+		super(undefined, instantiationService, editorService);
 	}
 
 	provide(picker: IQuickPick<IQuickPickItem, { useSeparators: true }>, token: CancellationToken, runOptions?: IQuickAccessProviderRunOptions): IDisposable {

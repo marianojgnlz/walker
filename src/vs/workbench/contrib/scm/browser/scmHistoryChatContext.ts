@@ -11,7 +11,7 @@ import { fromNow } from '../../../../base/common/date.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { basename } from '../../../../base/common/resources.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
-import { URI, UriComponents } from '../../../../base/common/uri.js';
+import { URI } from '../../../../base/common/uri.js';
 import { ITextModel } from '../../../../editor/common/model.js';
 import { IModelService } from '../../../../editor/common/services/model.js';
 import { ITextModelContentProvider, ITextModelService } from '../../../../editor/common/services/resolverService.js';
@@ -27,12 +27,9 @@ import { ISCMHistoryItemChangeVariableEntry, ISCMHistoryItemVariableEntry } from
 import { ScmHistoryItemResolver } from '../../multiDiffEditor/browser/scmMultiDiffSourceResolver.js';
 import { ISCMHistoryItem, ISCMHistoryItemChange } from '../common/history.js';
 import { ISCMProvider, ISCMService, ISCMViewService } from '../common/scm.js';
+import type { SCMHistoryItemTransferData } from './scmHistoryViewPane.js';
 
-export interface SCMHistoryItemTransferData {
-	readonly name: string;
-	readonly resource: UriComponents;
-	readonly historyItem: ISCMHistoryItem;
-}
+export type { SCMHistoryItemTransferData };
 
 export function extractSCMHistoryItemDropData(e: DragEvent): SCMHistoryItemTransferData[] | undefined {
 	if (!e.dataTransfer?.types.includes(CodeDataTransfers.SCM_HISTORY_ITEM)) {

@@ -37,7 +37,18 @@ import { IMcpSandboxService } from './mcpSandboxService.js';
 import { McpServerConnection } from './mcpServerConnection.js';
 import { IMcpServerConnection, LazyCollectionState, McpCollectionDefinition, McpCollectionProvenance, McpDefinitionReference, McpServerDefinition, McpServerLaunch, McpServerTrust, McpStartServerInteraction, UserInteractionRequiredError } from './mcpTypes.js';
 import { COPILOT_STRICT_PLUGIN_ONLY_CUSTOMIZATION_CONFIG } from '../../../../platform/policy/common/copilotManagedSettings.js';
-import { isStrictPluginOnlyCustomizationEnabled, StrictPluginOnlyCustomization } from '../../chat/common/customizationLockdown.js';
+
+/**
+ * Enterprise policy value for `chat.customizations.strictPluginOnlyCustomization`.
+ * The type and helper used to live in the chat tree; they are inlined here so the
+ * retained MCP registry keeps enforcing the same managed policy without a chat
+ * dependency.
+ */
+type StrictPluginOnlyCustomization = boolean | null | undefined;
+
+function isStrictPluginOnlyCustomizationEnabled(value: StrictPluginOnlyCustomization): boolean {
+	return value === true;
+}
 
 const notTrustedNonce = '__vscode_not_trusted';
 

@@ -34,7 +34,7 @@ import { ExtensionAction } from '../../extensions/browser/extensionsActions.js';
 import { ActionWithDropdownActionViewItem, IActionWithDropdownActionViewItemOptions } from '../../../../base/browser/ui/dropdown/dropdownActionViewItem.js';
 import { IContextMenuProvider } from '../../../../base/browser/contextmenu.js';
 import Severity from '../../../../base/common/severity.js';
-import { ContributionEnablementState, isContributionDisabled, isContributionEnabled } from '../../chat/common/enablement.js';
+import { ContributionEnablementState, isContributionDisabled, isContributionEnabled } from '../../../../platform/mcp/common/contributionEnablement.js';
 import { getWorkbenchMenuMotionContextMenuOptions } from '../../../browser/actions/menuMotion.js';
 import { McpConfigurationDestination } from './mcpConfigurationDestination.js';
 

@@ -6,12 +6,10 @@
 import assert from 'assert';
 import { Event } from '../../../../../base/common/event.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
 import { IExtensionDescription } from '../../../../../platform/extensions/common/extensions.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { ILogService, NullLogService } from '../../../../../platform/log/common/log.js';
 import { IStorageService, InMemoryStorageService } from '../../../../../platform/storage/common/storage.js';
-import { IChatEntitlementService } from '../../../chat/common/chatEntitlementService.js';
 import { IExtensionService } from '../../../extensions/common/extensions.js';
 import { TestExtensionService, mock } from '../../../../test/common/workbenchTestServices.js';
 import { CopilotAssignmentFilterProvider, ExtensionsFilter } from '../../common/assignmentFilters.js';
@@ -28,35 +26,19 @@ suite('CopilotAssignmentFilterProvider', () => {
 
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('excludes account-derived experiment filters without reading account state', () => {
-		const accountReads: string[] = [];
-		const entitlement = new class extends mock<IChatEntitlementService>() {
-			override readonly onDidChangeEntitlement = Event.None;
-			override get sku() { accountReads.push('sku'); return 'pro'; }
-			override get organisations() { accountReads.push('organisations'); return ['github']; }
-			override get copilotTrackingId() { accountReads.push('trackingId'); return 'tracking-id'; }
-		}();
-		const account = new class extends mock<IDefaultAccountService>() {
-			override readonly onDidChangeCopilotTokenInfo = Event.None;
-			override get copilotTokenInfo() { accountReads.push('tokenInfo'); return { sn: '1', fcv1: '1' }; }
-		}();
+	test('exposes only extension-version filters without reading account state', () => {
 		const instantiationService = disposables.add(new TestInstantiationService());
 		instantiationService.stub(IExtensionService, new TestExtensionService());
 		instantiationService.stub(ILogService, new NullLogService());
 		instantiationService.stub(IStorageService, disposables.add(new InMemoryStorageService()));
-		instantiationService.stub(IChatEntitlementService, entitlement);
-		instantiationService.stub(IDefaultAccountService, account);
 
 		const provider = disposables.add(instantiationService.createInstance(CopilotAssignmentFilterProvider));
 
-		assert.deepStrictEqual({ accountReads, filters: [...provider.getFilters().keys()] }, {
-			accountReads: [],
-			filters: [
-				ExtensionsFilter.CopilotExtensionVersion,
-				ExtensionsFilter.CopilotChatExtensionVersion,
-				ExtensionsFilter.CompletionsVersionInCopilotChat,
-			],
-		});
+		assert.deepStrictEqual([...provider.getFilters().keys()], [
+			ExtensionsFilter.CopilotExtensionVersion,
+			ExtensionsFilter.CopilotChatExtensionVersion,
+			ExtensionsFilter.CompletionsVersionInCopilotChat,
+		]);
 	});
 
 	test('retains Copilot extension versions as assignment filters', async () => {

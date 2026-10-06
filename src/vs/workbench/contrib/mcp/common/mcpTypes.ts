@@ -30,8 +30,8 @@ import { McpResourceFormat } from '../../../../platform/mcp/common/mcpWorkspaceC
 import { StorageScope } from '../../../../platform/storage/common/storage.js';
 import { IWorkspaceFolder, IWorkspaceFolderData } from '../../../../platform/workspace/common/workspace.js';
 import { IWorkbenchLocalMcpServer, IWorkbencMcpServerInstallOptions, WORKSPACE_FOLDER_CONFIG_ID_PREFIX } from '../../../services/mcp/common/mcpWorkbenchManagementService.js';
-import { ContributionEnablementState, IEnablementModel } from '../../chat/common/enablement.js';
-import { ToolProgress } from '../../chat/common/tools/languageModelToolsService.js';
+import { ContributionEnablementState, IEnablementModel } from '../../../../platform/mcp/common/contributionEnablement.js';
+import { ToolProgress } from '../../../../platform/mcp/common/mcpToolTypes.js';
 import { ExternalDiscoverySource, IMcpServerSamplingConfiguration } from './mcpConfiguration.js';
 import { McpServerRequestHandler } from './mcpServerRequestHandler.js';
 import { MCP } from './modelContextProtocol.js';

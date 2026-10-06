@@ -10,7 +10,7 @@ import { URI } from '../../../../../base/common/uri.js';
 import { mock } from '../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { McpServerType } from '../../../../../platform/mcp/common/mcpPlatformTypes.js';
-import { ContributionEnablementState } from '../../../chat/common/enablement.js';
+import { ContributionEnablementState } from '../../../../../platform/mcp/common/contributionEnablement.js';
 import { IAgentPlugin, IAgentPluginMcpServerDefinition, IAgentPluginService } from '../../../chat/common/plugins/agentPluginService.js';
 import { PluginFormat } from '../../../../../platform/agentPlugins/common/pluginParsers.js';
 import { PluginMcpDiscovery } from '../../common/discovery/pluginMcpDiscovery.js';

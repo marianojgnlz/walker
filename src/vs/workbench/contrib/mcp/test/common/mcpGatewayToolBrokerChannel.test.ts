@@ -9,7 +9,7 @@ import { observableValue } from '../../../../../base/common/observable.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { runWithFakedTimers } from '../../../../../base/test/common/timeTravelScheduler.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { ContributionEnablementState } from '../../../chat/common/enablement.js';
+import { ContributionEnablementState } from '../../../../../platform/mcp/common/contributionEnablement.js';
 import { NullLogService } from '../../../../../platform/log/common/log.js';
 import { IMcpGatewayServerDescriptor } from '../../../../../platform/mcp/common/mcpGateway.js';
 import { MCP } from '../../common/modelContextProtocol.js';

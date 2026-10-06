@@ -5,10 +5,17 @@
 
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { Event } from '../../../../base/common/event.js';
-import { ContextKeyExpr, IContextKey, IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
+import { ContextKeyExpr, IContextKey, IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { ChatContextKeys } from '../../chat/common/actions/chatContextKeys.js';
+import { localize } from '../../../../nls.js';
+
+/**
+ * Whether any remote coding agent is available. Defined here (rather than in a
+ * chat-owned module) because the remote coding agent registry is a retained
+ * generic feature.
+ */
+export const hasRemoteCodingAgentContextKey = new RawContextKey<boolean>('hasRemoteCodingAgent', false, localize('hasRemoteCodingAgent', "Whether any remote coding agent is available"));
 
 export interface IRemoteCodingAgent {
 	id: string;
@@ -38,7 +45,7 @@ export class RemoteCodingAgentsService extends Disposable implements IRemoteCodi
 		@IContextKeyService private readonly contextKeyService: IContextKeyService
 	) {
 		super();
-		this._ctxHasRemoteCodingAgent = ChatContextKeys.hasRemoteCodingAgent.bindTo(this.contextKeyService);
+		this._ctxHasRemoteCodingAgent = hasRemoteCodingAgentContextKey.bindTo(this.contextKeyService);
 
 		// Listen for context changes and re-evaluate agent availability
 		this._register(Event.filter(contextKeyService.onDidChangeContext, e => e.affectsSome(this.contextKeys))(() => {

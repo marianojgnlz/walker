@@ -35,7 +35,7 @@ import type { IEditorOptions } from '../../../../platform/editor/common/editor.j
 import type { TerminalEditorInput } from './terminalEditorInput.js';
 import type { MaybePromise } from '../../../../base/common/async.js';
 import { isNumber, type SingleOrMany } from '../../../../base/common/types.js';
-import type { ToolConfirmationAction } from '../../chat/common/tools/languageModelToolsService.js';
+import { Separator } from '../../../../base/common/actions.js';
 
 export const ITerminalService = createDecorator<ITerminalService>('terminalService');
 export const ITerminalConfigurationService = createDecorator<ITerminalConfigurationService>('terminalConfigurationService');
@@ -146,6 +146,20 @@ export interface IChatTerminalOutputSource {
 	readonly hasExited: boolean;
 	readonly exitCode: number | undefined;
 }
+
+/**
+ * A confirmation action rendered for a terminal auto-approve command analysis. The shape is
+ * owned by the terminal layer so that the retained terminal API does not depend on chat.
+ */
+export interface ITerminalChatConfirmationAction {
+	label: string;
+	disabled?: boolean;
+	tooltip?: string;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	data: any;
+}
+
+export type TerminalChatConfirmationAction = ITerminalChatConfirmationAction | Separator;
 
 export interface ITerminalChatService {
 	readonly _serviceBrand: undefined;
@@ -293,7 +307,7 @@ export interface ITerminalChatService {
 	 * @returns The actions to show in the confirmation dropdown, or undefined if the command
 	 * line could not be analyzed
 	 */
-	getAutoApproveActions(commandLine: string, language: 'shellscript' | 'powershell'): Promise<ToolConfirmationAction[] | undefined>;
+	getAutoApproveActions(commandLine: string, language: 'shellscript' | 'powershell'): Promise<TerminalChatConfirmationAction[] | undefined>;
 
 	/**
 	 * Signal that a foreground terminal tool invocation should continue in the background.

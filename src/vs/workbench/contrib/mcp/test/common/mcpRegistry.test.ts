@@ -32,7 +32,7 @@ import { IConfigurationResolverService } from '../../../../services/configuratio
 import { ConfigurationResolverExpression, Replacement } from '../../../../services/configurationResolver/common/configurationResolverExpression.js';
 import { IOutputService } from '../../../../services/output/common/output.js';
 import { TestLoggerService, TestStorageService, TestWorkspaceTrustManagementService, TestWorkspaceTrustRequestService } from '../../../../test/common/workbenchTestServices.js';
-import { ContributionEnablementState, EnablementModel, isContributionEnabled } from '../../../chat/common/enablement.js';
+import { ContributionEnablementState, EnablementModel, isContributionEnabled } from '../../../../../platform/mcp/common/contributionEnablement.js';
 import { McpCollisionBehavior, mcpServerCollisionBehaviorSection } from '../../common/mcpConfiguration.js';
 import { McpRegistry } from '../../common/mcpRegistry.js';
 import { IMcpHostDelegate, IMcpMessageTransport } from '../../common/mcpRegistryTypes.js';
