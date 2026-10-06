@@ -560,3 +560,10 @@ Scope: remove the `IWindowCreationOptions.isSessionsWindow` tail (L1568 pass + L
 ### Surface ratification (2026-10-06, post-hoc)
 src/vs/workbench/services/environment/electron-browser/environmentService.ts
 RATIFIED: the one-line `isSessionsWindow` compile-necessity reader was required by the authorized field removal — in-scope retroactively.
+
+### Post-wave grant additions (2026-10-06; wave-completion fix pass)
+src/vs/platform/defaultAccount/**
+src/vs/workbench/services/accounts/**
+src/vs/workbench/services/policies/common/accountPolicyService.ts
+src/vs/workbench/services/policies/test/browser/multiplexPolicyService.test.ts
+Scope: resolve the wave's dangling references (exact error list in the apply brief). The default-account surface (platform interface + services impl) is account-owned → delete; remove its plumbing from web.main/desktop.main/workbenchTestServices/policy services/tests (AccountPolicyService ctor may drop the account dependency — generic policy behavior preserved). cellRenderer/terminal.contribution/extensionGalleryManifestService.test dangling refs: mechanical removal of deleted-module usage, preserving generic notebook/terminal/gallery-manifest behavior.

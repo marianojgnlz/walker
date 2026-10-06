@@ -400,3 +400,15 @@ All recorded dispositions for the 68 unbatched retained→deletion edge files (a
 ### Final readiness re-scan (executor-measured)
 
 Same method as above, with every W1–W26 root (plus the placeholders) treated as deletion-bound. Result: **15 retained files with edges, all already wave-covered** — W8 3 (`notebook/browser/{contrib,controller}/chat/*`), W14 5 (terminal agent-host trio + tests), W15 4 (MCP tool-call UI + editor-affordance state + tests), W16 2 (server agent-host channel/manager + test), W19 1 (`workbench/test/browser/aiCustomizationManagementSectionRegistry.test.ts`). Zero uncovered retained→wave edges remain; W1/W2/W11/W12/W20 can be deleted without further disconnection work.
+
+### Post-wave completion — pending physical deletion (2026-10-06)
+
+The wave left the default-account surface half-deleted; the executor removed its workbench plumbing and decoupled `AccountPolicyService` (see `apply-progress.md`, “Post-wave dangling-reference fix pass”). Physical deletion is parent-owned:
+
+| Path | Ready? | Notes |
+| --- | --- | --- |
+| `src/vs/workbench/services/accounts/browser/managedSettings.ts` | **Yes** | zero production importers after the deleted workbench account impl went; only its own test imports it. |
+| `src/vs/workbench/services/accounts/test/browser/managedSettings.test.ts` | **Yes** | tests only the file above; delete both together. |
+| `src/vs/platform/defaultAccount/common/defaultAccount.ts` | **Yes** | parent approved the 4 exact test paths; the dead `IDefaultAccountService` stubs were removed from `editor/contrib/inlineCompletions/test/browser/{utils,suggestWidgetModel.test}.ts`, `editor/contrib/suggest/test/browser/suggestModel.test.ts` and `workbench/services/assignment/test/common/assignmentService.test.ts`. Zero importers remain after the `services/accounts` pair is deleted; `git rm` all three together (see `apply-progress.md`). |
+
+After this pass no production file imports `platform/defaultAccount` or `workbench/services/accounts`; `accountPolicyService.ts` no longer references the account service, and the editor inline-completions account/`sku` injection is gone, so no runtime DI consumer remains.

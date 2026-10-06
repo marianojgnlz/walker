@@ -12,7 +12,6 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/tes
 import { TestConfigurationService } from '../../../../../platform/configuration/test/common/testConfigurationService.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
-import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
 import { IEnvironmentService } from '../../../../../platform/environment/common/environment.js';
 import { ExtensionGalleryManifestStatus, ExtensionGalleryResourceType, ExtensionGalleryServiceUrlConfigKey } from '../../../../../platform/extensionManagement/common/extensionGalleryManifest.js';
 import { IFileService } from '../../../../../platform/files/common/files.js';
@@ -24,7 +23,6 @@ import { IProductService } from '../../../../../platform/product/common/productS
 import { IRequestService } from '../../../../../platform/request/common/request.js';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { NullTelemetryServiceShape } from '../../../../../platform/telemetry/common/telemetryUtils.js';
-import { AuthenticationSession, IAuthenticationService } from '../../../authentication/common/authentication.js';
 import { IRemoteAgentService } from '../../../remote/common/remoteAgentService.js';
 import { WorkbenchExtensionGalleryManifestService } from '../../electron-browser/extensionGalleryManifestService.js';
 
@@ -61,16 +59,12 @@ suite('WorkbenchExtensionGalleryManifestService', () => {
 	let instantiationService: TestInstantiationService;
 	let requestHandler: (options: IRequestOptions) => IRequestContext | Promise<IRequestContext>;
 	let requestCount: number;
-	let defaultAccountLookups: number;
-	let microsoftSessionLookups: number;
 	let configurationService: TestConfigurationService;
 	let telemetryService: RecordingTelemetryService;
 
 	setup(() => {
 		requestHandler = () => mockResponse(200, createGalleryManifest());
 		requestCount = 0;
-		defaultAccountLookups = 0;
-		microsoftSessionLookups = 0;
 
 		configurationService = new TestConfigurationService({
 			[ExtensionGalleryServiceUrlConfigKey]: 'https://marketplace.example.com',
@@ -122,20 +116,7 @@ suite('WorkbenchExtensionGalleryManifestService', () => {
 			}
 		}());
 
-		instantiationService.stub(IDefaultAccountService, new class extends mock<IDefaultAccountService>() {
-			override readonly onDidChangeDefaultAccount = Event.None;
-			override async getDefaultAccount() { defaultAccountLookups++; return null; }
-		}());
-
 		instantiationService.stub(ILogService, new NullLogService());
-
-		instantiationService.stub(IAuthenticationService, new class extends mock<IAuthenticationService>() {
-			override readonly onDidChangeSessions = Event.None;
-			override async getSessions(): Promise<readonly AuthenticationSession[]> {
-				microsoftSessionLookups++;
-				return [];
-			}
-		}());
 
 		instantiationService.stub(IContextKeyService, disposableStore.add(new MockContextKeyService()));
 	});
@@ -159,7 +140,7 @@ suite('WorkbenchExtensionGalleryManifestService', () => {
 		assert.strictEqual(service.extensionGalleryManifestStatus, ExtensionGalleryManifestStatus.Unavailable);
 		assert.strictEqual(manifest, null);
 		assert.deepStrictEqual(statusChanges, []);
-		assert.deepStrictEqual({ defaultAccountLookups, microsoftSessionLookups, requestCount }, { defaultAccountLookups: 0, microsoftSessionLookups: 0, requestCount: 0 });
+		assert.strictEqual(requestCount, 0);
 		assert.deepStrictEqual(telemetryService.events, []);
 	});
 
@@ -171,7 +152,6 @@ suite('WorkbenchExtensionGalleryManifestService', () => {
 		await service.getExtensionGalleryManifest();
 
 		assert.strictEqual(service.extensionGalleryManifestStatus, ExtensionGalleryManifestStatus.Unavailable);
-		assert.strictEqual(microsoftSessionLookups, 0);
 		assert.strictEqual(requestCount, 0);
 	});
 
@@ -195,8 +175,6 @@ suite('WorkbenchExtensionGalleryManifestService', () => {
 
 		// With no configured marketplace serviceUrl, the product's default gallery is fetched anonymously.
 		assert.strictEqual(service.extensionGalleryManifestStatus, ExtensionGalleryManifestStatus.Available);
-		assert.strictEqual(defaultAccountLookups, 0);
-		assert.strictEqual(microsoftSessionLookups, 0);
 	});
 
 });

@@ -13,7 +13,6 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/tes
 import { ICommandService } from '../../../../../platform/commands/common/commands.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { TestConfigurationService } from '../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
 import { IExtensionGalleryService, IExtensionManagementService, type IExtensionInfo, type IExtensionQueryOptions, type IGalleryExtension, type ILocalExtension } from '../../../../../platform/extensionManagement/common/extensionManagement.js';
 import { IFileService } from '../../../../../platform/files/common/files.js';
 import { ILayoutService } from '../../../../../platform/layout/browser/layoutService.js';
@@ -52,32 +51,12 @@ class RecordingNotificationService extends TestNotificationService {
 	}
 }
 
-/**
- * Records every property access on the account service so the first step can
- * prove it never depends on accounts. Method-like accesses stay callable so a
- * regression fails on the assertion instead of throwing mid-render.
- */
-function createAccountServiceProbe(accesses: string[]): IDefaultAccountService {
-	return new Proxy({}, {
-		get: (_target, property) => {
-			if (typeof property === 'symbol') {
-				return undefined;
-			}
-			accesses.push(property);
-			return property === 'resolveGitHubUrl'
-				? (path: string) => `https://github.com/${path}`
-				: () => Promise.resolve(null);
-		},
-	}) as IDefaultAccountService;
-}
-
 interface IOnboardingHarness {
 	readonly container: HTMLElement;
 	readonly service: OnboardingVariationA;
 	readonly configurationService: RecordingConfigurationService;
 	readonly notificationService: RecordingNotificationService;
 	readonly executedCommands: ICommandInvocation[];
-	readonly accountServiceAccesses: string[];
 	readonly themesSet: string[];
 	readonly keymapGalleryRequests: string[];
 	readonly keymapInstallations: string[];
@@ -106,7 +85,6 @@ function createHarness(store: Pick<DisposableStore, 'add'>, handleCommand: (id: 
 	const configurationService = new RecordingConfigurationService();
 	const notificationService = new RecordingNotificationService();
 	const executedCommands: ICommandInvocation[] = [];
-	const accountServiceAccesses: string[] = [];
 	const themesSet: string[] = [];
 	const keymapGalleryRequests: string[] = [];
 	const keymapInstallations: string[] = [];
@@ -132,7 +110,6 @@ function createHarness(store: Pick<DisposableStore, 'add'>, handleCommand: (id: 
 			return Promise.resolve(null);
 		}
 	});
-	instantiationService.stub(IDefaultAccountService, createAccountServiceProbe(accountServiceAccesses));
 	instantiationService.stub(IFileService, new class extends mock<IFileService>() {
 		override exists(): Promise<boolean> { return Promise.resolve(detectOtherEditors); }
 	});
@@ -151,7 +128,7 @@ function createHarness(store: Pick<DisposableStore, 'add'>, handleCommand: (id: 
 	});
 
 	const service = store.add(instantiationService.createInstance(OnboardingVariationA));
-	return { container, service, configurationService, notificationService, executedCommands, accountServiceAccesses, themesSet, keymapGalleryRequests, keymapInstallations };
+	return { container, service, configurationService, notificationService, executedCommands, themesSet, keymapGalleryRequests, keymapInstallations };
 }
 
 function waitFor(event: VSCodeEvent<void>): Promise<void> {
@@ -207,7 +184,6 @@ function assertNoAccountActivity(harness: IOnboardingHarness): void {
 	assert.deepStrictEqual(harness.configurationService.updates, [], 'no configuration write from the account-free step');
 	assert.deepStrictEqual(harness.executedCommands.filter(command => command.id === chatSetupCommandId), [], 'no chat setup command invocation');
 	assert.deepStrictEqual(harness.notificationService.messages, [], 'no notification was raised');
-	assert.deepStrictEqual(harness.accountServiceAccesses, [], 'no default account service access');
 }
 
 interface IDeferred<T> {

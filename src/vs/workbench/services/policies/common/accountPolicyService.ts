@@ -5,64 +5,12 @@
 
 import { IStringDictionary } from '../../../../base/common/collections.js';
 import { IPolicyData } from '../../../../base/common/defaultAccount.js';
-import { Emitter, Event } from '../../../../base/common/event.js';
+import { Emitter } from '../../../../base/common/event.js';
 import { equals } from '../../../../base/common/objects.js';
 import { ManagedSettingValue, ManagedSettingsData } from '../../../../base/common/policy.js';
-import { localize } from '../../../../nls.js';
-import { RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
-import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { INativeManagedSettingsService, IFileManagedSettingsService, IManagedSettingsPick, IManagedSettingsService, MANAGED_SETTINGS_CHANNELS, ManagedSettingsChannel, collectManagedSettingsDefinitions, hasManagedSettingsDefinitions, hasRawManagedSettings, projectManagedSettings, pickManagedSettings } from '../../../../platform/policy/common/copilotManagedSettings.js';
-import { IManagedSettingsFreshness, isManagedSettingsFreshnessBlocking } from '../../../../platform/policy/common/managedSettingsFreshness.js';
 import { AbstractPolicyService, IPolicyService, PolicyDefinition, PolicyValue, PolicyValueSource } from '../../../../platform/policy/common/policy.js';
-import { IDefaultAccountService } from '../../../../platform/defaultAccount/common/defaultAccount.js';
-
-/**
- * Policy name (declared by `chat.approvedAccountOrganizations`) holding the list of
- * GitHub organization logins that satisfy the gate. The token `*` is a wildcard.
- */
-export const APPROVED_ACCOUNT_ORGANIZATIONS_POLICY_NAME = 'ChatApprovedAccountOrganizations';
-
-export const enum AccountPolicyGateState {
-	Inactive = 'inactive',
-	Satisfied = 'satisfied',
-	/** Gate active and NOT satisfied — restricted values are applied to all gated policies. */
-	Restricted = 'restricted',
-}
-
-export const enum AccountPolicyGateUnsatisfiedReason {
-	NoAccount = 'noAccount',
-	WrongProvider = 'wrongProvider',
-	OrgNotApproved = 'orgNotApproved',
-	PolicyNotResolved = 'policyNotResolved',
-	ManagedSettingsRefresh = 'managedSettingsRefresh',
-}
-
-export interface IAccountPolicyGateInfo {
-	readonly state: AccountPolicyGateState;
-	readonly reason?: AccountPolicyGateUnsatisfiedReason;
-	readonly approvedOrganizations?: readonly string[];
-	readonly managedSettingsFreshness?: IManagedSettingsFreshness;
-}
-
-export const ChatAccountPolicyGateActiveContext = new RawContextKey<boolean>(
-	'chatAccountPolicyGateActive',
-	false,
-	{ type: 'boolean', description: localize('chatAccountPolicyGateActive', "True when account policy or managed-settings enforcement prevents this client from using AI features.") }
-);
-
-/**
- * Read-only accessor for the Account Policy gate state. Backed by the same
- * `AccountPolicyService` instance that drives policy enforcement, so UX consumers
- * (notifications, context keys, telemetry) cannot drift from the authoritative
- * gate decision.
- */
-export const IAccountPolicyGateService = createDecorator<IAccountPolicyGateService>('accountPolicyGateService');
-export interface IAccountPolicyGateService {
-	readonly _serviceBrand: undefined;
-	readonly gateInfo: IAccountPolicyGateInfo;
-	readonly onDidChangeGateInfo: Event<IAccountPolicyGateInfo>;
-}
 
 interface IResolvedPolicyData {
 	readonly policyData: IPolicyData;
@@ -70,15 +18,9 @@ interface IResolvedPolicyData {
 	readonly activeManagedSettingsSources: readonly ManagedSettingsChannel[];
 }
 
-export class AccountPolicyService extends AbstractPolicyService implements IPolicyService, IAccountPolicyGateService, IManagedSettingsService {
+export class AccountPolicyService extends AbstractPolicyService implements IPolicyService, IManagedSettingsService {
 
 	declare readonly _serviceBrand: undefined;
-
-	private _gateInfo: IAccountPolicyGateInfo = { state: AccountPolicyGateState.Inactive };
-	get gateInfo(): IAccountPolicyGateInfo { return this._gateInfo; }
-
-	private readonly _onDidChangeGateInfo = this._register(new Emitter<IAccountPolicyGateInfo>());
-	readonly onDidChangeGateInfo = this._onDidChangeGateInfo.event;
 
 	private _managedSettings: ManagedSettingsData = {};
 	private readonly _onDidChangeManagedSettings = this._register(new Emitter<void>());
@@ -88,41 +30,20 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 		return this._managedSettings[key];
 	}
 
-	// Read-only — the MultiplexPolicyService owns calling updatePolicyDefinitions.
-	private readonly managedPolicyReader?: IPolicyService;
 	private readonly nativeManagedSettingsService?: INativeManagedSettingsService;
 	private readonly fileManagedSettingsService?: IFileManagedSettingsService;
 
 	constructor(
 		@ILogService private readonly logService: ILogService,
-		@IDefaultAccountService private readonly defaultAccountService: IDefaultAccountService,
-		managedPolicyService?: IPolicyService,
 		nativeManagedSettingsService?: INativeManagedSettingsService,
 		fileManagedSettingsService?: IFileManagedSettingsService,
 	) {
 		super();
 
-		this.managedPolicyReader = managedPolicyService;
 		this.nativeManagedSettingsService = nativeManagedSettingsService;
 		this.fileManagedSettingsService = fileManagedSettingsService;
 
 		this._updatePolicyDefinitions(this.policyDefinitions);
-		this._register(this.defaultAccountService.onDidChangePolicyData(() => {
-			this._updatePolicyDefinitions(this.policyDefinitions);
-		}));
-		this._register(this.defaultAccountService.onDidChangeDefaultAccount(() => {
-			this._updatePolicyDefinitions(this.policyDefinitions);
-		}));
-		this._register(this.defaultAccountService.onDidChangeManagedSettingsFreshness(() => {
-			this._updatePolicyDefinitions(this.policyDefinitions);
-		}));
-		if (this.managedPolicyReader) {
-			this._register(this.managedPolicyReader.onDidChange(names => {
-				if (names.includes(APPROVED_ACCOUNT_ORGANIZATIONS_POLICY_NAME)) {
-					this._updatePolicyDefinitions(this.policyDefinitions);
-				}
-			}));
-		}
 		if (this.nativeManagedSettingsService) {
 			this._register(this.nativeManagedSettingsService.onDidChangeManagedSettings(() => {
 				this._updatePolicyDefinitions(this.policyDefinitions);
@@ -133,13 +54,6 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 				this._updatePolicyDefinitions(this.policyDefinitions);
 			}));
 		}
-
-		// The initial account load sets `currentDefaultAccount` but does NOT fire
-		// `onDidChangeDefaultAccount`. Re-evaluate once the account has resolved
-		// so the gate doesn't stay stuck on `noAccount`.
-		this.defaultAccountService.getDefaultAccount().then(() => {
-			this._updatePolicyDefinitions(this.policyDefinitions);
-		});
 	}
 
 	protected async _updatePolicyDefinitions(policyDefinitions: IStringDictionary<PolicyDefinition>): Promise<void> {
@@ -148,10 +62,6 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 
 		const updated: string[] = [];
 		const resolvedPolicyData = this.getPolicyData(managedSettings);
-
-		const previousInfo = this._gateInfo;
-		this._gateInfo = this.computeGateInfo();
-		const gateInfoChanged = !equals(previousInfo, this._gateInfo);
 
 		for (const key in policyDefinitions) {
 			const resolvedPolicy = this.resolvePolicyValue(policyDefinitions[key], resolvedPolicyData);
@@ -162,9 +72,6 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 
 		if (updated.length) {
 			this._onDidChange.fire(updated);
-		}
-		if (gateInfoChanged) {
-			this._onDidChangeGateInfo.fire(this._gateInfo);
 		}
 	}
 
@@ -238,16 +145,12 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 	}
 
 	private getPolicyData(mdmManagedSettings?: ManagedSettingsData): IResolvedPolicyData | undefined {
-		const accountPolicyData = this.defaultAccountService.policyData ?? undefined;
 		const nativeManagedSettings = mdmManagedSettings ?? this.nativeManagedSettingsService?.managedSettings;
 		const fileManagedSettings = this.fileManagedSettingsService?.managedSettings;
 
 		// Share channel resolution, including the force-on sandbox floor, with Policy Diagnostics.
-		const pick = pickManagedSettings(nativeManagedSettings, accountPolicyData?.managedSettings, fileManagedSettings);
+		const pick = pickManagedSettings(nativeManagedSettings, undefined, fileManagedSettings);
 		const activeSources = new Set(pick.activeSources);
-		if (accountPolicyData?.managedSettingsActive === true) {
-			activeSources.add('server');
-		}
 		if (hasRawManagedSettings(this.fileManagedSettingsService?.rawManagedSettings)) {
 			activeSources.add('file');
 		}
@@ -256,7 +159,7 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 			this._managedSettings = pick.values;
 			this._onDidChangeManagedSettings.fire();
 		}
-		if (!accountPolicyData && activeManagedSettingsSources.length === 0) {
+		if (activeManagedSettingsSources.length === 0) {
 			return undefined;
 		}
 
@@ -269,62 +172,12 @@ export class AccountPolicyService extends AbstractPolicyService implements IPoli
 
 		return {
 			policyData: {
-				...accountPolicyData,
 				managedSettings: managedSettingsData,
-				managedSettingsActive: activeManagedSettingsSources.length > 0,
+				managedSettingsActive: true,
 			},
 			managedSettingResolutions: pick.resolutions,
 			activeManagedSettingsSources,
 		};
-	}
-
-	private computeGateInfo(): IAccountPolicyGateInfo {
-		const freshness = this.defaultAccountService.managedSettingsFreshness;
-		if (isManagedSettingsFreshnessBlocking(freshness)) {
-			return {
-				state: AccountPolicyGateState.Restricted,
-				reason: AccountPolicyGateUnsatisfiedReason.ManagedSettingsRefresh,
-				managedSettingsFreshness: freshness,
-			};
-		}
-
-		if (!this.managedPolicyReader) {
-			return { state: AccountPolicyGateState.Inactive };
-		}
-
-		const approvedRaw = this.managedPolicyReader.getPolicyValue(APPROVED_ACCOUNT_ORGANIZATIONS_POLICY_NAME);
-		const approvedOrgs = parseApprovedOrganizations(approvedRaw);
-		if (approvedOrgs.length === 0) {
-			return { state: AccountPolicyGateState.Inactive };
-		}
-
-		const account = this.defaultAccountService.currentDefaultAccount;
-		if (!account) {
-			return { state: AccountPolicyGateState.Restricted, reason: AccountPolicyGateUnsatisfiedReason.NoAccount, approvedOrganizations: approvedOrgs };
-		}
-
-		const configuredProvider = this.defaultAccountService.getDefaultAccountAuthenticationProvider();
-		if (account.authenticationProvider.id !== configuredProvider.id) {
-			return { state: AccountPolicyGateState.Restricted, reason: AccountPolicyGateUnsatisfiedReason.WrongProvider, approvedOrganizations: approvedOrgs };
-		}
-
-		// Org membership is checked BEFORE policy-data resolution so users definitively
-		// NOT in an approved org are restricted immediately, even while policy data is
-		// still loading. `policyNotResolved` is reserved for users who ARE in an approved
-		// org — a transient state that resolves on its own.
-		if (!approvedOrgs.includes('*')) {
-			const accountOrgs = (account.entitlementsData?.organization_login_list ?? []).map(o => o.toLowerCase());
-			const intersects = accountOrgs.some(org => approvedOrgs.includes(org));
-			if (!intersects) {
-				return { state: AccountPolicyGateState.Restricted, reason: AccountPolicyGateUnsatisfiedReason.OrgNotApproved, approvedOrganizations: approvedOrgs };
-			}
-		}
-
-		if (this.defaultAccountService.policyData === null) {
-			return { state: AccountPolicyGateState.Restricted, reason: AccountPolicyGateUnsatisfiedReason.PolicyNotResolved, approvedOrganizations: approvedOrgs };
-		}
-
-		return { state: AccountPolicyGateState.Satisfied, approvedOrganizations: approvedOrgs };
 	}
 }
 
@@ -337,20 +190,4 @@ function policyValueSourceForManagedSettingsChannel(channel: ManagedSettingsChan
 		case 'file':
 			return PolicyValueSource.FileManagedSettings;
 	}
-}
-
-function parseApprovedOrganizations(raw: PolicyValue | undefined): string[] {
-	// Array-typed policies are delivered as JSON-stringified arrays — see
-	// `PolicyConfiguration.parse` for the same normalisation.
-	let value: unknown = raw;
-	if (typeof value === 'string') {
-		try { value = JSON.parse(value); } catch { /* not JSON */ }
-	}
-	if (!Array.isArray(value)) {
-		return [];
-	}
-	return value
-		.filter((v): v is string => typeof v === 'string')
-		.map(s => s.trim().toLowerCase())
-		.filter(s => s.length > 0);
 }

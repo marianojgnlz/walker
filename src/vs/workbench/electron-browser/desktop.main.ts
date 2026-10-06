@@ -64,8 +64,6 @@ import { ElectronRemoteResourceLoader } from '../../platform/remote/electron-bro
 import { IConfigurationService } from '../../platform/configuration/common/configuration.js';
 import { applyZoom } from '../../platform/window/electron-browser/window.js';
 import { mainWindow } from '../../base/browser/window.js';
-import { IDefaultAccountService } from '../../platform/defaultAccount/common/defaultAccount.js';
-import { DefaultAccountService } from '../services/accounts/browser/defaultAccount.js';
 import { AccountPolicyService } from '../services/policies/common/accountPolicyService.js';
 import { MultiplexPolicyService } from '../../platform/policy/common/multiplexPolicyService.js';
 
@@ -212,10 +210,6 @@ export class DesktopMain extends Disposable {
 			logService.trace('workbench#open(): with configuration', safeStringify({ ...this.configuration, nls: undefined /* exclude large property */ }));
 		}
 
-		// Default Account
-		const defaultAccountService = this._register(new DefaultAccountService(productService));
-		serviceCollection.set(IDefaultAccountService, defaultAccountService);
-
 		// Policies
 		let policyService: IPolicyService;
 		const policyChannel = this.configuration.policiesData ? this._register(new PolicyChannelClient(this.configuration.policiesData, mainProcessService.getChannel('policy'))) : undefined;
@@ -223,7 +217,7 @@ export class DesktopMain extends Disposable {
 		serviceCollection.set(INativeManagedSettingsService, nativeManagedSettings);
 		const fileManagedSettings = this._register(new FileManagedSettingsChannelClient(mainProcessService.getChannel('fileManagedSettings')));
 		serviceCollection.set(IFileManagedSettingsService, fileManagedSettings);
-		const accountPolicy = this._register(new AccountPolicyService(logService, defaultAccountService, policyChannel, nativeManagedSettings, fileManagedSettings));
+		const accountPolicy = this._register(new AccountPolicyService(logService, nativeManagedSettings, fileManagedSettings));
 		serviceCollection.set(IManagedSettingsService, accountPolicy);
 		if (policyChannel) {
 			policyService = this._register(new MultiplexPolicyService([policyChannel, accountPolicy], logService));

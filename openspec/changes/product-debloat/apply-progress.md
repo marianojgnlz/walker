@@ -2358,3 +2358,77 @@ Verification for the pass: compile 0, `agentHostEditMarkerService.test` (32) rem
 3. `browserToolHelpers.ts` retained subset vs. `browserEditorInput.test.ts`: both helpers byte-equivalent in behavior; no retained file imports the W24 placeholders.
 4. `windowsMainService.ts`/`windowImpl.ts`/`window.ts`: no `isSessionsWindow` producer/field remains; `environmentService.isSessionsWindow` is `false`; ordinary window creation/profile resolution still follows the retained `resolveProfileForBrowserWindow` path.
 5. Readiness scan: rerun the relative-import-resolving scan with the W1–W26 list plus placeholders and confirm the 15-file covered result; W1/W2/W12 deletion may not introduce a new retained edge.
+
+## Post-wave dangling-reference fix pass — W1–W26 wave completion (2026-10-06)
+
+**Structured status consumed:** `activeChange: product-debloat`, `artifactStore: openspec`, `applyState: ready`, `nextRecommended: sdd-apply`, `actionContext.mode: implement`, workspace `/home/marialez/Work/walker`, branch `product-debloat` (never commit). No goal set in this session; todo #17 is parent-owned and untouched. Mode: implement (no remediation authorization).
+
+**Wave cited:** the parent-executed W1–W26 deletion wave is present as the **staged index** (`git diff --cached --shortstat` = **5,095 files changed, 1,497,513 deletions**) on top of HEAD `4b359c9f6b7`; it was still uncommitted when this pass ran, so the checkboxes below cite the staged wave and HEAD rather than a wave commit hash the parent may substitute at commit time.
+
+### Errors fixed (compile-client, exactly the launch-brief list)
+
+| Site | Fix |
+| --- | --- |
+| `workbench/browser/web.main.ts` | dropped `IDefaultAccountService` + deleted-impl imports, the Default Account registration block, and the account ctor arg; `new AccountPolicyService(logService)`. |
+| `workbench/electron-browser/desktop.main.ts` | same removal; `new AccountPolicyService(logService, nativeManagedSettings, fileManagedSettings)`. |
+| `workbench/workbench.common.main.ts` | removed the deleted-module side-effect import and its comment. |
+| `workbench/test/browser/workbenchTestServices.ts` | removed the platform import, the deleted-impl import and the `IDefaultAccountService` stub (no consumer remains). |
+| `services/policies/common/accountPolicyService.ts` | decoupled from the account service: ctor no longer takes `IDefaultAccountService`/`IPolicyService` reader, and the account gate (`IAccountPolicyGateService`, `AccountPolicyGateState`/`UnsatisfiedReason`, `ChatAccountPolicyGateActiveContext`, `APPROVED_ACCOUNT_ORGANIZATIONS_POLICY_NAME`, `computeGateInfo`, `parseApprovedOrganizations`) is removed. Generic managed-settings behavior is preserved: native MDM + file channels via `pickManagedSettings(native, undefined, file)`, per-key precedence, sandbox force-on, presence gating (`managedSettingsDisabledValue`), source attribution (`NativeMdm`/`FileManagedSettings`/`MixedManagedSettings`), and `IManagedSettingsService`. The server/account channel is structurally absent. |
+| `services/policies/test/browser/accountPolicyService.test.ts` | rewritten to the retained generic surface: 11 tests (native/file values, precedence, sandbox force-on, per-key merge, mixed attribution, raw-rule presence gating and release, object-typed MDM JSON, no-settings baseline); the account-provider/gate suites are removed with the deleted impl. |
+| `services/policies/test/browser/multiplexPolicyService.test.ts` | rewritten to two policy services (file + a minimal `TestPolicyService`) covering no-policy, per-service values, merged values and union-typed JSON/empty-array/unset behavior; account-policy-data cases removed. |
+| `services/extensionManagement/test/electron-browser/extensionGalleryManifestService.test.ts` | dropped the deleted `authentication.js` import and both auth/account stubs + lookup counters; assertions now pin `requestCount`/telemetry only (retained manifest service untouched). |
+| `contrib/notebook/browser/view/renderers/cellRenderer.ts` | removed the deleted `CellChatPart` import, the two `.cell-chat-part` template nodes and both part instantiations; generic code/markup cell rendering unchanged. |
+| `contrib/terminal/browser/terminal.contribution.ts` | removed the deleted `agentHostTerminalService.js` import + `IAgentHostTerminalService` singleton registration; generic terminal registrations unchanged. |
+| `workbench/api/test/common/accountFreeApi.test.ts` | upgraded the RPC-actor test from “disconnected placeholder” reads to **physical-absence assertions** for the 28 deleted chat/auth bridge files (`existsSync === false`), keeping the retained protocol/registration positives; A1 facade still **10/10** and stronger. |
+
+### Additional account-surface disconnection (grant-covered files)
+
+- `editor/contrib/inlineCompletions/browser/model/inlineCompletionsModel.ts` (U05 grant): removed the `IDefaultAccountService` injection and the account-derived inline-completions `sku` observable/plumbing (`sku: undefined` remains in `InlineSuggestRequestInfo` because the type requires the field). This removes the workbench's last required account-service DI consumer, so no shadow/nulling account service was introduced and editors cannot throw a missing-service error at runtime.
+- `editor/standalone/browser/standaloneServices.ts` (U02 grant): removed the now-unconsumed `StandaloneDefaultAccountService` null implementation + registration and its imports.
+- `workbench/test/browser/componentFixtures/fixtureUtils.ts`, `welcomeOnboarding/test/browser/onboardingVariationA.test.ts` (U05 grants): removed the now-dead account-service fixture/probe and its assertion.
+
+### Pending physical deletion (parent `git rm` manifest)
+
+| Path | Status | Evidence |
+| --- | --- | --- |
+| `src/vs/workbench/services/accounts/browser/managedSettings.ts` | **ready to delete** | zero production importers (its only importer is its own test); it was the deleted workbench account impl's managed-settings helper. |
+| `src/vs/workbench/services/accounts/test/browser/managedSettings.test.ts` | **ready to delete** | tests only the file above. |
+| `src/vs/platform/defaultAccount/common/defaultAccount.ts` | **ready to delete** | **parent approved (option 1)** the 4 exact test paths; the dead `IDefaultAccountService` stub imports/blocks were then removed from `src/vs/editor/contrib/inlineCompletions/test/browser/utils.ts`, `src/vs/editor/contrib/inlineCompletions/test/browser/suggestWidgetModel.test.ts`, `src/vs/editor/contrib/suggest/test/browser/suggestModel.test.ts` and `src/vs/workbench/services/assignment/test/common/assignmentService.test.ts`. Zero files under `src/` now import `platform/defaultAccount` except the `services/accounts/browser/managedSettings.ts` remnant above (zero consumers, only its own test), so the three deletions are atomic: `git rm` the `services/accounts` pair **and** the platform interface file together, then `compile-client` must stay 0 (the interface had no remaining runtime consumer). |
+
+### Approved new-path cleanup (parent option 1, 2026-10-06)
+
+The parent approved the 4 exact paths as test-only dead-stub removals. Executed as unique-text splices with diff review:
+
+- `editor/contrib/inlineCompletions/test/browser/utils.ts`: removed the platform import and the `serviceCollection.set(IDefaultAccountService, {…})` fixture block (the `Event` import and all other fixtures stay).
+- `editor/contrib/inlineCompletions/test/browser/suggestWidgetModel.test.ts`: removed the platform import and the dead `ServiceCollection` entry.
+- `editor/contrib/suggest/test/browser/suggestModel.test.ts`: removed the platform import and the dead `ServiceCollection` entry.
+- `workbench/services/assignment/test/common/assignmentService.test.ts`: removed the platform + `Event` imports, the `accountReads` probe, the stub block and its assertion; the test is retained as *“starts ordinary assignments with no default-account service registered”* (it still exercises TAS startup with a stubbed client; the account-free guarantee is now structural — no `IDefaultAccountService` reference exists anywhere under `src/`).
+
+Re-verified after the cleanup: `npm run compile-client` **0 errors**; `accountFreeApi.test` **10/10**; `inlineCompletions.test` **29**, `suggestWidgetModel.test` **3**, `suggestModel.test` **33**, `assignmentService.test` **10** all passing. `IDefaultAccountService` has **zero** remaining references under `src/` (outside the deletion-bound platform file itself).
+
+### Verification (Node 24.18.0, this pass)
+
+- `npm run compile-client` → **0 errors** (`compile-src` 0, monaco typecheck 0; re-run after the `accountFreeApi` edit).
+- `npm run typecheck-client` → **exit 0**.
+- `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` → **10/10 passing** (A1 facade green and meaningful; physical-deletion assertions included).
+- Focused retained suites, all green: `accountPolicyService.test` **12 passing**, `multiplexPolicyService.test` **8 passing**, `extensionGalleryManifestService.test` **5 passing**, `inlineCompletions.test` **29 passing**, `inlineCompletions/test/browser/suggestWidgetModel.test` **3 passing**, `suggest/test/browser/suggestModel.test` **33 passing**, `notebook/test/browser/view/cellPart.test` **8 passing**, `terminal/test/browser/terminalService.test` **9 passing**, `welcomeOnboarding/test/browser/onboardingVariationA.test` **19 passing**, `assignment/test/common/assignmentService.test` **10 passing**. The five suites affected by the approved stub cleanup (`accountFreeApi`, `inlineCompletions`, `suggestWidgetModel`, `suggestModel`, `assignmentService`) were re-run after the final `compile-client` and stayed green.
+- `git diff --check` clean; no file was staged, committed, pushed, published, deleted or dependency-mutated by this executor.
+
+### Measured workload / review boundary
+
+- **22 tracked files, +268 / −1,462** (`git diff --numstat`, 19 source/test files + 3 OpenSpec artifacts; excludes the two pre-existing dirty files below). Authored additions are ≈180 lines of test/service logic and cleanup; the rest is deletion of account-gate/account-test code. Deletion-heavy coupled fix pass (cannot be split into ≤400-line slices without leaving the tree uncompilable between slices, which the wave-completion requirement forbids); no `size:exception` is claimed for authored feature work.
+- **Pre-existing, untouched:** `src/vs/workbench/services/extensions/common/extensionPoints.json` (mtime 02:18:31, before this pass; the wave/earlier build regenerated it) and `openspec/changes/product-debloat/parent-authorization.md` (parent-authored).
+
+### Persisted task state after the pass
+
+- `tasks.md` re-read after the edit: **63 checked / 45 unchecked**. Newly checked rows (scope complete via the staged wave + this pass): `A2.RED`, `A2.GREEN`, `A2.TRIANGULATE → REFACTOR`; `C1.RED`, `C1.GREEN`, `C1.TRIANGULATE → REFACTOR`; `C2.RED`, `C2.GREEN`, `C2.TRIANGULATE → REFACTOR`; `C3.RED`, `C3.GREEN`, `C3.TRIANGULATE → REFACTOR`; `C4.RED → GREEN`, `C4.TRIANGULATE → REFACTOR`.
+- Honest residual under C1 (recorded for the verifier, not a blocker): the `IDefaultChatAgent` **type member** in `base/common/product.ts` and a few inert null-safe readers (`completionsEnablement.ts`, `configurationRegistry.EXTENSION_UNIFICATION_EXTENSION_IDS`, `extensionsActions.ts` uninstall flows) remain; the product value and fallback defaults are gone, and `ExtensionIdentifier.equals` is null-safe, so all reads are inert. This matches the parent's U05 scope note (“remove ONLY the `defaultChatAgent` fallback product object”).
+- Not checked (out of this pass's scope, family not complete): `C5.*`, `C6.*` — known build/vite sessions tails remain (`build/next/resources.ts` globs, `build/next/devTunnelsWeb.ts` W22, `build/vite/mobile-multi-diff*.ts` imports); `build/vite/**` is excluded from `build/tsconfig.json`, so `compile-client`/`typecheck-client` are unaffected.
+
+### Review focus for the verifier
+
+1. `AccountPolicyService`: no `IDefaultAccountService`/gate references remain; verify native/file managed-settings parity with the previous channel-merge semantics (force-on sandbox, per-key fill-down, raw-rule presence gating, source attribution).
+2. `inlineCompletionsModel`: no account import/DI remains; `InlineSuggestRequestInfo.sku` stays a typed-but-`undefined` field; provider request shape otherwise unchanged.
+3. `accountFreeApi.test`: the physical-deletion list must match the wave exactly and the positive registration assertions must still pass; no deleted bridge file may reappear.
+4. `workbenchTestServices`/`fixtureUtils`/onboarding/gallery/policy tests: no `platform/defaultAccount` import exists in any granted file; after the approved stub cleanup the only remaining importer under `src/` is the deletion-bound `services/accounts/browser/managedSettings.ts` remnant.
+5. Physical-deletion manifest: all three entries are ready — `git rm` the `services/accounts` `managedSettings.ts` + test pair and `src/vs/platform/defaultAccount/common/defaultAccount.ts` together; re-run `compile-client` after the deletion (zero remaining importers, verified).

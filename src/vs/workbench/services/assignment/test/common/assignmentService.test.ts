@@ -18,15 +18,12 @@ import { IProductService } from '../../../../../platform/product/common/productS
 import { InMemoryStorageService, IStorageService } from '../../../../../platform/storage/common/storage.js';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IWorkbenchEnvironmentService } from '../../../environment/common/environmentService.js';
-import { IDefaultAccountService } from '../../../../../platform/defaultAccount/common/defaultAccount.js';
-import { Event } from '../../../../../base/common/event.js';
 
 suite('WorkbenchAssignmentService account boundary', () => {
 
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('starts ordinary assignments without querying the default account', async () => {
-		const accountReads: string[] = [];
+	test('starts ordinary assignments with no default-account service registered', async () => {
 		const instantiationService = disposables.add(new TestInstantiationService());
 		const configuration = new TestConfigurationService();
 		disposables.add(configuration.onDidChangeConfigurationEmitter);
@@ -40,14 +37,6 @@ suite('WorkbenchAssignmentService account boundary', () => {
 			tasConfig: { endpoint: 'https://example.invalid', assignmentContextTelemetryPropertyName: 'context', telemetryEventName: 'event' },
 		});
 		instantiationService.stub(IWorkbenchEnvironmentService, {});
-		instantiationService.stub(IDefaultAccountService, new class extends mock<IDefaultAccountService>() {
-			override get onDidChangeDefaultAccount() { accountReads.push('account-event'); return Event.None; }
-			override get currentDefaultAccount() { accountReads.push('current-account'); return null; }
-			override getDefaultAccount() {
-				accountReads.push('get-account');
-				return new Promise<null>(() => { });
-			}
-		}());
 
 		const prototype = WorkbenchAssignmentService.prototype as unknown as { setupTASClient: () => Promise<TASClient> };
 		const originalSetup = prototype.setupTASClient;
@@ -59,7 +48,6 @@ suite('WorkbenchAssignmentService account boundary', () => {
 		}
 
 		await Promise.resolve();
-		assert.deepStrictEqual(accountReads, []);
 	});
 });
 

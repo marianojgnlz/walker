@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { Event } from '../../../../base/common/event.js';
 import { URI } from '../../../../base/common/uri.js';
@@ -133,41 +133,43 @@ suite('Account-free authentication API', () => {
 		assert.deepStrictEqual({ providerCalls, toolCalls, modelEvents }, { providerCalls: 0, toolCalls: 0, modelEvents: 0 });
 	});
 
-	test('Chat RPC actors are disconnected while ordinary extension APIs remain registered', () => {
+	test('Chat RPC actors are physically deleted while ordinary extension APIs remain registered', () => {
 		const apiImplementation = readApiSource('src/vs/workbench/api/common/extHost.api.impl.ts');
 		const mainThreadContribution = readApiSource('src/vs/workbench/api/browser/extensionHost.contribution.ts');
 		const webviewManager = readApiSource('src/vs/workbench/api/browser/mainThreadWebviewManager.ts');
 		const commonServices = readApiSource('src/vs/workbench/api/common/extHost.common.services.ts');
 		const extensionService = readApiSource('src/vs/workbench/api/common/extHostExtensionService.ts');
 		const protocol = readApiSource('src/vs/workbench/api/common/extHost.protocol.ts');
-		const extHostAgentEditorComments = readApiSource('src/vs/workbench/api/common/extHostAgentEditorComments.ts');
-		const mainThreadAgentEditorComments = readApiSource('src/vs/workbench/api/browser/mainThreadAgentEditorComments.ts');
-		const extHostChatQuota = readApiSource('src/vs/workbench/api/common/extHostChatQuota.ts');
-		const mainThreadChatQuota = readApiSource('src/vs/workbench/api/browser/mainThreadChatQuota.ts');
-		const extHostChatStatus = readApiSource('src/vs/workbench/api/common/extHostChatStatus.ts');
-		const mainThreadChatStatus = readApiSource('src/vs/workbench/api/browser/mainThreadChatStatus.ts');
-		const extHostChatOutputRenderer = readApiSource('src/vs/workbench/api/common/extHostChatOutputRenderer.ts');
-		const mainThreadChatOutputRenderer = readApiSource('src/vs/workbench/api/browser/mainThreadChatOutputRenderer.ts');
-		const extHostCodeMapper = readApiSource('src/vs/workbench/api/common/extHostCodeMapper.ts');
-		const mainThreadChatCodeMapper = readApiSource('src/vs/workbench/api/browser/mainThreadChatCodeMapper.ts');
-		const extHostChatContext = readApiSource('src/vs/workbench/api/common/extHostChatContext.ts');
-		const mainThreadChatContext = readApiSource('src/vs/workbench/api/browser/mainThreadChatContext.ts');
-		const extHostChatInputNotification = readApiSource('src/vs/workbench/api/common/extHostChatInputNotification.ts');
-		const mainThreadChatInputNotification = readApiSource('src/vs/workbench/api/browser/mainThreadChatInputNotification.ts');
-		const extHostLanguageModelTools = readApiSource('src/vs/workbench/api/common/extHostLanguageModelTools.ts');
-		const mainThreadLanguageModelTools = readApiSource('src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts');
-		const extHostLanguageModels = readApiSource('src/vs/workbench/api/common/extHostLanguageModels.ts');
-		const mainThreadLanguageModels = readApiSource('src/vs/workbench/api/browser/mainThreadLanguageModels.ts');
-		const extHostChatAgents2 = readApiSource('src/vs/workbench/api/common/extHostChatAgents2.ts');
-		const mainThreadChatAgents2 = readApiSource('src/vs/workbench/api/browser/mainThreadChatAgents2.ts');
-		const extHostChatSessions = readApiSource('src/vs/workbench/api/common/extHostChatSessions.ts');
-		const mainThreadChatSessions = readApiSource('src/vs/workbench/api/browser/mainThreadChatSessions.ts');
-		const extHostChatDebug = readApiSource('src/vs/workbench/api/common/extHostChatDebug.ts');
-		const mainThreadChatDebug = readApiSource('src/vs/workbench/api/browser/mainThreadChatDebug.ts');
-		const extHostAuthentication = readApiSource('src/vs/workbench/api/common/extHostAuthentication.ts');
-		const mainThreadAuthentication = readApiSource('src/vs/workbench/api/browser/mainThreadAuthentication.ts');
-		const nodeExtHostAuthentication = readApiSource('src/vs/workbench/api/node/extHostAuthentication.ts');
-		const extHostXaaAuthProvider = readApiSource('src/vs/workbench/api/common/extHostXaaAuthProvider.ts');
+		const deletedBridgeActors = [
+			'src/vs/workbench/api/common/extHostAgentEditorComments.ts',
+			'src/vs/workbench/api/browser/mainThreadAgentEditorComments.ts',
+			'src/vs/workbench/api/common/extHostChatQuota.ts',
+			'src/vs/workbench/api/browser/mainThreadChatQuota.ts',
+			'src/vs/workbench/api/common/extHostChatStatus.ts',
+			'src/vs/workbench/api/browser/mainThreadChatStatus.ts',
+			'src/vs/workbench/api/common/extHostChatOutputRenderer.ts',
+			'src/vs/workbench/api/browser/mainThreadChatOutputRenderer.ts',
+			'src/vs/workbench/api/common/extHostCodeMapper.ts',
+			'src/vs/workbench/api/browser/mainThreadChatCodeMapper.ts',
+			'src/vs/workbench/api/common/extHostChatContext.ts',
+			'src/vs/workbench/api/browser/mainThreadChatContext.ts',
+			'src/vs/workbench/api/common/extHostChatInputNotification.ts',
+			'src/vs/workbench/api/browser/mainThreadChatInputNotification.ts',
+			'src/vs/workbench/api/common/extHostLanguageModelTools.ts',
+			'src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts',
+			'src/vs/workbench/api/common/extHostLanguageModels.ts',
+			'src/vs/workbench/api/browser/mainThreadLanguageModels.ts',
+			'src/vs/workbench/api/common/extHostChatAgents2.ts',
+			'src/vs/workbench/api/browser/mainThreadChatAgents2.ts',
+			'src/vs/workbench/api/common/extHostChatSessions.ts',
+			'src/vs/workbench/api/browser/mainThreadChatSessions.ts',
+			'src/vs/workbench/api/common/extHostChatDebug.ts',
+			'src/vs/workbench/api/browser/mainThreadChatDebug.ts',
+			'src/vs/workbench/api/common/extHostAuthentication.ts',
+			'src/vs/workbench/api/browser/mainThreadAuthentication.ts',
+			'src/vs/workbench/api/node/extHostAuthentication.ts',
+			'src/vs/workbench/api/common/extHostXaaAuthProvider.ts',
+		];
 		const disconnectedContexts = [
 			'ExtHostCodeMapper',
 			'ExtHostChatOutputRenderer',
@@ -199,10 +201,11 @@ suite('Account-free authentication API', () => {
 		for (const customer of disconnectedMainThreadCustomers) {
 			assert.doesNotMatch(mainThreadContribution, new RegExp(`import '\\./${customer}\\.js';`), `${customer} remains a main-thread customer`);
 		}
+		for (const actor of deletedBridgeActors) {
+			assert.strictEqual(existsSync(join(process.cwd(), actor)), false, `${actor} must be physically deleted`);
+		}
 		assert.doesNotMatch(webviewManager, /MainThreadChatOutputRenderer/);
 		assert.doesNotMatch(protocol, /AgentEditorComments/);
-		assert.doesNotMatch(extHostAgentEditorComments, /class ExtHostAgentEditorComments/);
-		assert.doesNotMatch(mainThreadAgentEditorComments, /class MainThreadAgentEditorComments/);
 		assert.doesNotMatch(protocol, /IQuotaSnapshot(?:s)?Dto|IRateLimitSnapshotDto|(?:ExtHost|MainThread)ChatQuotaShape|(?:ExtHost|MainThread)ChatQuota:/);
 		assert.doesNotMatch(protocol, /ChatStatusItemDto|MainThreadChatStatusShape|MainThreadChatStatus:/);
 		assert.doesNotMatch(protocol, /ChatOutputRendererShape|IChatOutputRenderContextDto|MainThreadChatOutputRenderer:/);
@@ -215,32 +218,6 @@ suite('Account-free authentication API', () => {
 		assert.doesNotMatch(protocol, /ChatSessionsShape|MainThreadChatSessions:|ExtHostChatSessions:/);
 		assert.doesNotMatch(protocol, /ChatDebugShape|MainThreadChatDebug:|ExtHostChatDebug:/);
 		assert.doesNotMatch(protocol, /AuthenticationShape|MainThreadAuthentication:|ExtHostAuthentication:|IRegisterAuthenticationProviderDetails|IRegisterDynamicAuthenticationProviderDetails|IXaaProviderDiscovery/);
-		assert.doesNotMatch(extHostChatQuota, /class ExtHostChatQuota/);
-		assert.doesNotMatch(mainThreadChatQuota, /class MainThreadChatQuota/);
-		assert.doesNotMatch(extHostChatStatus, /class ExtHostChatStatus/);
-		assert.doesNotMatch(mainThreadChatStatus, /class MainThreadChatStatus/);
-		assert.doesNotMatch(extHostChatOutputRenderer, /class ExtHostChatOutputRenderer/);
-		assert.doesNotMatch(mainThreadChatOutputRenderer, /class MainThreadChatOutputRenderer/);
-		assert.doesNotMatch(extHostCodeMapper, /class ExtHostCodeMapper/);
-		assert.doesNotMatch(mainThreadChatCodeMapper, /class MainThreadChatCodemapper/);
-		assert.doesNotMatch(extHostChatContext, /class ExtHostChatContext/);
-		assert.doesNotMatch(mainThreadChatContext, /class MainThreadChatContext/);
-		assert.doesNotMatch(extHostChatInputNotification, /class ExtHostChatInputNotification/);
-		assert.doesNotMatch(mainThreadChatInputNotification, /class MainThreadChatInputNotification/);
-		assert.doesNotMatch(extHostLanguageModelTools, /class ExtHostLanguageModelTools/);
-		assert.doesNotMatch(mainThreadLanguageModelTools, /class MainThreadLanguageModelTools/);
-		assert.doesNotMatch(extHostLanguageModels, /class ExtHostLanguageModels/);
-		assert.doesNotMatch(mainThreadLanguageModels, /class MainThreadLanguageModels/);
-		assert.doesNotMatch(extHostChatAgents2, /class ExtHostChatAgents2/);
-		assert.doesNotMatch(mainThreadChatAgents2, /class MainThreadChatAgents2/);
-		assert.doesNotMatch(extHostChatSessions, /class ExtHostChatSessions/);
-		assert.doesNotMatch(mainThreadChatSessions, /class MainThreadChatSessions/);
-		assert.doesNotMatch(extHostChatDebug, /class ExtHostChatDebug/);
-		assert.doesNotMatch(mainThreadChatDebug, /class MainThreadChatDebug/);
-		assert.doesNotMatch(extHostAuthentication, /class ExtHostAuthentication/);
-		assert.doesNotMatch(mainThreadAuthentication, /class MainThreadAuthentication/);
-		assert.doesNotMatch(nodeExtHostAuthentication, /class NodeExtHostAuthentication/);
-		assert.doesNotMatch(extHostXaaAuthProvider, /class XaaifyAuthProvider/);
 		assert.doesNotMatch(apiImplementation, /accessor\.get\(IExtHostLanguageModels\)/);
 		assert.doesNotMatch(commonServices, /registerSingleton\(IExtHostLanguageModels/);
 		assert.doesNotMatch(extensionService, /IExtHostLanguageModels/);
