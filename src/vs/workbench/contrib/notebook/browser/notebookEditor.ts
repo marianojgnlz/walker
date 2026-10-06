@@ -11,7 +11,7 @@ import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { isWeb } from '../../../../base/common/platform.js';
 import { Emitter, Event } from '../../../../base/common/event.js';
 import { DisposableStore, MutableDisposable } from '../../../../base/common/lifecycle.js';
-import { extname, isEqual } from '../../../../base/common/resources.js';
+import { isEqual } from '../../../../base/common/resources.js';
 import { URI } from '../../../../base/common/uri.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { ITextResourceConfigurationService } from '../../../../editor/common/services/textResourceConfiguration.js';
@@ -22,7 +22,6 @@ import { IEditorOptions } from '../../../../platform/editor/common/editor.js';
 import { ByteSize, FileOperationError, FileOperationResult, IFileService, TooLargeFileOperationError } from '../../../../platform/files/common/files.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { Selection } from '../../../../editor/common/core/selection.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
@@ -34,7 +33,7 @@ import { IBorrowValue, INotebookEditorService } from './services/notebookEditorS
 import { NotebookEditorWidget } from './notebookEditorWidget.js';
 import { NotebooKernelActionViewItem } from './viewParts/notebookKernelView.js';
 import { NotebookTextModel } from '../common/model/notebookTextModel.js';
-import { CellKind, NOTEBOOK_EDITOR_ID, NotebookWorkingCopyTypeIdentifier } from '../common/notebookCommon.js';
+import { NOTEBOOK_EDITOR_ID, NotebookWorkingCopyTypeIdentifier } from '../common/notebookCommon.js';
 import { NotebookEditorInput } from '../common/notebookEditorInput.js';
 import { NotebookPerfMarks } from '../common/notebookPerformance.js';
 import { GroupsOrder, IEditorGroup, IEditorGroupsService } from '../../../services/editor/common/editorGroupsService.js';
@@ -50,7 +49,6 @@ import { streamToBuffer } from '../../../../base/common/buffer.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IPreferencesService } from '../../../services/preferences/common/preferences.js';
 import { IActionViewItemOptions } from '../../../../base/browser/ui/actionbar/actionViewItems.js';
-import { StopWatch } from '../../../../base/common/stopwatch.js';
 import { ICodeEditor } from '../../../../editor/browser/editorBrowser.js';
 
 const NOTEBOOK_EDITOR_VIEW_STATE_PREFERENCE_KEY = 'NotebookEditorViewState';
@@ -93,7 +91,6 @@ export class NotebookEditor extends EditorPane implements INotebookEditorPane, I
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
 		@IStorageService private readonly _storageService: IStorageService,
@@ -451,44 +448,6 @@ export class NotebookEditor extends EditorPane implements INotebookEditorPane, I
 	private _handlePerfMark(perf: NotebookPerfMarks, input: NotebookEditorInput, notebook?: NotebookTextModel) {
 		const perfMarks = perf.value;
 
-		type WorkbenchNotebookOpenClassification = {
-			owner: 'rebornix';
-			comment: 'The notebook file open metrics. Used to get a better understanding of the performance of notebook file opening';
-			scheme: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'File system provider scheme for the notebook resource' };
-			ext: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'File extension for the notebook resource' };
-			viewType: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The view type of the notebook editor' };
-			extensionActivated: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Extension activation time for the resource opening' };
-			inputLoaded: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Editor Input loading time for the resource opening' };
-			webviewCommLoaded: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Webview initialization time for the resource opening' };
-			customMarkdownLoaded: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Custom markdown loading time for the resource opening' };
-			editorLoaded: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Overall editor loading time for the resource opening' };
-			codeCellCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Total number of code cell' };
-			mdCellCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Total number of markdown cell' };
-			outputCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Total number of cell outputs' };
-			outputBytes: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Total number of bytes for all outputs' };
-			codeLength: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Length of text in all code cells' };
-			markdownLength: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Length of text in all markdown cells' };
-			notebookStatsLoaded: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Time for generating the notebook level information for telemetry' };
-		};
-
-		type WorkbenchNotebookOpenEvent = {
-			scheme: string;
-			ext: string;
-			viewType: string;
-			extensionActivated: number;
-			inputLoaded: number;
-			webviewCommLoaded: number;
-			customMarkdownLoaded: number | undefined;
-			editorLoaded: number;
-			codeCellCount: number | undefined;
-			mdCellCount: number | undefined;
-			outputCount: number | undefined;
-			outputBytes: number | undefined;
-			codeLength: number | undefined;
-			markdownLength: number | undefined;
-			notebookStatsLoaded: number | undefined;
-		};
-
 		const startTime = perfMarks['startTime'];
 		const extensionActivated = perfMarks['extensionActivated'];
 		const inputLoaded = perfMarks['inputLoaded'];
@@ -523,49 +482,7 @@ export class NotebookEditor extends EditorPane implements INotebookEditorPane, I
 			}
 		}
 
-		// Notebook information
-		let codeCellCount: number | undefined = undefined;
-		let mdCellCount: number | undefined = undefined;
-		let outputCount: number | undefined = undefined;
-		let outputBytes: number | undefined = undefined;
-		let codeLength: number | undefined = undefined;
-		let markdownLength: number | undefined = undefined;
-		let notebookStatsLoaded: number | undefined = undefined;
-		if (notebook) {
-			const stopWatch = new StopWatch();
-			for (const cell of notebook.cells) {
-				if (cell.cellKind === CellKind.Code) {
-					codeCellCount = (codeCellCount || 0) + 1;
-					codeLength = (codeLength || 0) + cell.getTextLength();
-					outputCount = (outputCount || 0) + cell.outputs.length;
-					outputBytes = (outputBytes || 0) + cell.outputs.reduce((prev, cur) => prev + cur.outputs.reduce((size, item) => size + item.data.byteLength, 0), 0);
-				} else {
-					mdCellCount = (mdCellCount || 0) + 1;
-					markdownLength = (codeLength || 0) + cell.getTextLength();
-				}
-			}
-			notebookStatsLoaded = stopWatch.elapsed();
-		}
-
 		this.logService.trace(`[NotebookEditor] open notebook perf ${notebook?.uri.toString() ?? ''} - extensionActivation: ${extensionActivationTimespan}, inputLoad: ${inputLoadingTimespan}, webviewComm: ${webviewCommLoadingTimespan}, customMarkdown: ${customMarkdownLoadingTimespan}, editorLoad: ${editorLoadingTimespan}`);
-
-		this.telemetryService.publicLog2<WorkbenchNotebookOpenEvent, WorkbenchNotebookOpenClassification>('notebook/editorOpenPerf', {
-			scheme: input.resource.scheme,
-			ext: extname(input.resource),
-			viewType: input.viewType,
-			extensionActivated: extensionActivationTimespan,
-			inputLoaded: inputLoadingTimespan,
-			webviewCommLoaded: webviewCommLoadingTimespan,
-			customMarkdownLoaded: customMarkdownLoadingTimespan,
-			editorLoaded: editorLoadingTimespan,
-			codeCellCount,
-			mdCellCount,
-			outputCount,
-			outputBytes,
-			codeLength,
-			markdownLength,
-			notebookStatsLoaded
-		});
 	}
 
 	override clearInput(): void {

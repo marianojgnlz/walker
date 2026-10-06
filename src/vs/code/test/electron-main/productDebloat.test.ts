@@ -201,12 +201,14 @@ suite('Product debloat process startup', () => {
 			['src/vs/editor/contrib/suggest/browser/suggestController.ts', /publicLog|suggest\.acceptedSuggestion|ITelemetryService/],
 			['src/vs/editor/contrib/suggest/browser/suggestModel.ts', /publicLog|suggest\.durations|ITelemetryService/],
 			['src/vs/editor/contrib/inlineCompletions/browser/hintsWidget/hoverParticipant.ts', /publicLog|inlineCompletionHover|ITelemetryService/],
-			['src/vs/editor/contrib/inlineCompletions/browser/telemetry.ts', /publicLog|sendInlineCompletionsEndOfLifeTelemetry|dataChannel\.publicLog2|InlineCompletionsEndOfLifeClassification/],
 			['src/vs/editor/contrib/inlineCompletions/browser/model/inlineCompletionsSource.ts', /publicLog|DataChannelForwardingTelemetryService|sendInlineCompletionsEndOfLifeTelemetry|emptyResponseInformation|RequestResponseData/],
 		];
 		for (const [relativePath, removal] of prunedSites) {
 			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
 		}
+
+		// The emptied module was deleted by the parent (W42); a reappearing file is itself the regression.
+		assert.strictEqual(repoFileExists('src/vs/editor/contrib/inlineCompletions/browser/telemetry.ts'), false);
 
 		// The workbench side of the same `inlineCompletion.endOfLife` event (extension-backed providers).
 		assert.doesNotMatch(
@@ -246,7 +248,6 @@ suite('Product debloat process startup', () => {
 		for (const relativePath of [
 			'src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts',
 			'src/vs/workbench/contrib/extensions/browser/extensionEditor.ts',
-			'src/vs/workbench/contrib/notebook/browser/notebookEditor.ts',
 			'src/vs/workbench/contrib/preferences/browser/settingsEditor2.ts',
 			'src/vs/workbench/contrib/surveys/browser/surveyEditorPane.ts',
 		]) {
@@ -311,6 +312,85 @@ suite('Product debloat process startup', () => {
 			'src/vs/editor/browser/widget/codeEditor/codeEditorWidget.ts',
 		]) {
 			assert.doesNotMatch(readRepoFile(relativePath), /telemetry|Telemetry/, relativePath);
+		}
+	});
+
+	test('files, search and workspace call-sites carry no telemetry emission', () => {
+		// T4 owners: any of these events, payload builders or injections reappearing means the
+		// file/search/workspace surfaces started reporting again. `_reason` is a telemetry-only
+		// query annotation whose only consumers were the `searchComplete` payloads.
+		const prunedSites: [string, RegExp][] = [
+			['src/vs/workbench/contrib/search/browser/searchTreeModel/searchModel.ts', /publicLog|ITelemetryService|searchResultsFirstRender|searchResultsFinished|searchResultsShown/],
+			['src/vs/workbench/contrib/search/browser/searchView.ts', /publicLog|ITelemetryService|searchKeywordClick/],
+			['src/vs/workbench/contrib/searchEditor/browser/searchEditorActions.ts', /publicLog|ITelemetryService|searchEditor\//],
+			['src/vs/workbench/contrib/searchEditor/browser/searchEditorInput.ts', /publicLog|ITelemetryService|searchEditor\//],
+			['src/vs/workbench/services/search/common/searchService.ts', /publicLog|ITelemetryService|sendTelemetry|cachedSearchComplete|textSearchComplete|_reason|randomChance/],
+			['src/vs/workbench/services/search/common/search.ts', /ITelemetryData|ITelemetryEvent|__GDPR__|_reason/],
+			['src/vs/workbench/services/search/browser/searchService.ts', /ITelemetryService/],
+			['src/vs/workbench/services/search/common/queryBuilder.ts', /_reason/],
+			['src/vs/workbench/api/browser/mainThreadWorkspace.ts', /_reason/],
+			['src/vs/workbench/api/common/extHostWorkspace.ts', /_reason/],
+			['src/vs/workbench/api/common/extHostNotebook.ts', /_reason/],
+			['src/vs/workbench/contrib/search/browser/anythingQuickAccess.ts', /_reason/],
+			['src/vs/workbench/contrib/search/browser/quickTextSearch/textSearchQuickAccess.ts', /_reason/],
+			['src/vs/workbench/contrib/searchEditor/browser/searchEditor.ts', /_reason/],
+			['src/vs/workbench/services/extensions/common/workspaceContains.ts', /_reason/],
+			['src/vs/workbench/contrib/files/browser/views/explorerView.ts', /publicLog|ITelemetryService|workbenchActionExecuted/],
+			['src/vs/workbench/contrib/files/browser/views/openEditorsView.ts', /publicLog|ITelemetryService|workbenchActionExecuted/],
+			['src/vs/workbench/contrib/files/browser/workspaceWatcher.ts', /publicLog|ITelemetryService|fileWatcherError/],
+			['src/vs/workbench/contrib/workspace/browser/workspace.contribution.ts', /publicLog|ITelemetryService|WorkspaceTrustTelemetry|workspaceTrustDisabled|workspaceTrustFolderCounts|workspaceTrustStateChanged|workspaceFolderDepthBelowTrustedFolder/],
+		];
+		for (const [relativePath, removal] of prunedSites) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+	});
+
+	test('terminal, debug, task, test and notebook call-sites carry no telemetry emission', () => {
+		// T5/T6 owners: any of these events, payload builders or injections reappearing means the
+		// terminal/debug/task/test/notebook surfaces started reporting again.
+		const prunedSites: [string, RegExp][] = [
+			['src/vs/workbench/contrib/terminalContrib/suggest/browser/terminalSuggestAddon.ts', /publicLog|ITelemetryService|_suggestTelemetry|_completionRequestTimestamp/],
+			['src/vs/workbench/contrib/terminal/browser/terminalInstance.ts', /publicLog|ITelemetryService|shellIntegrationFailureProcessExit/],
+			['src/vs/workbench/contrib/terminal/browser/terminalProcessManager.ts', /publicLog|ITelemetryService|FailedShellIntegrationActivation/],
+			['src/vs/workbench/contrib/terminal/browser/xterm/xtermTerminal.ts', /publicLog|ITelemetryService|disableShellIntegrationReporting|imageAddonActivated|imageAdded/],
+			['src/vs/platform/terminal/common/xterm/shellIntegrationAddon.ts', /publicLog|ITelemetryService|_hasUpdatedTelemetry|disableTelemetry/],
+			['src/vs/workbench/contrib/terminalContrib/links/browser/terminalLinkManager.ts', /publicLog|ITelemetryService|terminal\/openLink/],
+			['src/vs/workbench/contrib/terminalContrib/quickFix/browser/quickFixAddon.ts', /publicLog|ITelemetryService|terminal\/quick-fix/],
+			['src/vs/workbench/contrib/terminalContrib/typeAhead/browser/terminalTypeAheadAddon.ts', /publicLog|ITelemetryService|terminalLatencyStats/],
+			['src/vs/workbench/contrib/debug/browser/debugSession.ts', /publicLog|ITelemetryService|CustomEndpointTelemetryService|category === 'telemetry'/],
+			['src/vs/workbench/contrib/debug/browser/debugToolBar.ts', /publicLog|ITelemetryService|workbenchActionExecuted/],
+			['src/vs/workbench/contrib/debug/browser/variablesView.ts', /publicLog|ITelemetryService|didViewMemory/],
+			['src/vs/workbench/contrib/tasks/browser/abstractTaskService.ts', /ITelemetryService|_telemetryService/],
+			['src/vs/workbench/contrib/tasks/electron-browser/taskService.ts', /ITelemetryService|telemetryService/],
+			['src/vs/workbench/contrib/testing/browser/testResultsView/testResultsTree.ts', /publicLog|ITelemetryService|testing\.expandOlderResults/],
+			['src/vs/workbench/contrib/testing/common/testResultService.ts', /publicLog|ITelemetryService|telemetryService/],
+			['src/vs/workbench/contrib/testing/common/testResult.ts', /publicLog|ITelemetryService|test\.outcomes/],
+			['src/vs/workbench/contrib/notebook/browser/controller/coreActions.ts', /publicLog|ITelemetryService|sendEntryTelemetry/],
+			['src/vs/workbench/contrib/notebook/browser/notebookEditor.ts', /publicLog|ITelemetryService|editorOpenPerf|WorkbenchNotebookOpen/],
+			['src/vs/workbench/contrib/notebook/browser/notebookEditorWidget.ts', /publicLog|ITelemetryService|editorOpened/],
+			['src/vs/workbench/contrib/notebook/browser/view/cellParts/cellStatusPart.ts', /publicLog|ITelemetryService|workbenchActionExecuted/],
+			['src/vs/workbench/contrib/notebook/browser/view/renderers/backLayerWebView.ts', /publicLog|ITelemetryService|NotebookCellOutputRender|workbenchActionExecuted/],
+			['src/vs/workbench/contrib/notebook/common/notebookEditorModel.ts', /publicLog|ITelemetryService|notebook\/SaveError|getSaveErrorMessage/],
+			['src/vs/workbench/contrib/notebook/common/notebookEditorModelResolverServiceImpl.ts', /ITelemetryService|_telemetryService/],
+			['src/vs/workbench/api/browser/mainThreadSearch.ts', /publicLog|ITelemetryService|handleTelemetry/],
+		];
+		for (const [relativePath, removal] of prunedSites) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+
+		// The emptied telemetry-only modules are W43 deletion candidates: the parent may have
+		// deleted them, or they must still be content-free. A reappearing class/event is the
+		// regression, not the parent's deletion.
+		for (const relativePath of [
+			'src/vs/workbench/contrib/terminalContrib/telemetry/browser/terminalTelemetry.ts',
+			'src/vs/workbench/contrib/terminalContrib/telemetry/browser/terminalProfileConfigurationTelemetry.ts',
+			'src/vs/workbench/contrib/terminalContrib/telemetry/browser/terminal.telemetry.contribution.ts',
+			'src/vs/workbench/contrib/terminalContrib/suggest/browser/terminalSuggestTelemetry.ts',
+			'src/vs/workbench/contrib/debug/common/debugTelemetry.ts',
+		]) {
+			if (repoFileExists(relativePath)) {
+				assert.doesNotMatch(readRepoFile(relativePath), /publicLog|ITelemetryService|export (class|function|const)|TelemetryContribution/, relativePath);
+			}
 		}
 	});
 

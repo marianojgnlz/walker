@@ -6,7 +6,6 @@
 import { getWindow } from '../../../../../../base/browser/dom.js';
 import { IMouseWheelEvent } from '../../../../../../base/browser/mouseEvent.js';
 import { CodeWindow } from '../../../../../../base/browser/window.js';
-import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../../../base/common/actions.js';
 import { coalesce } from '../../../../../../base/common/arrays.js';
 import { DeferredPromise, runWhenGlobalIdle } from '../../../../../../base/common/async.js';
 import { decodeBase64 } from '../../../../../../base/common/buffer.js';
@@ -34,7 +33,6 @@ import { EditorOpenSource, ITextEditorOptions } from '../../../../../../platform
 import { IFileService } from '../../../../../../platform/files/common/files.js';
 import { extractSelection, IOpenerService } from '../../../../../../platform/opener/common/opener.js';
 import { IStorageService } from '../../../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
 import { editorFindMatch, editorFindMatchHighlight } from '../../../../../../platform/theme/common/colorRegistry.js';
 import { IThemeService, Themable } from '../../../../../../platform/theme/common/themeService.js';
 import { IWorkspaceContextService } from '../../../../../../platform/workspace/common/workspace.js';
@@ -183,8 +181,7 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 		@IStorageService private readonly storageService: IStorageService,
 		@IPathService private readonly pathService: IPathService,
 		@INotebookLoggingService private readonly notebookLogService: INotebookLoggingService,
-		@IThemeService themeService: IThemeService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService
+		@IThemeService themeService: IThemeService
 	) {
 		super(themeService);
 
@@ -773,9 +770,6 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 							const cell = this.reversedInsetMapping.get(outputId);
 
 							if (cell) {
-								this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>
-									('workbenchActionExecuted', { id: 'notebook.cell.toggleOutputScrolling', from: 'inlineLink' });
-
 								cell.cellViewModel.outputsViewModels.forEach((vm) => {
 									if (vm.model.metadata) {
 										vm.model.metadata['scrollable'] = true;
@@ -938,9 +932,6 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 				}
 				case 'notebookPerformanceMessage': {
 					this.notebookEditor.updatePerformanceMetadata(data.cellId, data.executionId, data.duration, data.rendererId);
-					if (data.outputSize && data.rendererId === 'vscode.builtin-renderer') {
-						this._sendPerformanceData(data.outputSize, data.duration);
-					}
 					break;
 				}
 				case 'outputInputFocus': {
@@ -957,27 +948,6 @@ export class BackLayerWebView<T extends ICommonCellInfo> extends Themable {
 		}));
 
 		return initializePromise.p;
-	}
-
-	private _sendPerformanceData(outputSize: number, renderTime: number) {
-		type NotebookOutputRenderClassification = {
-			owner: 'amunger';
-			comment: 'Track performance data for output rendering';
-			outputSize: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Size of the output data buffer.'; isMeasurement: true };
-			renderTime: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Time spent rendering output.'; isMeasurement: true };
-		};
-
-		type NotebookOutputRenderEvent = {
-			outputSize: number;
-			renderTime: number;
-		};
-
-		const telemetryData = {
-			outputSize,
-			renderTime
-		};
-
-		this.telemetryService.publicLog2<NotebookOutputRenderEvent, NotebookOutputRenderClassification>('NotebookCellOutputRender', telemetryData);
 	}
 
 	private _handleNotebookCellResource(uri: URI) {

@@ -9,7 +9,7 @@ import { PixelRatio } from '../../../../base/browser/pixelRatio.js';
 import { ActionBar, ActionsOrientation, IActionViewItem } from '../../../../base/browser/ui/actionbar/actionbar.js';
 import { IBaseActionViewItemOptions } from '../../../../base/browser/ui/actionbar/actionViewItems.js';
 import { CodeWindow, mainWindow } from '../../../../base/browser/window.js';
-import { Action, IAction, IRunEvent, WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../base/common/actions.js';
+import { Action, IAction, IRunEvent } from '../../../../base/common/actions.js';
 import * as arrays from '../../../../base/common/arrays.js';
 import { RunOnceScheduler } from '../../../../base/common/async.js';
 import { Codicon } from '../../../../base/common/codicons.js';
@@ -29,7 +29,6 @@ import { ContextKeyExpr, ContextKeyExpression, IContextKeyService } from '../../
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { widgetBorder } from '../../../../platform/theme/common/colorRegistry.js';
 import { IThemeService, Themable } from '../../../../platform/theme/common/themeService.js';
 import { getTitleBarStyle, TitlebarStyle } from '../../../../platform/window/common/window.js';
@@ -65,7 +64,6 @@ export class DebugToolBar extends Themable implements IWorkbenchContribution {
 
 	constructor(
 		@INotificationService private readonly notificationService: INotificationService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IDebugService private readonly debugService: IDebugService,
 		@IWorkbenchLayoutService private readonly layoutService: IWorkbenchLayoutService,
 		@IStorageService private readonly storageService: IStorageService,
@@ -162,9 +160,6 @@ export class DebugToolBar extends Themable implements IWorkbenchContribution {
 			if (e.error && !errors.isCancellationError(e.error)) {
 				this.notificationService.warn(e.error);
 			}
-
-			// log in telemetry
-			this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: e.action.id, from: 'debugActionsWidget' });
 		}));
 
 		this._register(dom.addDisposableGenericMouseUpListener(this.dragArea, (event: MouseEvent) => {

@@ -31,7 +31,6 @@ import { IInstantiationService } from '../../../../../platform/instantiation/com
 import { DecorationAddon } from './decorationAddon.js';
 import { ITerminalCapabilityStore, ITerminalCommand, TerminalCapability } from '../../../../../platform/terminal/common/capabilities/capabilities.js';
 import { Emitter, Event } from '../../../../../base/common/event.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IContextKey, IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
 import { TerminalContextKeys } from '../../common/terminalContextKey.js';
 import { IClipboardService } from '../../../../../platform/clipboard/common/clipboardService.js';
@@ -94,8 +93,6 @@ export interface IXtermTerminalOptions {
 	capabilities: ITerminalCapabilityStore;
 	/** The shell integration nonce to verify data coming from SI is trustworthy. */
 	shellIntegrationNonce?: string;
-	/** Whether to disable shell integration telemetry reporting. */
-	disableShellIntegrationReporting?: boolean;
 	/** The object that imports xterm addons, set this to inject an importer in tests. */
 	xtermAddonImporter?: XtermAddonImporter;
 	/** Whether to disable the overview ruler. */
@@ -219,7 +216,6 @@ export class XtermTerminal extends Disposable implements IXtermTerminal, IDetach
 		@ITerminalLogService private readonly _logService: ITerminalLogService,
 		@INotificationService private readonly _notificationService: INotificationService,
 		@IThemeService private readonly _themeService: IThemeService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@ITerminalConfigurationService private readonly _terminalConfigurationService: ITerminalConfigurationService,
 		@IClipboardService private readonly _clipboardService: IClipboardService,
 		@IContextKeyService contextKeyService: IContextKeyService,
@@ -331,7 +327,7 @@ export class XtermTerminal extends Disposable implements IXtermTerminal, IDetach
 		if (!options.detached) {
 			this._register(lifecycleService.onWillShutdown(() => this._decorationAddon.clearDecorations()));
 		}
-		this._shellIntegrationAddon = new ShellIntegrationAddon(options.shellIntegrationNonce ?? '', options.disableShellIntegrationReporting, this._onDidExecuteText, this._telemetryService, this._logService);
+		this._shellIntegrationAddon = new ShellIntegrationAddon(options.shellIntegrationNonce ?? '', this._onDidExecuteText, this._logService);
 		this.raw.loadAddon(this._shellIntegrationAddon);
 		this._xtermAddonLoader.importAddon('clipboard').then(ClipboardAddon => {
 			if (this._store.isDisposed) {
@@ -1010,18 +1006,6 @@ export class XtermTerminal extends Disposable implements IXtermTerminal, IDetach
 				const AddonCtor = await this._xtermAddonLoader.importAddon('image');
 				this._imageAddon = new AddonCtor();
 				this.raw.loadAddon(this._imageAddon);
-				type TerminalImageAddonActivatedClassification = {
-					owner: 'anthonykim1';
-					comment: 'Tracks when the xterm.js image addon is loaded, including dynamic enablement';
-				};
-				this._telemetryService.publicLog2<{}, TerminalImageAddonActivatedClassification>('terminal/imageAddonActivated');
-				this._register(this._imageAddon.onImageAdded(() => {
-					type TerminalImageAddedClassification = {
-						owner: 'anthonykim1';
-						comment: 'Tracks when an image is added to the terminal via the image addon';
-					};
-					this._telemetryService.publicLog2<{}, TerminalImageAddedClassification>('terminal/imageAdded');
-				}));
 			}
 		} else {
 			try {

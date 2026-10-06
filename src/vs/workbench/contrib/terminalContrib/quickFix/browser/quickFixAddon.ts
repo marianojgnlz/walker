@@ -15,7 +15,6 @@ import { IConfigurationService } from '../../../../../platform/configuration/com
 import { IOpenerService } from '../../../../../platform/opener/common/opener.js';
 import { DecorationSelector, updateLayout } from '../../../terminal/browser/xterm/decorationStyles.js';
 import type { IDecoration, Terminal } from '@xterm/xterm';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { CancellationTokenSource } from '../../../../../base/common/cancellation.js';
 import { IExtensionService } from '../../../../services/extensions/common/extensions.js';
 import { AccessibilitySignal, IAccessibilitySignalService } from '../../../../../platform/accessibilitySignal/browser/accessibilitySignalService.js';
@@ -74,15 +73,12 @@ export class TerminalQuickFixAddon extends Disposable implements ITerminalAddon,
 
 	private readonly _registeredSelectors: Set<string> = new Set();
 
-	private _didRun: boolean = false;
-
 	private readonly _onDidRequestRerunCommand = this._register(new Emitter<{ command: string; shouldExecute?: boolean }>());
 	readonly onDidRequestRerunCommand = this._onDidRequestRerunCommand.event;
 	private readonly _onDidUpdateQuickFixes = this._register(new Emitter<{ command: ITerminalCommand; actions: ITerminalAction[] | undefined }>());
 	readonly onDidUpdateQuickFixes = this._onDidUpdateQuickFixes.event;
 
 	constructor(
-		private readonly _sessionId: string,
 		private readonly _aliases: string[][] | undefined,
 		private readonly _capabilities: ITerminalCapabilityStore,
 		@IAccessibilitySignalService private readonly _accessibilitySignalService: IAccessibilitySignalService,
@@ -92,7 +88,6 @@ export class TerminalQuickFixAddon extends Disposable implements ITerminalAddon,
 		@IExtensionService private readonly _extensionService: IExtensionService,
 		@ILabelService private readonly _labelService: ILabelService,
 		@IOpenerService private readonly _openerService: IOpenerService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@ITerminalQuickFixService private readonly _quickFixService: ITerminalQuickFixService,
 	) {
 		super();
@@ -228,29 +223,11 @@ export class TerminalQuickFixAddon extends Disposable implements ITerminalAddon,
 	}
 
 	private _disposeQuickFix(command: ITerminalCommand, id: string): void {
-		type QuickFixResultTelemetryEvent = {
-			quickFixId: string;
-			ranQuickFix: boolean;
-			terminalSessionId: string;
-		};
-		type QuickFixClassification = {
-			owner: 'meganrogge';
-			quickFixId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The quick fix ID' };
-			ranQuickFix: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Whether the quick fix was run' };
-			terminalSessionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The terminal session ID' };
-			comment: 'Terminal quick fixes';
-		};
-		this._telemetryService?.publicLog2<QuickFixResultTelemetryEvent, QuickFixClassification>('terminal/quick-fix', {
-			quickFixId: id,
-			ranQuickFix: this._didRun,
-			terminalSessionId: this._sessionId
-		});
 		this._decoration.clear();
 		this._decorationDisposables.clear();
 		this._onDidUpdateQuickFixes.fire({ command, actions: this._quickFixes });
 		this._quickFixes = undefined;
 		this._lastQuickFixId = undefined;
-		this._didRun = false;
 	}
 
 	/**

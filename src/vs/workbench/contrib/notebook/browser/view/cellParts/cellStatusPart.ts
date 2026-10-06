@@ -6,7 +6,6 @@
 import * as DOM from '../../../../../../base/browser/dom.js';
 import { StandardKeyboardEvent } from '../../../../../../base/browser/keyboardEvent.js';
 import { SimpleIconLabel } from '../../../../../../base/browser/ui/iconLabel/simpleIconLabel.js';
-import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../../../base/common/actions.js';
 import { toErrorMessage } from '../../../../../../base/common/errorMessage.js';
 import { Emitter, Event } from '../../../../../../base/common/event.js';
 import { stripIcons } from '../../../../../../base/common/iconLabels.js';
@@ -18,7 +17,6 @@ import { isThemeColor } from '../../../../../../editor/common/editorCommon.js';
 import { ICommandService } from '../../../../../../platform/commands/common/commands.js';
 import { IInstantiationService } from '../../../../../../platform/instantiation/common/instantiation.js';
 import { INotificationService } from '../../../../../../platform/notification/common/notification.js';
-import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../../../platform/theme/common/themeService.js';
 import { ThemeColor } from '../../../../../../base/common/themables.js';
 import { INotebookCellActionContext } from '../../controller/coreActions.js';
@@ -293,7 +291,6 @@ class CellStatusBarItem extends Disposable {
 		private readonly _editor: ICodeEditor | undefined,
 		itemModel: INotebookCellStatusBarItem,
 		maxWidth: number | undefined,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@ICommandService private readonly _commandService: ICommandService,
 		@INotificationService private readonly _notificationService: INotificationService,
 		@IThemeService private readonly _themeService: IThemeService,
@@ -377,7 +374,6 @@ class CellStatusBarItem extends Disposable {
 			args.unshift(this._context);
 		}
 
-		this._telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id, from: 'cell status bar' });
 		try {
 			this._editor?.focus();
 			await this._commandService.executeCommand(id, ...args);

@@ -28,7 +28,6 @@ import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IProgressService } from '../../../../platform/progress/common/progress.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IViewDescriptorService } from '../../../common/views.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { IOutputService } from '../../../services/output/common/output.js';
@@ -66,7 +65,6 @@ export class TaskService extends AbstractTaskService {
 		@IEditorService editorService: IEditorService,
 		@IFileService fileService: IFileService,
 		@IWorkspaceContextService contextService: IWorkspaceContextService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@ITextFileService textFileService: ITextFileService,
 		@ILifecycleService lifecycleService: ILifecycleService,
 		@IModelService modelService: IModelService,
@@ -105,7 +103,6 @@ export class TaskService extends AbstractTaskService {
 			editorService,
 			fileService,
 			contextService,
-			telemetryService,
 			textFileService,
 			modelService,
 			extensionService,

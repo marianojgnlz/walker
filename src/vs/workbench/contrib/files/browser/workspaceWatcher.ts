@@ -15,7 +15,6 @@ import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { isAbsolute } from '../../../../base/common/path.js';
 import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
 import { IHostService } from '../../../services/host/browser/host.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 
 export class WorkspaceWatcher extends Disposable {
 
@@ -30,8 +29,7 @@ export class WorkspaceWatcher extends Disposable {
 		@INotificationService private readonly notificationService: INotificationService,
 		@IOpenerService private readonly openerService: IOpenerService,
 		@IUriIdentityService private readonly uriIdentityService: IUriIdentityService,
-		@IHostService private readonly hostService: IHostService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService
+		@IHostService private readonly hostService: IHostService
 	) {
 		super();
 
@@ -72,12 +70,9 @@ export class WorkspaceWatcher extends Disposable {
 
 	private onDidWatchError(error: Error): void {
 		const msg = error.toString();
-		let reason: 'ENOSPC' | 'EUNKNOWN' | 'ETERM' | undefined = undefined;
 
 		// Detect if we run into ENOSPC issues
 		if (msg.indexOf('ENOSPC') >= 0) {
-			reason = 'ENOSPC';
-
 			this.notificationService.prompt(
 				Severity.Warning,
 				localize('enospcError', "Unable to watch for file changes. Please follow the instructions link to resolve this issue."),
@@ -94,8 +89,6 @@ export class WorkspaceWatcher extends Disposable {
 
 		// Detect when the watcher throws an error unexpectedly
 		else if (msg.indexOf('EUNKNOWN') >= 0) {
-			reason = 'EUNKNOWN';
-
 			this.notificationService.prompt(
 				Severity.Warning,
 				localize('eshutdownError', "File changes watcher stopped unexpectedly. A reload of the window may enable the watcher again unless the workspace cannot be watched for file changes."),
@@ -108,25 +101,6 @@ export class WorkspaceWatcher extends Disposable {
 					priority: NotificationPriority.SILENT // reduce potential spam since we don't really know how often this fires
 				}
 			);
-		}
-
-		// Detect unexpected termination
-		else if (msg.indexOf('ETERM') >= 0) {
-			reason = 'ETERM';
-		}
-
-		// Log telemetry if we gathered a reason (logging it from the renderer
-		// allows us to investigate this situation in context of experiments)
-		if (reason) {
-			type WatchErrorClassification = {
-				owner: 'bpasero';
-				comment: 'An event that fires when a watcher errors';
-				reason: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The watcher error reason.' };
-			};
-			type WatchErrorEvent = {
-				reason: string;
-			};
-			this.telemetryService.publicLog2<WatchErrorEvent, WatchErrorClassification>('fileWatcherError', { reason });
 		}
 	}
 

@@ -168,7 +168,6 @@ export class MainThreadWorkspace extends Disposable implements MainThreadWorkspa
 		const folders = folder ? [folder] : workspace.folders.map(folder => folder.uri);
 
 		const query = this._queryBuilder.text(pattern, folders, revive(options));
-		query._reason = 'startTextSearch';
 
 		const onProgress = (p: ISearchProgressItem) => {
 			if ((<IFileMatch>p).results) {

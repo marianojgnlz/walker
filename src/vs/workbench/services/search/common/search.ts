@@ -13,7 +13,6 @@ import { fuzzyContains, getNLines } from '../../../../base/common/strings.js';
 import { URI, UriComponents } from '../../../../base/common/uri.js';
 import { IFilesConfiguration } from '../../../../platform/files/common/files.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { ITelemetryData } from '../../../../platform/telemetry/common/telemetry.js';
 import { Event } from '../../../../base/common/event.js';
 import * as paths from '../../../../base/common/path.js';
 import { isCancellationError } from '../../../../base/common/errors.js';
@@ -90,9 +89,6 @@ export interface IFolderQuery<U extends UriComponents = URI> {
 }
 
 export interface ICommonQueryProps<U extends UriComponents> {
-	/** For telemetry - indicates what is triggering the source */
-	_reason?: string;
-
 	folderQueries: IFolderQuery<U>[];
 	// The include pattern for files that gets passed into ripgrep.
 	// Note that this will override any ignore files if applicable.
@@ -164,16 +160,6 @@ export const enum QueryType {
 	aiText = 3
 }
 
-/* __GDPR__FRAGMENT__
-	"IPatternInfo" : {
-		"isRegExp": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
-		"isWordMatch": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
-		"wordSeparators": { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
-		"isMultiline": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
-		"isCaseSensitive": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
-		"isSmartCase": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true }
-	}
-*/
 export interface IPatternInfo {
 	pattern: string;
 	isRegExp?: boolean;
@@ -561,10 +547,6 @@ export function deserializeSearchError(error: Error): SearchError {
 export function serializeSearchError(searchError: SearchError): Error {
 	const details = { message: searchError.message, code: searchError.code };
 	return new Error(JSON.stringify(details));
-}
-export interface ITelemetryEvent {
-	eventName: string;
-	data: ITelemetryData;
 }
 
 export interface IRawSearchService {

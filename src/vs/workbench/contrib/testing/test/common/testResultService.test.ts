@@ -10,7 +10,6 @@ import { CancellationTokenSource } from '../../../../../base/common/cancellation
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { MockContextKeyService } from '../../../../../platform/keybinding/test/common/mockKeybindingService.js';
 import { NullLogService } from '../../../../../platform/log/common/log.js';
-import { NullTelemetryService } from '../../../../../platform/telemetry/common/telemetryUtils.js';
 import { IUriIdentityService } from '../../../../../platform/uriIdentity/common/uriIdentity.js';
 import { TestId } from '../../common/testId.js';
 import { TestProfileService } from '../../common/testProfileService.js';
@@ -51,7 +50,7 @@ suite('Workbench - Test Results Service', () => {
 			persist: boolean,
 			request: ResolvedTestRunRequest,
 		) {
-			super(id, persist, request, insertCounter++, NullTelemetryService);
+			super(id, persist, request, insertCounter++);
 			ds.add(this);
 		}
 
@@ -228,7 +227,6 @@ suite('Workbench - Test Results Service', () => {
 				new MockContextKeyService(),
 				storage,
 				ds.add(new TestProfileService(new MockContextKeyService(), ds.add(new TestStorageService()))),
-				NullTelemetryService,
 			));
 		});
 
@@ -247,7 +245,6 @@ suite('Workbench - Test Results Service', () => {
 				new MockContextKeyService(),
 				storage,
 				ds.add(new TestProfileService(new MockContextKeyService(), ds.add(new TestStorageService()))),
-				NullTelemetryService,
 			));
 
 			assert.strictEqual(0, results.results.length);
@@ -274,7 +271,6 @@ suite('Workbench - Test Results Service', () => {
 				false,
 				defaultOpts([]),
 				insertCounter++,
-				NullTelemetryService,
 			));
 			results.clear();
 
@@ -289,7 +285,6 @@ suite('Workbench - Test Results Service', () => {
 				false,
 				defaultOpts([]),
 				insertCounter++,
-				NullTelemetryService,
 			));
 
 			assert.deepStrictEqual(results.results, [r2, r]);

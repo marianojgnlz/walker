@@ -580,7 +580,6 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape, IExtHostWorkspac
 					maxResults: options.maxResults,
 					excludePattern: excludePatterns.length > 0 ? excludePatterns : undefined,
 					ignoreGlobCase: options.caseInsensitive,
-					_reason: 'startFileSearch',
 					shouldGlobSearch: query.type === 'include' ? undefined : true,
 				};
 

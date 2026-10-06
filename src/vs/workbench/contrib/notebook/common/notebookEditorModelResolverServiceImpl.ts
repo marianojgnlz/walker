@@ -21,7 +21,6 @@ import { assertReturnsDefined } from '../../../../base/common/types.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IFileReadLimits } from '../../../../platform/files/common/files.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { INotebookLoggingService } from './notebookLoggingService.js';
 import { parse } from '../../../services/notebook/common/notebookDocumentService.js';
 
@@ -44,7 +43,6 @@ class NotebookModelReferenceCollection extends ReferenceCollection<Promise<IReso
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
 		@INotebookService private readonly _notebookService: INotebookService,
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@INotebookLoggingService private readonly _notebookLoggingService: INotebookLoggingService,
 	) {
 		super();
@@ -80,7 +78,7 @@ class NotebookModelReferenceCollection extends ReferenceCollection<Promise<IReso
 		const workingCopyTypeId = NotebookWorkingCopyTypeIdentifier.create(notebookType, viewType);
 		let workingCopyManager = this._workingCopyManagers.get(workingCopyTypeId);
 		if (!workingCopyManager) {
-			const factory = new NotebookFileWorkingCopyModelFactory(notebookType, this._notebookService, this._configurationService, this._telemetryService, this._notebookLoggingService);
+			const factory = new NotebookFileWorkingCopyModelFactory(notebookType, this._notebookService, this._configurationService, this._notebookLoggingService);
 			workingCopyManager = this._instantiationService.createInstance(
 				FileWorkingCopyManager<NotebookFileWorkingCopyModel, NotebookFileWorkingCopyModel>,
 				workingCopyTypeId,

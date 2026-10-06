@@ -66,9 +66,6 @@ class MockMainThreadSearch implements MainThreadSearchShape {
 		this.keywords.push(data);
 	}
 
-	$handleTelemetry(eventName: string, data: any): void {
-	}
-
 	dispose() {
 	}
 }

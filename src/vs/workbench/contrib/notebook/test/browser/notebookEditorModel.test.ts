@@ -16,7 +16,6 @@ import { ExtensionIdentifier } from '../../../../../platform/extensions/common/e
 import { IFileStatWithMetadata } from '../../../../../platform/files/common/files.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { ILogService } from '../../../../../platform/log/common/log.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { NotebookTextModel } from '../../common/model/notebookTextModel.js';
 import { CellKind, IOutputDto, NotebookData, NotebookSetting, TransientOptions } from '../../common/notebookCommon.js';
 import { NotebookFileWorkingCopyModel } from '../../common/notebookEditorModel.js';
@@ -29,10 +28,7 @@ suite('NotebookFileWorkingCopyModel', function () {
 	let disposables: DisposableStore;
 	let instantiationService: TestInstantiationService;
 	const configurationService = new TestConfigurationService();
-	const telemetryService = new class extends mock<ITelemetryService>() {
-		override publicLogError2() { }
-	};
-	const logservice = new class extends mock<ILogService>() { };
+		const logservice = new class extends mock<ILogService>() { };
 
 	teardown(() => disposables.dispose());
 
@@ -69,7 +65,6 @@ suite('NotebookFileWorkingCopyModel', function () {
 					}
 				),
 				configurationService,
-				telemetryService,
 				logservice
 			));
 
@@ -93,7 +88,6 @@ suite('NotebookFileWorkingCopyModel', function () {
 					}
 				),
 				configurationService,
-				telemetryService,
 				logservice
 			));
 			await model.snapshot(SnapshotContext.Save, CancellationToken.None);
@@ -129,7 +123,6 @@ suite('NotebookFileWorkingCopyModel', function () {
 					}
 				),
 				configurationService,
-				telemetryService,
 				logservice
 			));
 
@@ -153,7 +146,6 @@ suite('NotebookFileWorkingCopyModel', function () {
 					}
 				),
 				configurationService,
-				telemetryService,
 				logservice
 
 			));
@@ -189,7 +181,6 @@ suite('NotebookFileWorkingCopyModel', function () {
 					}
 				),
 				configurationService,
-				telemetryService,
 				logservice
 			));
 
@@ -213,7 +204,6 @@ suite('NotebookFileWorkingCopyModel', function () {
 					}
 				),
 				configurationService,
-				telemetryService,
 				logservice
 			));
 			await model.snapshot(SnapshotContext.Save, CancellationToken.None);
@@ -250,7 +240,6 @@ suite('NotebookFileWorkingCopyModel', function () {
 				configurationService
 			),
 			configurationService,
-			telemetryService,
 			logservice
 		));
 
@@ -293,7 +282,6 @@ suite('NotebookFileWorkingCopyModel', function () {
 			notebook,
 			notebookService,
 			configurationService,
-			telemetryService,
 			logservice
 		));
 

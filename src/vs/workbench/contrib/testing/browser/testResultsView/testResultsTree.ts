@@ -32,7 +32,6 @@ import { IContextMenuService } from '../../../../../platform/contextview/browser
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { WorkbenchCompressibleObjectTree } from '../../../../../platform/list/browser/listService.js';
 import { IProgressService } from '../../../../../platform/progress/common/progress.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { widgetClose } from '../../../../../platform/theme/common/iconRegistry.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
 import { TestCommandId, Testing } from '../../common/constants.js';
@@ -314,7 +313,6 @@ export class OutputPeekTree extends Disposable {
 		@ITestExplorerFilterState explorerFilter: ITestExplorerFilterState,
 		@ITestCoverageService coverageService: ITestCoverageService,
 		@IProgressService progressService: IProgressService,
-		@ITelemetryService telemetryService: ITelemetryService,
 	) {
 		super();
 
@@ -627,16 +625,6 @@ export class OutputPeekTree extends Disposable {
 
 
 		this._register(this.tree.onContextMenu(e => this.onContextMenu(e)));
-
-		this._register(this.tree.onDidChangeCollapseState(e => {
-			if (e.node.element instanceof OlderResultsElement && !e.node.collapsed) {
-				telemetryService.publicLog2<{}, {
-					owner: 'connor4312';
-					// we're considering removing or depromoting this feature because we don't think it's used:
-					comment: 'Records that test history was used';
-				}>('testing.expandOlderResults');
-			}
-		}));
 
 		this.tree.setChildren(null, getRootChildren());
 		for (const result of results.results) {

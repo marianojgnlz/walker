@@ -13,10 +13,7 @@ import { getNotebookEditorFromEditorPane, IActiveNotebookEditor, ICellViewModel,
 import { INTERACTIVE_WINDOW_IS_ACTIVE_EDITOR, NOTEBOOK_EDITOR_EDITABLE, NOTEBOOK_EDITOR_FOCUSED, NOTEBOOK_IS_ACTIVE_EDITOR, NOTEBOOK_KERNEL_COUNT, NOTEBOOK_KERNEL_SOURCE_COUNT, REPL_NOTEBOOK_IS_ACTIVE_EDITOR } from '../../common/notebookContextKeys.js';
 import { ICellRange, isICellRange } from '../../common/notebookRange.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
-import { isEditorCommandsContext } from '../../../../common/editor.js';
 import { INotebookEditorService } from '../services/notebookEditorService.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../../base/common/actions.js';
 import { TypeConstraint } from '../../../../../base/common/types.js';
 import { IJSONSchema } from '../../../../../base/common/jsonSchema.js';
 import { MarshalledId } from '../../../../../base/common/marshallingIds.js';
@@ -157,8 +154,6 @@ export abstract class NotebookAction extends Action2 {
 	}
 
 	async run(accessor: ServicesAccessor, context?: any, ...additionalArgs: any[]): Promise<void> {
-		sendEntryTelemetry(accessor, this.desc.id, context);
-
 		if (!this.isNotebookActionContext(context)) {
 			context = this.getEditorContextFromArgsOrActive(accessor, context, ...additionalArgs);
 			if (!context) {
@@ -222,8 +217,6 @@ export abstract class NotebookMultiCellAction extends Action2 {
 	async run(accessor: ServicesAccessor, ...additionalArgs: any[]): Promise<void> {
 		const context = additionalArgs[0];
 
-		sendEntryTelemetry(accessor, this.desc.id, context);
-
 		const isFromCellToolbar = isCellToolbarContext(context);
 		if (isFromCellToolbar) {
 			return this.runWithContext(accessor, context);
@@ -260,8 +253,6 @@ export abstract class NotebookCellAction<T = INotebookCellActionContext> extends
 	}
 
 	override async run(accessor: ServicesAccessor, context?: INotebookCellActionContext, ...additionalArgs: any[]): Promise<void> {
-		sendEntryTelemetry(accessor, this.desc.id, context);
-
 		if (this.isCellActionContext(context)) {
 			return this.runWithContext(accessor, context);
 		}
@@ -287,22 +278,6 @@ interface IMultiCellArgs {
 	ranges: ICellRange[];
 	document?: URI;
 	autoReveal?: boolean;
-}
-
-function sendEntryTelemetry(accessor: ServicesAccessor, id: string, context?: any) {
-	if (context) {
-		const telemetryService = accessor.get(ITelemetryService);
-		if (context.source) {
-			telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: id, from: context.source });
-		} else if (URI.isUri(context)) {
-			telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: id, from: 'cellEditorContextMenu' });
-		} else if (context && 'from' in context && context.from === 'cellContainer') {
-			telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: id, from: 'cellContainer' });
-		} else {
-			const from = isCellToolbarContext(context) ? 'cellToolbar' : (isEditorCommandsContext(context) ? 'editorToolbar' : 'other');
-			telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: id, from: from });
-		}
-	}
 }
 
 function isCellToolbarContext(context?: unknown): context is INotebookCellToolbarActionContext {

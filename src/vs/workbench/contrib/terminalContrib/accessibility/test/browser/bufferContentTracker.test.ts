@@ -85,7 +85,6 @@ suite('Buffer Content Tracker', () => {
 			rows: 30,
 			xtermColorProvider: { getBackgroundColor: () => undefined },
 			capabilities,
-			disableShellIntegrationReporting: true
 		}, undefined));
 		const container = document.createElement('div');
 		xterm.raw.open(container);

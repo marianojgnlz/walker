@@ -8,7 +8,6 @@ import { range } from '../../../../../base/common/arrays.js';
 import { DisposableStore } from '../../../../../base/common/lifecycle.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { NullLogService } from '../../../../../platform/log/common/log.js';
-import { NullTelemetryService } from '../../../../../platform/telemetry/common/telemetryUtils.js';
 import { IUriIdentityService } from '../../../../../platform/uriIdentity/common/uriIdentity.js';
 import { ITestResult, LiveTestResult } from '../../common/testResult.js';
 import { InMemoryResultStorage, RETAIN_MAX_RESULTS } from '../../common/testResultStorage.js';
@@ -26,7 +25,6 @@ suite('Workbench - Test Result Storage', () => {
 			true,
 			{ targets: [], group: TestRunProfileBitset.Run },
 			1,
-			NullTelemetryService,
 		));
 
 		t.addTask({ id: taskName, name: 'n', running: true, ctrlId: 'ctrlId' });

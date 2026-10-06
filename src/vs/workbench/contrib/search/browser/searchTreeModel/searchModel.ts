@@ -8,16 +8,14 @@ import { CancellationToken, CancellationTokenSource } from '../../../../../base/
 import * as errors from '../../../../../base/common/errors.js';
 import { Emitter, Event, PauseableEmitter } from '../../../../../base/common/event.js';
 import { Lazy } from '../../../../../base/common/lazy.js';
-import { Disposable, IDisposable } from '../../../../../base/common/lifecycle.js';
-import { Schemas } from '../../../../../base/common/network.js';
+import { Disposable } from '../../../../../base/common/lifecycle.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../../platform/log/common/log.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { INotebookSearchService } from '../../common/notebookSearch.js';
 import { ReplacePattern } from '../../../../services/search/common/replace.js';
-import { IFileMatch, IPatternInfo, ISearchComplete, ISearchConfigurationProperties, ISearchProgressItem, ISearchService, ITextQuery, ITextSearchStats, QueryType, SearchCompletionExitCode } from '../../../../services/search/common/search.js';
+import { IFileMatch, ISearchComplete, ISearchConfigurationProperties, ISearchProgressItem, ISearchService, ITextQuery, QueryType, SearchCompletionExitCode } from '../../../../services/search/common/search.js';
 import { IChangeEvent, mergeSearchResultEvents, SearchModelLocation, ISearchModel, ISearchResult, SEARCH_MODEL_PREFIX } from './searchTreeCommon.js';
 import { SearchResultImpl } from './searchResult.js';
 import { ISearchViewModelWorkbenchService } from './searchViewModelWorkbenchService.js';
@@ -53,7 +51,6 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 
 	constructor(
 		@ISearchService private readonly searchService: ISearchService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@ILogService private readonly logService: ILogService,
@@ -127,7 +124,6 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 		const searchInstanceID = Date.now().toString();
 		const tokenSource = new CancellationTokenSource();
 		this.currentAICancelTokenSource = tokenSource;
-		const start = Date.now();
 		const asyncAIResults = this.searchService.aiTextSearch(
 			{ ...this._searchQuery, contentPattern: this._searchQuery.contentPattern.pattern, type: QueryType.aiText },
 			tokenSource.token,
@@ -142,28 +138,26 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 						// alert of no results since onProgress won't be called
 						onResult(undefined);
 					}
-					this.onSearchCompleted(value, Date.now() - start, searchInstanceID, true);
+					this.onSearchCompleted(value, searchInstanceID, true);
 					return value;
 				},
 				e => {
-					this.onSearchError(e, Date.now() - start, true);
+					this.onSearchError(e, true);
 					throw e;
 				});
 		return asyncAIResults;
 	}
 
-	private doSearch(query: ITextQuery, progressEmitter: Emitter<void>, searchQuery: ITextQuery, searchInstanceID: string, onProgress?: (result: ISearchProgressItem) => void, callerToken?: CancellationToken): {
+	private doSearch(query: ITextQuery, searchQuery: ITextQuery, searchInstanceID: string, onProgress?: (result: ISearchProgressItem) => void, callerToken?: CancellationToken): {
 		asyncResults: Promise<ISearchComplete>;
 		syncResults: IFileMatch<URI>[];
 	} {
 		const asyncGenerateOnProgress = async (p: ISearchProgressItem) => {
-			progressEmitter.fire();
 			this.onSearchProgress(p, searchInstanceID, false, false);
 			onProgress?.(p);
 		};
 
 		const syncGenerateOnProgress = (p: ISearchProgressItem) => {
-			progressEmitter.fire();
 			this.onSearchProgress(p, searchInstanceID, true);
 			onProgress?.(p);
 		};
@@ -226,13 +220,12 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 
 		this._searchResult.query = this._searchQuery;
 
-		const progressEmitter = this._register(new Emitter<void>());
 		this._replacePattern = new ReplacePattern(this.replaceString, this._searchQuery.contentPattern);
 
 		// In search on type case, delay the streaming of results just a bit, so that we don't flash the only "local results" fast path
 		this._startStreamDelay = new Promise(resolve => setTimeout(resolve, this.searchConfig.searchOnType ? 150 : 0));
 
-		const req = this.doSearch(query, progressEmitter, this._searchQuery, searchInstanceID, onProgress, callerToken);
+		const req = this.doSearch(query, this._searchQuery, searchInstanceID, onProgress, callerToken);
 		const asyncResults = req.asyncResults;
 		const syncResults = req.syncResults;
 
@@ -244,50 +237,21 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 			});
 		}
 
-		const start = Date.now();
-		let event: IDisposable | undefined;
-
-		const progressEmitterPromise = new Promise(resolve => {
-			event = Event.once(progressEmitter.event)(resolve);
-			return event;
-		});
-
-		Promise.race([asyncResults, progressEmitterPromise]).finally(() => {
-			/* __GDPR__
-				"searchResultsFirstRender" : {
-					"owner": "roblourens",
-					"duration" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true }
-				}
-			*/
-			event?.dispose();
-			this.telemetryService.publicLog('searchResultsFirstRender', { duration: Date.now() - start });
-		});
-
-		try {
-			return {
-				asyncResults: asyncResults.then(
-					value => {
-						this.onSearchCompleted(value, Date.now() - start, searchInstanceID, false);
-						return value;
-					},
-					e => {
-						this.onSearchError(e, Date.now() - start, false);
-						throw e;
-					}),
-				syncResults
-			};
-		} finally {
-			/* __GDPR__
-				"searchResultsFinished" : {
-					"owner": "roblourens",
-					"duration" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true }
-				}
-			*/
-			this.telemetryService.publicLog('searchResultsFinished', { duration: Date.now() - start });
-		}
+		return {
+			asyncResults: asyncResults.then(
+				value => {
+					this.onSearchCompleted(value, searchInstanceID, false);
+					return value;
+				},
+				e => {
+					this.onSearchError(e, false);
+					throw e;
+				}),
+			syncResults
+		};
 	}
 
-	private onSearchCompleted(completed: ISearchComplete | undefined, duration: number, searchInstanceID: string, ai: boolean): ISearchComplete | undefined {
+	private onSearchCompleted(completed: ISearchComplete | undefined, searchInstanceID: string, ai: boolean): ISearchComplete | undefined {
 		if (!this._searchQuery) {
 			throw new Error('onSearchCompleted must be called after a search is started');
 		}
@@ -302,49 +266,16 @@ export class SearchModelImpl extends Disposable implements ISearchModel {
 
 		this.searchResult.setCachedSearchComplete(completed, ai);
 
-		const options: IPatternInfo = Object.assign({}, this._searchQuery.contentPattern);
-		// eslint-disable-next-line local/code-no-any-casts
-		delete (options as any).pattern;
-
-		const stats = completed && completed.stats as ITextSearchStats;
-
-		const fileSchemeOnly = this._searchQuery.folderQueries.every(fq => fq.folder.scheme === Schemas.file);
-		const otherSchemeOnly = this._searchQuery.folderQueries.every(fq => fq.folder.scheme !== Schemas.file);
-		const scheme = fileSchemeOnly ? Schemas.file :
-			otherSchemeOnly ? 'other' :
-				'mixed';
-
-		/* __GDPR__
-			"searchResultsShown" : {
-				"owner": "roblourens",
-				"count" : { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
-				"fileCount": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
-				"options": { "${inline}": [ "${IPatternInfo}" ] },
-				"duration": { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-				"type" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-				"scheme" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth" },
-				"searchOnTypeEnabled" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
-			}
-		*/
-		this.telemetryService.publicLog('searchResultsShown', {
-			count: this._searchResult.count(),
-			fileCount: this._searchResult.fileCount(),
-			options,
-			duration,
-			type: stats && stats.type,
-			scheme,
-			searchOnTypeEnabled: this.searchConfig.searchOnType
-		});
 		return completed;
 	}
 
-	private onSearchError(e: any, duration: number, ai: boolean): void {
+	private onSearchError(e: any, ai: boolean): void {
 		if (errors.isCancellationError(e)) {
 			this.onSearchCompleted(
 				(ai ? this.aiSearchCancelledForNewSearch : this.searchCancelledForNewSearch)
 					? { exit: SearchCompletionExitCode.NewSearchStarted, results: [], messages: [] }
 					: undefined,
-				duration, '', ai);
+				'', ai);
 			if (ai) {
 				this.aiSearchCancelledForNewSearch = false;
 			} else {

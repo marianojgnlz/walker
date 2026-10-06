@@ -5,7 +5,6 @@
 import assert from 'assert';
 import * as sinon from 'sinon';
 import * as arrays from '../../../../../base/common/arrays.js';
-import { DeferredPromise, timeout } from '../../../../../base/common/async.js';
 import { CancellationToken, CancellationTokenSource } from '../../../../../base/common/cancellation.js';
 import { URI } from '../../../../../base/common/uri.js';
 import { Range } from '../../../../../editor/common/core/range.js';
@@ -14,9 +13,7 @@ import { ModelService } from '../../../../../editor/common/services/modelService
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { TestConfigurationService } from '../../../../../platform/configuration/test/common/testConfigurationService.js';
 import { TestInstantiationService } from '../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { IAITextQuery, IFileMatch, IFileQuery, IFileSearchStats, IFolderQuery, ISearchComplete, ISearchProgressItem, ISearchQuery, ISearchService, ITextQuery, ITextSearchMatch, OneLineRange, QueryType, TextSearchMatch } from '../../../../services/search/common/search.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { NullTelemetryService } from '../../../../../platform/telemetry/common/telemetryUtils.js';
+import { IAITextQuery, IFileMatch, IFileQuery, IFolderQuery, ISearchComplete, ISearchProgressItem, ISearchQuery, ISearchService, ITextQuery, ITextSearchMatch, OneLineRange, QueryType, TextSearchMatch } from '../../../../services/search/common/search.js';
 import { SearchModelImpl } from '../../browser/searchTreeModel/searchModel.js';
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
 import { TestThemeService } from '../../../../../platform/theme/test/common/testThemeService.js';
@@ -43,25 +40,6 @@ import { IEditorService } from '../../../../services/editor/common/editorService
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
 import { CellMatch, MatchInNotebook } from '../../browser/notebookSearch/notebookSearchModel.js';
 
-const nullEvent = new class {
-	id: number = -1;
-	topic!: string;
-	name!: string;
-	description!: string;
-	data: any;
-
-	startTime!: Date;
-	stopTime!: Date;
-
-	stop(): void {
-		return;
-	}
-
-	timeTaken(): number {
-		return -1;
-	}
-};
-
 const lineOneRange = new OneLineRange(1, 0, 1);
 
 suite('SearchModel', () => {
@@ -69,26 +47,12 @@ suite('SearchModel', () => {
 	let instantiationService: TestInstantiationService;
 	const store = ensureNoDisposablesAreLeakedInTestSuite();
 
-	const testSearchStats: IFileSearchStats = {
-		fromCache: false,
-		resultCount: 1,
-		type: 'searchProcess',
-		detailStats: {
-			fileWalkTime: 0,
-			cmdTime: 0,
-			cmdResultCount: 0,
-			directoriesWalked: 2,
-			filesWalked: 3
-		}
-	};
-
 	const folderQueries: IFolderQuery[] = [
 		{ folder: createFileUriFromPathFromRoot() }
 	];
 
 	setup(() => {
 		instantiationService = new TestInstantiationService();
-		instantiationService.stub(ITelemetryService, NullTelemetryService);
 		instantiationService.stub(ILabelService, { getUriBasenameLabel: (uri: URI) => '' });
 		instantiationService.stub(INotebookService, { getNotebookTextModels: () => [] });
 		instantiationService.stub(IModelService, stubModelService(instantiationService));
@@ -142,39 +106,6 @@ suite('SearchModel', () => {
 							results.forEach(onProgress!);
 							resolve(complete!);
 						});
-					})
-				};
-			}
-		};
-	}
-
-	function searchServiceWithError(error: Error): ISearchService {
-		return <ISearchService>{
-			textSearch(query: ISearchQuery, token?: CancellationToken, onProgress?: (result: ISearchProgressItem) => void): Promise<ISearchComplete> {
-				return new Promise((resolve, reject) => {
-					reject(error);
-				});
-			},
-			fileSearch(query: IFileQuery, token?: CancellationToken): Promise<ISearchComplete> {
-				return new Promise((resolve, reject) => {
-					queueMicrotask(() => {
-						reject(error);
-					});
-				});
-			},
-			aiTextSearch(query: ISearchQuery, token?: CancellationToken, onProgress?: (result: ISearchProgressItem) => void, notebookURIs?: ResourceSet): Promise<ISearchComplete> {
-				return new Promise((resolve, reject) => {
-					reject(error);
-				});
-			},
-			textSearchSplitSyncAsync(query: ITextQuery, token?: CancellationToken | undefined, onProgress?: ((result: ISearchProgressItem) => void) | undefined): { syncResults: ISearchComplete; asyncResults: Promise<ISearchComplete> } {
-				return {
-					syncResults: {
-						results: [],
-						messages: []
-					},
-					asyncResults: new Promise((resolve, reject) => {
-						reject(error);
 					})
 				};
 			}
@@ -237,21 +168,6 @@ suite('SearchModel', () => {
 			}
 		};
 	}
-
-	function searchServiceWithDeferredPromise(p: Promise<ISearchComplete>): ISearchService {
-		return <ISearchService>{
-			textSearchSplitSyncAsync(query: ITextQuery, token?: CancellationToken | undefined, onProgress?: ((result: ISearchProgressItem) => void) | undefined): { syncResults: ISearchComplete; asyncResults: Promise<ISearchComplete> } {
-				return {
-					syncResults: {
-						results: [],
-						messages: []
-					},
-					asyncResults: p,
-				};
-			}
-		};
-	}
-
 
 	function notebookSearchServiceWithInfo(results: INotebookFileMatchWithModel[], tokenSource: CancellationTokenSource | undefined): INotebookSearchService {
 		return <INotebookSearchService>{
@@ -436,120 +352,6 @@ suite('SearchModel', () => {
 
 		assert.strictEqual(URI.file(`${getRootName()}/2`).toString(), actual[1].resource.toString());
 		assert.strictEqual(URI.file(`${getRootName()}/3`).toString(), actual[2].resource.toString());
-	});
-
-	test('Search Model: Search reports telemetry on search completed', async () => {
-		const target = instantiationService.spy(ITelemetryService, 'publicLog');
-		const results = [
-			aRawMatch('/1',
-				new TextSearchMatch('preview 1', new OneLineRange(1, 1, 4)),
-				new TextSearchMatch('preview 1', new OneLineRange(1, 4, 11))),
-			aRawMatch('/2',
-				new TextSearchMatch('preview 2', lineOneRange))];
-		instantiationService.stub(ISearchService, searchServiceWithResults(results, { limitHit: false, messages: [], results }));
-		instantiationService.stub(INotebookSearchService, notebookSearchServiceWithInfo([], undefined));
-
-		const testObject: SearchModelImpl = instantiationService.createInstance(SearchModelImpl);
-		store.add(testObject);
-		await testObject.search({ contentPattern: { pattern: 'somestring' }, type: QueryType.Text, folderQueries }).asyncResults;
-
-		assert.ok(target.calledThrice);
-		assert.ok(target.calledWith('searchResultsFirstRender'));
-		assert.ok(target.calledWith('searchResultsFinished'));
-	});
-
-	test('Search Model: Search reports timed telemetry on search when progress is not called', () => {
-		const target2 = sinon.spy();
-		sinon.stub(nullEvent, 'stop').callsFake(target2);
-		const target1 = sinon.stub().returns(nullEvent);
-		instantiationService.stub(ITelemetryService, 'publicLog', target1);
-
-		instantiationService.stub(ISearchService, searchServiceWithResults([], { limitHit: false, messages: [], results: [] }));
-		instantiationService.stub(INotebookSearchService, notebookSearchServiceWithInfo([], undefined));
-
-		const testObject = instantiationService.createInstance(SearchModelImpl);
-		store.add(testObject);
-		const result = testObject.search({ contentPattern: { pattern: 'somestring' }, type: QueryType.Text, folderQueries }).asyncResults;
-
-		return result.then(() => {
-			return timeout(1).then(() => {
-				assert.ok(target1.calledWith('searchResultsFirstRender'));
-				assert.ok(target1.calledWith('searchResultsFinished'));
-			});
-		});
-	});
-
-	test('Search Model: Search reports timed telemetry on search when progress is called', () => {
-		const target2 = sinon.spy();
-		sinon.stub(nullEvent, 'stop').callsFake(target2);
-		const target1 = sinon.stub().returns(nullEvent);
-		instantiationService.stub(ITelemetryService, 'publicLog', target1);
-
-		instantiationService.stub(ISearchService, searchServiceWithResults(
-			[aRawMatch('/1', new TextSearchMatch('some preview', lineOneRange))],
-			{ results: [], stats: testSearchStats, messages: [] }));
-		instantiationService.stub(INotebookSearchService, notebookSearchServiceWithInfo([], undefined));
-
-		const testObject = instantiationService.createInstance(SearchModelImpl);
-		store.add(testObject);
-		const result = testObject.search({ contentPattern: { pattern: 'somestring' }, type: QueryType.Text, folderQueries }).asyncResults;
-
-		return result.then(() => {
-			return timeout(1).then(() => {
-				// timeout because promise handlers may run in a different order. We only care that these
-				// are fired at some point.
-				assert.ok(target1.calledWith('searchResultsFirstRender'));
-				assert.ok(target1.calledWith('searchResultsFinished'));
-				// assert.strictEqual(1, target2.callCount);
-			});
-		});
-	});
-
-	test('Search Model: Search reports timed telemetry on search when error is called', () => {
-		const target2 = sinon.spy();
-		sinon.stub(nullEvent, 'stop').callsFake(target2);
-		const target1 = sinon.stub().returns(nullEvent);
-		instantiationService.stub(ITelemetryService, 'publicLog', target1);
-
-		instantiationService.stub(ISearchService, searchServiceWithError(new Error('This error should be thrown by this test.')));
-		instantiationService.stub(INotebookSearchService, notebookSearchServiceWithInfo([], undefined));
-
-		const testObject = instantiationService.createInstance(SearchModelImpl);
-		store.add(testObject);
-		const result = testObject.search({ contentPattern: { pattern: 'somestring' }, type: QueryType.Text, folderQueries }).asyncResults;
-
-		return result.then(() => { }, () => {
-			return timeout(1).then(() => {
-				assert.ok(target1.calledWith('searchResultsFirstRender'));
-				assert.ok(target1.calledWith('searchResultsFinished'));
-			});
-		});
-	});
-
-	test('Search Model: Search reports timed telemetry on search when error is cancelled error', () => {
-		const target2 = sinon.spy();
-		sinon.stub(nullEvent, 'stop').callsFake(target2);
-		const target1 = sinon.stub().returns(nullEvent);
-		instantiationService.stub(ITelemetryService, 'publicLog', target1);
-
-		const deferredPromise = new DeferredPromise<ISearchComplete>();
-
-		instantiationService.stub(ISearchService, searchServiceWithDeferredPromise(deferredPromise.p));
-		instantiationService.stub(INotebookSearchService, notebookSearchServiceWithInfo([], undefined));
-
-		const testObject = instantiationService.createInstance(SearchModelImpl);
-		store.add(testObject);
-		const result = testObject.search({ contentPattern: { pattern: 'somestring' }, type: QueryType.Text, folderQueries }).asyncResults;
-
-		deferredPromise.cancel();
-
-		return result.then(() => { }, async () => {
-			return timeout(1).then(() => {
-				assert.ok(target1.calledWith('searchResultsFirstRender'));
-				assert.ok(target1.calledWith('searchResultsFinished'));
-				// assert.ok(target2.calledOnce);
-			});
-		});
 	});
 
 	test('Search Model: Search results are cleared during search', async () => {

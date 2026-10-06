@@ -10,7 +10,6 @@ import { Emitter } from '../../../../../base/common/event.js';
 import { Disposable, toDisposable } from '../../../../../base/common/lifecycle.js';
 import { escapeRegExpCharacters } from '../../../../../base/common/strings.js';
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { XtermAttributes, IXtermCore } from '../../../terminal/browser/xterm-private.js';
 import { IBeforeProcessDataEvent, ITerminalProcessManager, TERMINAL_CONFIG_SECTION } from '../../../terminal/common/terminal.js';
 import type { IBuffer, IBufferCell, IDisposable, ITerminalAddon, Terminal } from '@xterm/xterm';
@@ -32,7 +31,6 @@ const NOT_WORD_RE = /[^a-z0-9]/i;
 
 const enum StatsConstants {
 	StatsBufferSize = 24,
-	StatsSendTelemetryEvery = 1000 * 60 * 5, // how often to collect stats
 	StatsMinSamplesToTurnOn = 5,
 	StatsMinAccuracyToTurnOn = 0.3,
 	StatsToggleOffThreshold = 0.5, // if latency is less than `threshold * this`, turn off
@@ -1311,7 +1309,6 @@ export class TypeAheadAddon extends Disposable implements ITerminalAddon {
 	constructor(
 		private _processManager: ITerminalProcessManager,
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 	) {
 		super();
 		this._typeaheadThreshold = this._configurationService.getValue<ITerminalTypeAheadConfiguration>(TERMINAL_CONFIG_SECTION).localEchoLatencyThreshold;
@@ -1352,15 +1349,7 @@ export class TypeAheadAddon extends Disposable implements ITerminalAddon {
 		}));
 		this._register(this._processManager.onBeforeProcessData(e => this._onBeforeProcessData(e)));
 
-		let nextStatsSend: Timeout | undefined;
 		this._register(stats.onChange(() => {
-			if (!nextStatsSend) {
-				nextStatsSend = setTimeout(() => {
-					this._sendLatencyStats(stats);
-					nextStatsSend = undefined;
-				}, StatsConstants.StatsSendTelemetryEvery);
-			}
-
 			if (timeline.length === 0) {
 				style.debounceStopTracking();
 			}
@@ -1423,23 +1412,6 @@ export class TypeAheadAddon extends Disposable implements ITerminalAddon {
 				timeline.setShowPredictions(false);
 			}
 		}
-	}
-
-	private _sendLatencyStats(stats: PredictionStats) {
-		/* __GDPR__
-			"terminalLatencyStats" : {
-				"owner": "anthonykim1",
-				"min" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-				"max" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-				"median" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-				"count" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true },
-				"predictionAccuracy" : { "classification": "SystemMetaData", "purpose": "PerformanceAndHealth", "isMeasurement": true }
-			}
-		 */
-		this._telemetryService.publicLog('terminalLatencyStats', {
-			...stats.latency,
-			predictionAccuracy: stats.accuracy,
-		});
 	}
 
 	private _onUserData(data: string): void {

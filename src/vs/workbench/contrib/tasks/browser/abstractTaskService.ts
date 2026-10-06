@@ -26,7 +26,6 @@ import { IFileService, IFileStatWithPartialMetadata } from '../../../../platform
 import { IMarkerData, IMarkerService } from '../../../../platform/markers/common/markers.js';
 import { IProgressOptions, IProgressService, ProgressLocation } from '../../../../platform/progress/common/progress.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IExtensionService } from '../../../services/extensions/common/extensions.js';
 import { INamedProblemMatcher, ProblemMatcherRegistry } from '../common/problemMatcher.js';
 
@@ -265,7 +264,6 @@ export abstract class AbstractTaskService extends Disposable implements ITaskSer
 		@IEditorService private readonly _editorService: IEditorService,
 		@IFileService protected readonly _fileService: IFileService,
 		@IWorkspaceContextService protected readonly _contextService: IWorkspaceContextService,
-		@ITelemetryService protected readonly _telemetryService: ITelemetryService,
 		@ITextFileService private readonly _textFileService: ITextFileService,
 		@IModelService protected readonly _modelService: IModelService,
 		@IExtensionService private readonly _extensionService: IExtensionService,

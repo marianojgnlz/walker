@@ -11,7 +11,6 @@ import { Disposable, DisposableMap, DisposableStore } from '../../../../base/com
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { IContextKey, IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { TestingContextKeys } from './testingContextKeys.js';
 import { ITestProfileService } from './testProfileService.js';
 import { ITestResult, LiveTestResult, TestResultItemChange, TestResultItemChangeReason } from './testResult.js';
@@ -112,7 +111,6 @@ export class TestResultService extends Disposable implements ITestResultService 
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@ITestResultStorage private readonly storage: ITestResultStorage,
 		@ITestProfileService private readonly testProfiles: ITestProfileService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super();
 		this.isRunning = TestingContextKeys.isRunning.bindTo(contextKeyService);
@@ -139,7 +137,7 @@ export class TestResultService extends Disposable implements ITestResultService 
 	public createLiveResult(req: ResolvedTestRunRequest | ExtensionRunTestsRequest) {
 		if ('targets' in req) {
 			const id = generateUuid();
-			return this.push(new LiveTestResult(id, true, req, this.insertOrderCounter++, this.telemetryService));
+			return this.push(new LiveTestResult(id, true, req, this.insertOrderCounter++));
 		}
 
 		let profile: ITestRunProfile | undefined;
@@ -164,7 +162,7 @@ export class TestResultService extends Disposable implements ITestResultService 
 			});
 		}
 
-		return this.push(new LiveTestResult(req.id, req.persist, resolved, this.insertOrderCounter++, this.telemetryService));
+		return this.push(new LiveTestResult(req.id, req.persist, resolved, this.insertOrderCounter++));
 	}
 
 	/**

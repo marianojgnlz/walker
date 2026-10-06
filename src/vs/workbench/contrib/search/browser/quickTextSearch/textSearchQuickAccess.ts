@@ -39,7 +39,6 @@ import { IMatch } from '../../../../../base/common/filters.js';
 export const TEXT_SEARCH_QUICK_ACCESS_PREFIX = '%';
 
 const DEFAULT_TEXT_QUERY_BUILDER_OPTIONS: ITextQueryBuilderOptions = {
-	_reason: 'quickAccessSearch',
 	disregardIgnoreFiles: false,
 	disregardExcludeSettings: false,
 	onlyOpenEditors: false,

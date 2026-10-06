@@ -33,7 +33,6 @@ import { WorkbenchAsyncDataTree } from '../../../../platform/list/browser/listSe
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { ProgressLocation } from '../../../../platform/progress/common/progress.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { ViewAction, ViewPane } from '../../../browser/parts/views/viewPane.js';
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
@@ -765,20 +764,9 @@ CommandsRegistry.registerCommand({
 		const editorService = accessor.get(IEditorService);
 		const notificationService = accessor.get(INotificationService);
 		const extensionService = accessor.get(IExtensionService);
-		const telemetryService = accessor.get(ITelemetryService);
 
 		const ext = await extensionService.getExtension(HEX_EDITOR_EXTENSION_ID);
 		if (ext || await tryInstallHexEditor(extensionsWorkbenchService, notificationService)) {
-			/* __GDPR__
-				"debug/didViewMemory" : {
-					"owner": "connor4312",
-					"debugType" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
-				}
-			*/
-			telemetryService.publicLog('debug/didViewMemory', {
-				debugType: debugService.getModel().getSession(sessionId)?.configuration.type,
-			});
-
 			await editorService.openEditor({
 				resource: getUriForDebugMemory(sessionId, memoryReference),
 				options: {

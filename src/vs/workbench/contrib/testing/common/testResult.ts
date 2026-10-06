@@ -13,7 +13,6 @@ import { language } from '../../../../base/common/platform.js';
 import { WellDefinedPrefixTree } from '../../../../base/common/prefixTree.js';
 import { removeAnsiEscapeCodes } from '../../../../base/common/strings.js';
 import { localize } from '../../../../nls.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
 import { IComputedStateAccessor, refreshComputedState } from './getComputedState.js';
 import { TestCoverage } from './testCoverage.js';
@@ -342,7 +341,6 @@ export class LiveTestResult extends Disposable implements ITestResult {
 		public readonly persist: boolean,
 		public readonly request: ResolvedTestRunRequest,
 		public readonly insertOrder: number,
-		@ITelemetryService private readonly telemetry: ITelemetryService,
 	) {
 		super();
 	}
@@ -491,21 +489,6 @@ export class LiveTestResult extends Disposable implements ITestResult {
 
 		this._completedAt = Date.now();
 		this.completeEmitter.fire();
-
-		this.telemetry.publicLog2<
-			{ failures: number; passes: number; controller: string },
-			{
-				owner: 'connor4312';
-				comment: 'Test outcome metrics. This helps us understand magnitude of feature use and how to build fix suggestions.';
-				failures: { comment: 'Number of test failures'; classification: 'SystemMetaData'; purpose: 'FeatureInsight' };
-				passes: { comment: 'Number of test failures'; classification: 'SystemMetaData'; purpose: 'FeatureInsight' };
-				controller: { comment: 'The test controller being used'; classification: 'SystemMetaData'; purpose: 'FeatureInsight' };
-			}
-		>('test.outcomes', {
-			failures: this.counts[TestResultState.Errored] + this.counts[TestResultState.Failed],
-			passes: this.counts[TestResultState.Passed],
-			controller: this.request.targets.map(t => t.controllerId).join(',')
-		});
 	}
 
 	/**

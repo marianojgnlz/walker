@@ -1472,7 +1472,6 @@ export interface MainThreadSearchShape extends IDisposable {
 	$handleFileMatch(handle: number, session: number, data: UriComponents[]): void;
 	$handleTextMatch(handle: number, session: number, data: search.IRawFileMatch2[]): void;
 	$handleKeywordResult(handle: number, session: number, data: AISearchKeyword): void;
-	$handleTelemetry(eventName: string, data: any): void;
 }
 
 export interface MainThreadShareShape extends IDisposable {

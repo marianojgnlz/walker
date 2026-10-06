@@ -5,11 +5,10 @@
 
 import assert from 'assert';
 import type { IBuffer, Terminal } from '@xterm/xterm';
-import { SinonStub, stub, useFakeTimers } from 'sinon';
+import { useFakeTimers } from 'sinon';
 import { Emitter } from '../../../../../../base/common/event.js';
 import { CharPredictState, IPrediction, PredictionStats, TypeAheadAddon } from '../../browser/terminalTypeAheadAddon.js';
 import { IBeforeProcessDataEvent, ITerminalProcessManager } from '../../../../terminal/common/terminal.js';
-import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
 import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
@@ -86,7 +85,6 @@ suite('Workbench - Terminal Typeahead', () => {
 
 	suite('timeline', () => {
 		let onBeforeProcessData: Emitter<IBeforeProcessDataEvent>;
-		let publicLog: SinonStub;
 		let config: ITerminalTypeAheadConfiguration;
 		let addon: TestTypeAheadAddon;
 
@@ -111,11 +109,9 @@ suite('Workbench - Terminal Typeahead', () => {
 				localEchoLatencyThreshold: 0,
 				localEchoExcludePrograms: DEFAULT_LOCAL_ECHO_EXCLUDE,
 			});
-			publicLog = stub();
 			addon = new TestTypeAheadAddon(
 				upcastPartial<ITerminalProcessManager>({ onBeforeProcessData: onBeforeProcessData.event }),
-				new TestConfigurationService({ terminal: { integrated: { ...config } } }),
-				upcastPartial<ITelemetryService>({ publicLog })
+				new TestConfigurationService({ terminal: { integrated: { ...config } } })
 			);
 			addon.unlockMakingPredictions();
 		});

@@ -84,7 +84,6 @@ import { ISearchTreeMatch, isSearchTreeMatch, RenderableMatch, SearchModelLocati
 import { INotebookFileInstanceMatch, isIMatchInNotebook } from './notebookSearch/notebookSearchModelBase.js';
 import { searchMatchComparer } from './searchCompare.js';
 import { AIFolderMatchWorkspaceRootImpl } from './AISearch/aiSearchModel.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { forcedExpandRecursively } from './searchActionsTopBar.js';
 
 const $ = dom.$;
@@ -237,7 +236,6 @@ export class SearchView extends ViewPane {
 		@INotebookService private readonly notebookService: INotebookService,
 		@ILogService private readonly logService: ILogService,
 		@IAccessibilitySignalService private readonly accessibilitySignalService: IAccessibilitySignalService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@ISCMService private readonly scmService: ISCMService,
 	) {
 
@@ -1665,7 +1663,6 @@ export class SearchView extends ViewPane {
 		const charsPerLine = content.isRegExp ? 10000 : 1000;
 
 		const options: ITextQueryBuilderOptions = {
-			_reason: 'searchView',
 			extraFileResources: this.instantiationService.invokeFunction(getOutOfWorkspaceEditorResources),
 			maxResults: this.searchConfig.maxResults ?? undefined,
 			disregardIgnoreFiles: !useExcludesAndIgnoreFiles || undefined,
@@ -2104,23 +2101,9 @@ export class SearchView extends ViewPane {
 		}
 	}
 
-	private handleKeywordClick(keyword: string, index: number) {
+	private handleKeywordClick(keyword: string) {
 		this.searchWidget.searchInput?.setValue(keyword);
 		this.triggerQueryChange({ preserveFocus: false, triggeredOnType: false, shouldKeepAIResults: false });
-		type KeywordClickClassification = {
-			owner: 'osortega';
-			comment: 'Fired when the user clicks on a keyword suggestion';
-			index: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; isMeasurement: true; comment: 'The index of the keyword clicked' };
-			maxKeywords: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; isMeasurement: true; comment: 'The total number of suggested keywords' };
-		};
-		type KeywordClickEvent = {
-			index: number;
-			maxKeywords: number;
-		};
-		this.telemetryService.publicLog2<KeywordClickEvent, KeywordClickClassification>('searchKeywordClick', {
-			index,
-			maxKeywords: this._cachedKeywords.length
-		});
 	}
 
 	private updateKeywordSuggestionUI(keyword: AISearchKeyword) {
@@ -2131,10 +2114,9 @@ export class SearchView extends ViewPane {
 				return;
 			}
 			dom.append(element, ', ');
-			const index = this._cachedKeywords.length;
 			const button = this.messageDisposables.add(new SearchLinkButton(
 				keyword.keyword,
-				() => this.handleKeywordClick(keyword.keyword, index),
+				() => this.handleKeywordClick(keyword.keyword),
 				this.hoverService
 			));
 			dom.append(element, button.element);
@@ -2148,7 +2130,7 @@ export class SearchView extends ViewPane {
 
 			const button = this.messageDisposables.add(new SearchLinkButton(
 				keyword.keyword,
-				() => this.handleKeywordClick(keyword.keyword, 0),
+				() => this.handleKeywordClick(keyword.keyword),
 				this.hoverService
 			));
 			dom.append(messageEl, button.element);

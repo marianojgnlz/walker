@@ -13,8 +13,7 @@ import { Schemas } from '../../../../base/common/network.js';
 import { assertType, hasKey } from '../../../../base/common/types.js';
 import { URI } from '../../../../base/common/uri.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
-import { IWriteFileOptions, IFileStatWithMetadata, FileOperationError, FileOperationResult } from '../../../../platform/files/common/files.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
+import { IWriteFileOptions, IFileStatWithMetadata } from '../../../../platform/files/common/files.js';
 import { IRevertOptions, ISaveOptions, IUntypedEditorInput } from '../../../common/editor.js';
 import { EditorModel } from '../../../common/editor/editorModel.js';
 import { NotebookTextModel } from './model/notebookTextModel.js';
@@ -197,7 +196,6 @@ export class NotebookFileWorkingCopyModel extends Disposable implements IStoredF
 		private readonly _notebookModel: NotebookTextModel,
 		private readonly _notebookService: INotebookService,
 		private readonly _configurationService: IConfigurationService,
-		private readonly _telemetryService: ITelemetryService,
 		private readonly _notebookLogService: INotebookLoggingService,
 	) {
 		super();
@@ -263,25 +261,7 @@ export class NotebookFileWorkingCopyModel extends Disposable implements IStoredF
 				return stat;
 			} catch (error) {
 				if (!token.isCancellationRequested && error.name !== 'Canceled') {
-					type notebookSaveErrorData = {
-						isRemote: boolean;
-						isIPyNbWorkerSerializer: boolean;
-						error: string;
-					};
-					type notebookSaveErrorClassification = {
-						owner: 'amunger';
-						comment: 'Detect if we are having issues saving a notebook on the Extension Host';
-						isRemote: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Whether the save is happening on a remote file system' };
-						isIPyNbWorkerSerializer: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Whether the IPynb files are serialized in workers' };
-						error: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Info about the error that occurred' };
-					};
-					const isIPynb = this._notebookModel.viewType === 'jupyter-notebook' || this._notebookModel.viewType === 'interactive';
-					const errorMessage = getSaveErrorMessage(error);
-					this._telemetryService.publicLogError2<notebookSaveErrorData, notebookSaveErrorClassification>('notebook/SaveError', {
-						isRemote: this._notebookModel.uri.scheme === Schemas.vscodeRemote,
-						isIPyNbWorkerSerializer: isIPynb && this._configurationService.getValue<boolean>('ipynb.experimental.serialization'),
-						error: errorMessage
-					});
+					// The error remains visible to the caller and the notebook log service; no reporting here.
 				}
 
 				throw error;
@@ -341,7 +321,6 @@ export class NotebookFileWorkingCopyModelFactory implements IStoredFileWorkingCo
 		private readonly _viewType: string,
 		@INotebookService private readonly _notebookService: INotebookService,
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@INotebookLoggingService private readonly _notebookLogService: INotebookLoggingService
 	) { }
 
@@ -350,7 +329,7 @@ export class NotebookFileWorkingCopyModelFactory implements IStoredFileWorkingCo
 		const notebookModel = this._notebookService.getNotebookTextModel(resource) ??
 			await this._notebookService.createNotebookTextModel(this._viewType, resource, stream);
 
-		return new NotebookFileWorkingCopyModel(notebookModel, this._notebookService, this._configurationService, this._telemetryService, this._notebookLogService);
+		return new NotebookFileWorkingCopyModel(notebookModel, this._notebookService, this._configurationService, this._notebookLogService);
 	}
 }
 
@@ -361,36 +340,4 @@ class NotebookSaveError extends Error {
 		super(message);
 		this.name = 'NotebookSaveError';
 	}
-}
-
-function getSaveErrorMessage(error: Error): string {
-	if (error.name === 'NotebookSaveError') {
-		return error.message;
-	} else if (error instanceof FileOperationError) {
-		switch (error.fileOperationResult) {
-			case FileOperationResult.FILE_IS_DIRECTORY:
-				return 'File is a directory';
-			case FileOperationResult.FILE_NOT_FOUND:
-				return 'File not found';
-			case FileOperationResult.FILE_NOT_MODIFIED_SINCE:
-				return 'File not modified since';
-			case FileOperationResult.FILE_MODIFIED_SINCE:
-				return 'File modified since';
-			case FileOperationResult.FILE_MOVE_CONFLICT:
-				return 'File move conflict';
-			case FileOperationResult.FILE_WRITE_LOCKED:
-				return 'File write locked';
-			case FileOperationResult.FILE_PERMISSION_DENIED:
-				return 'File permission denied';
-			case FileOperationResult.FILE_TOO_LARGE:
-				return 'File too large';
-			case FileOperationResult.FILE_INVALID_PATH:
-				return 'File invalid path';
-			case FileOperationResult.FILE_NOT_DIRECTORY:
-				return 'File not directory';
-			case FileOperationResult.FILE_OTHER_ERROR:
-				return 'File other error';
-		}
-	}
-	return 'Unknown error';
 }
