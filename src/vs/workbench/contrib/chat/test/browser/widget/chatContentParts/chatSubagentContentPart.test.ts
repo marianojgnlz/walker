@@ -16,7 +16,8 @@ import { BaseObservable } from '../../../../../../../base/common/observableInter
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { upcastPartial } from '../../../../../../../base/test/common/mock.js';
 import { mainWindow } from '../../../../../../../base/browser/window.js';
-import { TestMenuService, workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { TestMenuService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { IChatWidgetService } from '../../../../browser/chat.js';
 import { ChatCollapsibleContentPart } from '../../../../browser/widget/chatContentParts/chatCollapsibleContentPart.js';
 import { ChatSubagentContentPart } from '../../../../browser/widget/chatContentParts/chatSubagentContentPart.js';

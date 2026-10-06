@@ -13,7 +13,7 @@ import { URI } from '../../../../../../base/common/uri.js';
 import { runWithFakedTimers } from '../../../../../../base/test/common/timeTravelScheduler.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { LocalAgentsSessionsController } from '../../../browser/agentSessions/localAgentSessionsController.js';
 import { IChatService, ResponseModelState } from '../../../common/chatService/chatService.js';
 import { chatModelToChatDetail } from '../../../common/chatService/chatServiceImpl.js';

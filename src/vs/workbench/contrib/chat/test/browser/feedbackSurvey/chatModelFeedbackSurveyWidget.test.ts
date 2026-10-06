@@ -9,7 +9,7 @@ import { mainWindow } from '../../../../../../base/browser/window.js';
 import { Emitter, Event } from '../../../../../../base/common/event.js';
 import { URI } from '../../../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { ChatModelFeedbackSurveyWidget } from '../../../browser/feedbackSurvey/chatModelFeedbackSurveyWidget.js';
 import { ChatModelFeedbackSurveyStatus, IChatModelFeedbackSurveyChangeEvent, IChatModelFeedbackSurveyService, IChatModelFeedbackSurveyState } from '../../../browser/feedbackSurvey/chatModelFeedbackSurveyService.js';
 import { ChatModelFeedbackSurveyStepKind, IChatModelFeedbackSurveyConfig } from '../../../common/feedbackSurvey/chatModelFeedbackSurveyConfig.js';

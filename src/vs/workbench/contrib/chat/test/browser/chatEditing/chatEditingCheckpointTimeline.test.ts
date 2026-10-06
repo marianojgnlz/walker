@@ -17,7 +17,7 @@ import { PieceTreeTextBuffer } from '../../../../../../editor/common/model/piece
 import { PieceTreeTextBufferBuilder } from '../../../../../../editor/common/model/pieceTreeTextBuffer/pieceTreeTextBufferBuilder.js';
 import { SyncDescriptor } from '../../../../../../platform/instantiation/common/descriptors.js';
 import { ServiceCollection } from '../../../../../../platform/instantiation/common/serviceCollection.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { INotebookService } from '../../../../notebook/common/notebookService.js';
 import { ChatEditingCheckpointTimelineImpl, IChatEditingTimelineFsDelegate } from '../../../browser/chatEditing/chatEditingCheckpointTimelineImpl.js';
 import { FileOperation, FileOperationType } from '../../../browser/chatEditing/chatEditingOperations.js';

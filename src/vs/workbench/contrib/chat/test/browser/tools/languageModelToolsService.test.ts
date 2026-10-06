@@ -23,7 +23,7 @@ import { TestDialogService } from '../../../../../../platform/dialogs/test/commo
 import { ExtensionIdentifier } from '../../../../../../platform/extensions/common/extensions.js';
 import { ConfirmationOptionKind } from '../../../../../../platform/agentHost/common/state/protocol/state.js';
 import { ITelemetryService } from '../../../../../../platform/telemetry/common/telemetry.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { LanguageModelToolsService } from '../../../browser/tools/languageModelToolsService.js';
 import { IChatToolRiskAssessmentService, IToolRiskAssessment, ToolRiskLevel, ToolRiskPromptKind } from '../../../browser/tools/chatToolRiskAssessmentService.js';
 import { ChatModel, IChatModel } from '../../../common/model/chatModel.js';

@@ -14,7 +14,7 @@ import { TestConfigurationService } from '../../../../../../../platform/configur
 import { ContextKeyService } from '../../../../../../../platform/contextkey/browser/contextKeyService.js';
 import { IAgentNetworkFilterService } from '../../../../../../../platform/networkFilter/common/networkFilterService.js';
 import { IWebContentExtractorService } from '../../../../../../../platform/webContentExtractor/common/webContentExtractor.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { TestContextService, TestFileService } from '../../../../../../test/common/workbenchTestServices.js';
 import { MockTrustedDomainService } from '../../../../../url/test/browser/mockTrustedDomainService.js';
 import { IChatToolRiskAssessmentService } from '../../../../browser/tools/chatToolRiskAssessmentService.js';

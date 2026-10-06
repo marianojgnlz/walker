@@ -12,7 +12,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/tes
 import { IContextMenuService } from '../../../../../platform/contextview/browser/contextView.js';
 import { computePullRequestIcon, type ChatPullRequestState } from '../../../../common/chatPullRequest.js';
 import type { IChatPillSection } from '../../../../browser/chatPills.js';
-import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../common/chatWorkbenchTestServices.js';
 import { TestStorageService } from '../../../../test/common/workbenchTestServices.js';
 import { ChatInputPills, createChatInputPillSource, StandardChatInputPillSources, type IStandardChatInputPillsData } from '../../browser/chatInputPills.js';
 import { createSessionPullRequestPillData, type IChatPullRequestPillEntry, type IChatPullRequestPillSection } from '../../browser/sessionPullRequestPill.js';

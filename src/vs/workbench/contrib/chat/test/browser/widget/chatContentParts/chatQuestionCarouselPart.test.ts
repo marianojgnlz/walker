@@ -9,7 +9,7 @@ import { mainWindow } from '../../../../../../../base/browser/window.js';
 import { MarkdownString } from '../../../../../../../base/common/htmlContent.js';
 import { toDisposable } from '../../../../../../../base/common/lifecycle.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { ChatQuestionCarouselPart, IChatQuestionCarouselOptions } from '../../../../browser/widget/chatContentParts/chatQuestionCarouselPart.js';
 import { IChatQuestionAnswerValue, IChatQuestionCarousel } from '../../../../common/chatService/chatService.js';
 import { IChatContentPartRenderContext } from '../../../../browser/widget/chatContentParts/chatContentParts.js';

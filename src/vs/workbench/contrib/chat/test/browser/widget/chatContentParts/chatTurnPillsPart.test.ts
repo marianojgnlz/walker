@@ -8,7 +8,7 @@ import { Disposable, toDisposable } from '../../../../../../../base/common/lifec
 import { observableValue } from '../../../../../../../base/common/observable.js';
 import { URI } from '../../../../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { AUTHORITATIVE_EMPTY_CHAT_RESPONSE_FILE_CHANGES, IChatResponseFileChangesService } from '../../../../browser/chatResponseFileChangesService.js';
 import { ChatCollapsibleContentPart } from '../../../../browser/widget/chatContentParts/chatCollapsibleContentPart.js';
 import { IChatContentPartRenderContext } from '../../../../browser/widget/chatContentParts/chatContentParts.js';

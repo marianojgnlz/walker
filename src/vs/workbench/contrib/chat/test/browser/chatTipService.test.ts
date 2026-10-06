@@ -35,7 +35,7 @@ import { ILanguageModelToolsService } from '../../common/tools/languageModelTool
 import { MockLanguageModelToolsService } from '../common/tools/mockLanguageModelToolsService.js';
 import { ChatTipTier, TIP_CATALOG, extractCommandIds } from '../../browser/chatTipCatalog.js';
 import { ChatEntitlement, IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
-import { TestChatEntitlementService } from '../../../../test/common/workbenchTestServices.js';
+import { TestChatEntitlementService } from '../common/chatTestServices.js';
 import { IChatService } from '../../common/chatService/chatService.js';
 import { MockChatService } from '../common/chatService/mockChatService.js';
 import { CreateSlashCommandsUsageTracker } from '../../browser/createSlashCommandsUsageTracker.js';

@@ -40,7 +40,8 @@ import { IExtensionService, nullExtensionDescription } from '../../../../../serv
 import { ILifecycleService } from '../../../../../services/lifecycle/common/lifecycle.js';
 import { IViewsService } from '../../../../../services/views/common/viewsService.js';
 import { IWorkspaceEditingService } from '../../../../../services/workspaces/common/workspaceEditing.js';
-import { InMemoryTestFileService, mock, TestChatEntitlementService, TestContextService, TestExtensionService, TestStorageService } from '../../../../../test/common/workbenchTestServices.js';
+import { InMemoryTestFileService, mock, TestContextService, TestExtensionService, TestStorageService } from '../../../../../test/common/workbenchTestServices.js';
+import { TestChatEntitlementService } from '../chatTestServices.js';
 import { IMcpService } from '../../../../mcp/common/mcpTypes.js';
 import { TestMcpService } from '../../../../mcp/test/common/testMcpService.js';
 import { ChatPasteAttachmentMetadata, IChatRequestVariableEntry, toPasteVariableEntry } from '../../../common/attachments/chatVariableEntries.js';

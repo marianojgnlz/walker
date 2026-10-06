@@ -15,7 +15,7 @@ import { IAgentSessionsService } from '../../../browser/agentSessions/agentSessi
 import { IAgentSessionsFilter } from '../../../browser/agentSessions/agentSessionsViewer.js';
 import { IChatSessionsService } from '../../../common/chatSessionsService.js';
 import { IVoicePlaybackService } from '../../../common/voicePlaybackService.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 
 suite('AgentSessionsControl', () => {
 

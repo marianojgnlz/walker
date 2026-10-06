@@ -37,7 +37,7 @@ import type { IMigratedCustomizationsResult } from '../../../browser/aiCustomiza
 import type { ICustomizationMigrationCategorySummary } from '../../../browser/aiCustomization/aiCustomizationWelcomePage.js';
 import { AICustomizationManagementEditorInput } from '../../../browser/aiCustomization/aiCustomizationManagementEditorInput.js';
 import { IMcpServerDetailInput } from '../../../browser/aiCustomization/embeddedMcpServerDetail.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { defaultCheckboxStyles } from '../../../../../../platform/theme/browser/defaultStyles.js';
 import { McpServerType } from '../../../../../../platform/mcp/common/mcpPlatformTypes.js';
 import type { ICustomizationMigrationDashboardActivity, ICustomizationMigrationDashboardDestination, ICustomizationMigrationDashboardOverview } from '../../../browser/aiCustomization/customizationMigrationDashboard.js';

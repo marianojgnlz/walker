@@ -6,7 +6,7 @@
 import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { observableValue } from '../../../../../../../base/common/observable.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { ChatContextUsageDetails, IChatContextUsageData } from '../../../../browser/widgetHosts/viewPane/chatContextUsageDetails.js';
 
 suite('ChatContextUsageDetails', () => {

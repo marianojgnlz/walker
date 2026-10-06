@@ -19,7 +19,7 @@ import { IContextKeyService } from '../../../../../../platform/contextkey/common
 import { WorkbenchListSupportsFind } from '../../../../../../platform/list/browser/listService.js';
 import { scrollbarShadow } from '../../../../../../platform/theme/common/colorRegistry.js';
 import { IWorkbenchEnvironmentService } from '../../../../../services/environment/common/environmentService.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { IChatAccessibilityService } from '../../../browser/chat.js';
 import { ChatAttachmentWidgetRegistry, IChatAttachmentWidgetRegistry } from '../../../browser/attachments/chatAttachmentWidgetRegistry.js';
 import { computeScrollDownState, getAnchoredScrollTop, AutoScrollHolds, UserToggleResizeState, ChatListWidget, IChatListWidgetOptions, getChatContextMenuTargetContext, isChatBackgroundContextMenuTarget } from '../../../browser/widget/chatListWidget.js';

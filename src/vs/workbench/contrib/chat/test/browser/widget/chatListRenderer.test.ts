@@ -27,7 +27,8 @@ import { IUserInteractionService, MockUserInteractionService } from '../../../..
 import { URI } from '../../../../../../base/common/uri.js';
 import { mock, upcastPartial } from '../../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { TestMenuService, workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { TestMenuService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { IViewDescriptorService } from '../../../../../common/views.js';
 import { IChatOutputRendererService, RenderedOutputPart } from '../../../browser/chatOutputItemRenderer.js';
 import { ChatTreeItem, IChatAccessibilityService, IChatListItemRendererOptions, IChatWidget, IChatWidgetService } from '../../../browser/chat.js';

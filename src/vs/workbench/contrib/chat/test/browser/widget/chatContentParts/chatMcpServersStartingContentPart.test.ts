@@ -9,7 +9,7 @@ import { observableValue } from '../../../../../../../base/common/observable.js'
 import { URI } from '../../../../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { TestInstantiationService } from '../../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { ChatMcpServersStartingContentPart } from '../../../../browser/widget/chatContentParts/chatMcpServersStartingContentPart.js';
 import { IChatMcpServersStartingSlow, IChatMcpStartingServer } from '../../../../common/chatService/chatService.js';
 import { IChatRendererContent } from '../../../../common/model/chatViewModel.js';

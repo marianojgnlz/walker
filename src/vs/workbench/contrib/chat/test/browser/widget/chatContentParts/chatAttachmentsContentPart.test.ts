@@ -13,7 +13,8 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../ba
 import { IFileService } from '../../../../../../../platform/files/common/files.js';
 import { IHoverService } from '../../../../../../../platform/hover/browser/hover.js';
 import { NullHoverService } from '../../../../../../../platform/hover/test/browser/nullHoverService.js';
-import { TestFileService, workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { TestFileService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { DEFAULT_LABELS_CONTAINER, ResourceLabels } from '../../../../../../browser/labels.js';
 import { getEffectiveImageOmittedState, ImageAttachmentWidget } from '../../../../browser/attachments/chatAttachmentWidgets.js';
 import { ChatAttachmentsContentPart } from '../../../../browser/widget/chatContentParts/chatAttachmentsContentPart.js';

@@ -18,7 +18,9 @@ import { AgentSessionsFilter } from '../../../browser/agentSessions/agentSession
 import { ChatSessionStatus, IChatSessionItemController, IChatSessionItem, IChatSessionItemsDelta, IChatSessionsService, localChatSessionType } from '../../../common/chatSessionsService.js';
 import { LocalChatSessionUri } from '../../../common/model/chatUri.js';
 import { MockChatSessionsService } from '../../common/mockChatSessionsService.js';
-import { TestChatWidgetService, TestLifecycleService, workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { TestLifecycleService } from '../../../../../test/browser/workbenchTestServices.js';
+import { TestChatWidgetService } from '../../common/chatTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { runWithFakedTimers } from '../../../../../../base/test/common/timeTravelScheduler.js';
 import { Codicon } from '../../../../../../base/common/codicons.js';
 import { MenuId } from '../../../../../../platform/actions/common/actions.js';

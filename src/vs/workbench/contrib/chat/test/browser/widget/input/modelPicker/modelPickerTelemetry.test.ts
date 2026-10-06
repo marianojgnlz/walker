@@ -32,7 +32,8 @@ import { IUpdateService, StateType } from '../../../../../../../../platform/upda
 import { IUriIdentityService } from '../../../../../../../../platform/uriIdentity/common/uriIdentity.js';
 import { IWorkspaceTrustManagementService, IWorkspaceTrustRequestService } from '../../../../../../../../platform/workspace/common/workspaceTrust.js';
 import { ChatEntitlement, IChatEntitlementService } from '../../../../../../../services/chat/common/chatEntitlementService.js';
-import { TestChatEntitlementService, TestWorkspaceTrustManagementService } from '../../../../../../../test/common/workbenchTestServices.js';
+import { TestWorkspaceTrustManagementService } from '../../../../../../../test/common/workbenchTestServices.js';
+import { TestChatEntitlementService } from '../../../../common/chatTestServices.js';
 import { ModelPickerConfiguration } from '../../../../../browser/widget/input/modelPicker/modelPickerConfiguration.js';
 import { IModelConfigurationAccess } from '../../../../../browser/widget/input/modelPicker/modelPickerModelConfig.js';
 import { ModelPickerWidget, TABBED_MODEL_PICKER_SETTING_ID } from '../../../../../browser/widget/input/modelPicker/modelPickerWidget.js';

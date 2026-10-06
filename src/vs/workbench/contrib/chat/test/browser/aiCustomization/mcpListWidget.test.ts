@@ -19,7 +19,7 @@ import { IConfigurationService } from '../../../../../../platform/configuration/
 import { ContributionEnablementState } from '../../../common/enablement.js';
 import { ICommandService } from '../../../../../../platform/commands/common/commands.js';
 import { IHoverService } from '../../../../../../platform/hover/browser/hover.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { mcpAccessConfig, McpAccessValue } from '../../../../../../platform/mcp/common/mcpManagement.js';
 import { IAuthenticationQueryService } from '../../../../../services/authentication/common/authenticationQuery.js';
 import { IAuthenticationService } from '../../../../../services/authentication/common/authentication.js';

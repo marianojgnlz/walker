@@ -20,7 +20,7 @@ import { TestNotificationService } from '../../../../../../../platform/notificat
 import { defaultButtonStyles } from '../../../../../../../platform/theme/browser/defaultStyles.js';
 import { IWorkbenchAssignmentService } from '../../../../../../services/assignment/common/assignmentService.js';
 import { NullWorkbenchAssignmentService } from '../../../../../../services/assignment/test/common/nullAssignmentService.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { ChatInputPart } from '../../../../browser/widget/input/chatInputPart.js';
 import { CHAT_SESSION_ARCHIVE_NUDGE_ICON_TREATMENT, CHAT_SESSION_ARCHIVE_NUDGE_TITLE_TREATMENT, ChatSessionArchiveNudge, IChatSessionArchiveNudgeOptions } from '../../../../browser/widget/input/chatSessionArchiveNudge.js';
 import '../../../../../../browser/media/style.css';

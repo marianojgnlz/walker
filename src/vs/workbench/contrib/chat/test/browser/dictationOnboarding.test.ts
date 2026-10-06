@@ -11,7 +11,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/tes
 import { ICommandService } from '../../../../../platform/commands/common/commands.js';
 import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { NullTelemetryServiceShape } from '../../../../../platform/telemetry/common/telemetryUtils.js';
-import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../common/chatWorkbenchTestServices.js';
 import { buildMicrophoneOptions, DictationOnboardingBanner, DictationOnboardingService, indexOfMicrophone } from '../../browser/speechToText/dictationOnboarding.js';
 import { isChatInputStackSlotShowing } from '../../browser/widget/input/chatInputStack.js';
 

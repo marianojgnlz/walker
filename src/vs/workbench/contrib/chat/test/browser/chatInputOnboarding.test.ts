@@ -8,7 +8,7 @@ import * as dom from '../../../../../base/browser/dom.js';
 import { errorHandler, setUnexpectedErrorHandler } from '../../../../../base/common/errors.js';
 import { DisposableStore, toDisposable } from '../../../../../base/common/lifecycle.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../base/test/common/utils.js';
-import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../common/chatWorkbenchTestServices.js';
 import { IStorageService, StorageScope } from '../../../../../platform/storage/common/storage.js';
 import { ChatInputNoticeClaim, ChatInputOnboarding, IChatInputOnboardingContext } from '../../browser/widget/input/chatInputOnboarding.js';
 import { ChatInputNoticeHost, ChatInputNoticeLane } from '../../browser/widget/input/chatInputNoticeHost.js';

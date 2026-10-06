@@ -9,7 +9,7 @@ import { mock } from '../../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
 import { ContextKeyService } from '../../../../../../platform/contextkey/browser/contextKeyService.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { ClientToolSetsContribution } from '../../../browser/tools/clientToolSetsContribution.js';
 import { LanguageModelToolsService } from '../../../browser/tools/languageModelToolsService.js';
 import { createToolSetFileContents, deleteToolSetFromFileContents, getEnabledSelectionReferences } from '../../../browser/tools/toolSetsContribution.js';

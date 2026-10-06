@@ -9,7 +9,7 @@ import { Event as BaseEvent } from '../../../../../../base/common/event.js';
 import { DisposableStore } from '../../../../../../base/common/lifecycle.js';
 import { createRegExp } from '../../../../../../base/common/strings.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { ChatTreeItem } from '../../../browser/chat.js';
 import { ChatFindModel } from '../../../browser/widget/chatFind/chatFindModel.js';
 import { ChatFindWidget, computeRevealScrollTop, findMatchRangesInDom, IChatFindHost, openAncestorDisclosures, rangesEqual, shouldCaptureFocusBeforeShow } from '../../../browser/widget/chatFind/chatFindWidget.js';

@@ -24,7 +24,7 @@ import { TestConfigurationService } from '../../../../../../../platform/configur
 import { IMarkdownRenderer } from '../../../../../../../platform/markdown/browser/markdownRenderer.js';
 import { IOpenerService } from '../../../../../../../platform/opener/common/opener.js';
 import { toAgentHostUri } from '../../../../../../../platform/agentHost/common/agentHostUri.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { IChatContentPartRenderContext } from '../../../../browser/widget/chatContentParts/chatContentParts.js';
 import { ChatMarkdownContentPart } from '../../../../browser/widget/chatContentParts/chatMarkdownContentPart.js';
 import { ChatMarkdownDecorationsRenderer } from '../../../../browser/widget/chatContentParts/chatMarkdownDecorationsRenderer.js';

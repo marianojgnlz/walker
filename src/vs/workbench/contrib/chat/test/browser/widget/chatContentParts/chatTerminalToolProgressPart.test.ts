@@ -28,7 +28,7 @@ import { IMarkdownRenderer } from '../../../../../../../platform/markdown/browse
 import { TerminalCapabilityStore } from '../../../../../../../platform/terminal/common/capabilities/terminalCapabilityStore.js';
 import { IThemeService } from '../../../../../../../platform/theme/common/themeService.js';
 import { TestThemeService } from '../../../../../../../platform/theme/test/common/testThemeService.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { IAiEditTelemetryService } from '../../../../../editTelemetry/browser/telemetry/aiEditTelemetry/aiEditTelemetryService.js';
 import { IChatOutputRendererService } from '../../../../browser/chatOutputItemRenderer.js';
 import { IChatMarkdownAnchorService } from '../../../../browser/widget/chatContentParts/chatMarkdownAnchorService.js';

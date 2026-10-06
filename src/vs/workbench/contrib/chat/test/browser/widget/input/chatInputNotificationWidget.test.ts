@@ -19,7 +19,7 @@ import { ServiceCollection } from '../../../../../../../platform/instantiation/c
 import { ILogService, NullLogService } from '../../../../../../../platform/log/common/log.js';
 import { ITelemetryService } from '../../../../../../../platform/telemetry/common/telemetry.js';
 import { NullTelemetryService, NullTelemetryServiceShape } from '../../../../../../../platform/telemetry/common/telemetryUtils.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { ChatInputNotificationActionKind, ChatInputNotificationSeverity, IChatInputNotification, IChatInputNotificationBody, IChatInputNotificationContext, IChatInputNotificationModelState, IChatInputNotificationService, matchesModelIdentifier } from '../../../../browser/widget/input/chatInputNotificationService.js';
 import { ChatInputPart } from '../../../../browser/widget/input/chatInputPart.js';
 import { ChatInputNotificationWidget, IChatInputNotificationDelegate, IChatInputNotificationModelSelection } from '../../../../browser/widget/input/chatInputNotificationWidget.js';

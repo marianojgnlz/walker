@@ -152,6 +152,18 @@ suite('Account-free authentication API', () => {
 		const mainThreadChatCodeMapper = readApiSource('src/vs/workbench/api/browser/mainThreadChatCodeMapper.ts');
 		const extHostChatContext = readApiSource('src/vs/workbench/api/common/extHostChatContext.ts');
 		const mainThreadChatContext = readApiSource('src/vs/workbench/api/browser/mainThreadChatContext.ts');
+		const extHostChatInputNotification = readApiSource('src/vs/workbench/api/common/extHostChatInputNotification.ts');
+		const mainThreadChatInputNotification = readApiSource('src/vs/workbench/api/browser/mainThreadChatInputNotification.ts');
+		const extHostLanguageModelTools = readApiSource('src/vs/workbench/api/common/extHostLanguageModelTools.ts');
+		const mainThreadLanguageModelTools = readApiSource('src/vs/workbench/api/browser/mainThreadLanguageModelTools.ts');
+		const extHostLanguageModels = readApiSource('src/vs/workbench/api/common/extHostLanguageModels.ts');
+		const mainThreadLanguageModels = readApiSource('src/vs/workbench/api/browser/mainThreadLanguageModels.ts');
+		const extHostChatAgents2 = readApiSource('src/vs/workbench/api/common/extHostChatAgents2.ts');
+		const mainThreadChatAgents2 = readApiSource('src/vs/workbench/api/browser/mainThreadChatAgents2.ts');
+		const extHostChatSessions = readApiSource('src/vs/workbench/api/common/extHostChatSessions.ts');
+		const mainThreadChatSessions = readApiSource('src/vs/workbench/api/browser/mainThreadChatSessions.ts');
+		const extHostChatDebug = readApiSource('src/vs/workbench/api/common/extHostChatDebug.ts');
+		const mainThreadChatDebug = readApiSource('src/vs/workbench/api/browser/mainThreadChatDebug.ts');
 		const disconnectedContexts = [
 			'ExtHostCodeMapper',
 			'ExtHostChatOutputRenderer',
@@ -192,6 +204,12 @@ suite('Account-free authentication API', () => {
 		assert.doesNotMatch(protocol, /ChatOutputRendererShape|IChatOutputRenderContextDto|MainThreadChatOutputRenderer:/);
 		assert.doesNotMatch(protocol, /CodeMapperShape|ICodeMapper.*Dto|MainThreadCodeMapper:/);
 		assert.doesNotMatch(protocol, /ExtHostChatContextShape|ExtHostChatContext:|MainThreadChatContextShape|MainThreadChatContext:|IChatContextItemDto/);
+		assert.doesNotMatch(protocol, /ChatInputNotificationDto|ChatInputNotificationSeverityDto|ChatInputNotificationActionDto|MainThreadChatInputNotificationShape|MainThreadChatInputNotification:/);
+		assert.doesNotMatch(protocol, /IToolDataDto|IToolDefinitionDto|ILanguageModelChatSelectorDto|LanguageModelToolsShape|MainThreadLanguageModelTools:|ExtHostLanguageModelTools:/);
+		assert.doesNotMatch(protocol, /LanguageModelsShape|MainThreadLanguageModels:|ExtHostChatProvider:/);
+		assert.doesNotMatch(protocol, /ChatAgentsShape2|IChatAgentProgressShape|MainThreadChatAgents2:|ExtHostChatAgents2:/);
+		assert.doesNotMatch(protocol, /ChatSessionsShape|MainThreadChatSessions:|ExtHostChatSessions:/);
+		assert.doesNotMatch(protocol, /ChatDebugShape|MainThreadChatDebug:|ExtHostChatDebug:/);
 		assert.doesNotMatch(extHostChatQuota, /class ExtHostChatQuota/);
 		assert.doesNotMatch(mainThreadChatQuota, /class MainThreadChatQuota/);
 		assert.doesNotMatch(extHostChatStatus, /class ExtHostChatStatus/);
@@ -202,6 +220,18 @@ suite('Account-free authentication API', () => {
 		assert.doesNotMatch(mainThreadChatCodeMapper, /class MainThreadChatCodemapper/);
 		assert.doesNotMatch(extHostChatContext, /class ExtHostChatContext/);
 		assert.doesNotMatch(mainThreadChatContext, /class MainThreadChatContext/);
+		assert.doesNotMatch(extHostChatInputNotification, /class ExtHostChatInputNotification/);
+		assert.doesNotMatch(mainThreadChatInputNotification, /class MainThreadChatInputNotification/);
+		assert.doesNotMatch(extHostLanguageModelTools, /class ExtHostLanguageModelTools/);
+		assert.doesNotMatch(mainThreadLanguageModelTools, /class MainThreadLanguageModelTools/);
+		assert.doesNotMatch(extHostLanguageModels, /class ExtHostLanguageModels/);
+		assert.doesNotMatch(mainThreadLanguageModels, /class MainThreadLanguageModels/);
+		assert.doesNotMatch(extHostChatAgents2, /class ExtHostChatAgents2/);
+		assert.doesNotMatch(mainThreadChatAgents2, /class MainThreadChatAgents2/);
+		assert.doesNotMatch(extHostChatSessions, /class ExtHostChatSessions/);
+		assert.doesNotMatch(mainThreadChatSessions, /class MainThreadChatSessions/);
+		assert.doesNotMatch(extHostChatDebug, /class ExtHostChatDebug/);
+		assert.doesNotMatch(mainThreadChatDebug, /class MainThreadChatDebug/);
 		assert.doesNotMatch(apiImplementation, /accessor\.get\(IExtHostLanguageModels\)/);
 		assert.doesNotMatch(commonServices, /registerSingleton\(IExtHostLanguageModels/);
 		assert.doesNotMatch(extensionService, /IExtHostLanguageModels/);

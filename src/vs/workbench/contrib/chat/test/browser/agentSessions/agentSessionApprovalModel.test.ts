@@ -18,7 +18,7 @@ import { MockChatService } from '../../common/chatService/mockChatService.js';
 import { IChatService, IChatToolInvocation, IChatTerminalToolInvocationData, ToolConfirmKind, ConfirmedReason } from '../../../common/chatService/chatService.js';
 import { ChatModel, IChatChangeEvent, IChatModel, IChatRequestModel, IChatResponseModel, IResponse, IChatProgressResponseContent } from '../../../common/model/chatModel.js';
 import { ILanguageService } from '../../../../../../editor/common/languages/language.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { ChatAgentLocation } from '../../../common/constants.js';
 import { ChatToolInvocation } from '../../../common/model/chatProgressTypes/chatToolInvocation.js';
 import { ChatAgentService, IChatAgentService } from '../../../common/participants/chatAgents.js';

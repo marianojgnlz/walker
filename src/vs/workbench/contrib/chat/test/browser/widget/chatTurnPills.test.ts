@@ -25,7 +25,7 @@ import { ChatResourcePillActionViewItem } from '../../../../../browser/chatResou
 import { DEFAULT_LABELS_CONTAINER, ResourceLabels } from '../../../../../browser/labels.js';
 import type { IActionViewItem } from '../../../../../../base/browser/ui/actionbar/actionbar.js';
 import { ChatConfiguration } from '../../../common/constants.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 
 suite('ChatTurnPills', () => {
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();

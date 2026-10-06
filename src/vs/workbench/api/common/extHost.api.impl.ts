@@ -351,12 +351,7 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 
 	// These actors are disconnected before their source modules are physically removed.
 	const disconnectedChatApiContexts = new Set<ProxyIdentifier<any>>([
-		ExtHostContext.ExtHostLanguageModelTools,
-		ExtHostContext.ExtHostChatSessions,
-		ExtHostContext.ExtHostChatAgents2,
-		ExtHostContext.ExtHostChatDebug,
 		ExtHostContext.ExtHostEmbeddings,
-		ExtHostContext.ExtHostChatProvider,
 	]);
 
 	// Check that no named customers are missing, excluding intentionally disconnected chat actors.

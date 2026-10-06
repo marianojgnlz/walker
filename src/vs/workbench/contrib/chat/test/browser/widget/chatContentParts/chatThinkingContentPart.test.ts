@@ -11,7 +11,7 @@ import { observableValue } from '../../../../../../../base/common/observable.js'
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { mainWindow } from '../../../../../../../base/browser/window.js';
 import { Codicon } from '../../../../../../../base/common/codicons.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { isResourceMultiDiffEditorInput } from '../../../../../../common/editor.js';
 import { IEditorService } from '../../../../../../services/editor/common/editorService.js';
 import { IConfigurationService } from '../../../../../../../platform/configuration/common/configuration.js';

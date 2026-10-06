@@ -12,7 +12,7 @@ import { URI } from '../../../../../../../base/common/uri.js';
 import { mock, upcastPartial } from '../../../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { IMarkdownRenderer } from '../../../../../../../platform/markdown/browser/markdownRenderer.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { IChatAccessibilityService, IChatWidgetService } from '../../../../browser/chat.js';
 import { ChatErrorConfirmationContentPart } from '../../../../browser/widget/chatContentParts/chatErrorConfirmationPart.js';
 import { IChatContentPartRenderContext } from '../../../../browser/widget/chatContentParts/chatContentParts.js';

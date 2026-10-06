@@ -15,7 +15,7 @@ import { URI } from '../../../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { PluginFormat } from '../../../../../../platform/agentPlugins/common/pluginParsers.js';
 import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { AICustomizationItemsModel } from '../../../browser/aiCustomization/aiCustomizationItemsModel.js';
 import { AICustomizationManagementSection, AICustomizationSources, BUILTIN_STORAGE, IAICustomizationWorkspaceService } from '../../../common/aiCustomizationWorkspaceService.js';
 import { ICustomizationHarnessService, ICustomizationItem, ICustomizationItemProvider, ICustomizationSyncProvider, IHarnessDescriptor } from '../../../common/customizationHarnessService.js';

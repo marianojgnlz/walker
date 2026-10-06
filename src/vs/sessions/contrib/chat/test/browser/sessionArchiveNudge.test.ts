@@ -26,7 +26,8 @@ import { NullTelemetryService } from '../../../../../platform/telemetry/common/t
 import { Memento } from '../../../../../workbench/common/memento.js';
 import { NullWorkbenchAssignmentService } from '../../../../../workbench/services/assignment/test/common/nullAssignmentService.js';
 import { TestHostService, TestLayoutService } from '../../../../../workbench/test/browser/workbenchTestServices.js';
-import { TestChatEntitlementService, TestLifecycleService, TestStorageService } from '../../../../../workbench/test/common/workbenchTestServices.js';
+import { TestLifecycleService, TestStorageService } from '../../../../../workbench/test/common/workbenchTestServices.js';
+import { TestChatEntitlementService } from '../../../../../workbench/contrib/chat/test/common/chatTestServices.js';
 import { IViewsService } from '../../../../../workbench/services/views/common/viewsService.js';
 import { OnboardingScenarioService } from '../../../../../workbench/contrib/onboarding/browser/onboardingService.js';
 import { ISpotlightPayload, SPOTLIGHT_PRESENTATION_KIND } from '../../../../../workbench/contrib/onboarding/browser/spotlight/spotlightTypes.js';

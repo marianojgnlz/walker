@@ -9,7 +9,7 @@ import { Codicon } from '../../../../../../base/common/codicons.js';
 import { toDisposable } from '../../../../../../base/common/lifecycle.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { MenuItemAction } from '../../../../../../platform/actions/common/actions.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { StartOverActionId } from '../../../browser/chatEditing/chatEditingActions.js';
 import { ChatRestoreCheckpointActionViewItem } from '../../../browser/widget/chatRestoreCheckpointActionViewItem.js';
 

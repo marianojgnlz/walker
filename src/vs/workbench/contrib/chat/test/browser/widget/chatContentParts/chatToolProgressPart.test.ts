@@ -18,7 +18,7 @@ import { IHoverService } from '../../../../../../../platform/hover/browser/hover
 import { IMarkdownRenderer } from '../../../../../../../platform/markdown/browser/markdownRenderer.js';
 import { IConfigurationService } from '../../../../../../../platform/configuration/common/configuration.js';
 import { TestConfigurationService } from '../../../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { IChatMarkdownAnchorService } from '../../../../browser/widget/chatContentParts/chatMarkdownAnchorService.js';
 import { IChatContentPartRenderContext, InlineTextModelCollection } from '../../../../browser/widget/chatContentParts/chatContentParts.js';
 import { ChatProgressContentPart } from '../../../../browser/widget/chatContentParts/chatProgressContentPart.js';

@@ -10,7 +10,7 @@ import { mock } from '../../../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { renderFileAnchor, renderFileWidgets } from '../../../../browser/widget/chatContentParts/chatInlineAnchorWidget.js';
 import { mainWindow } from '../../../../../../../base/browser/window.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { Disposable, DisposableStore } from '../../../../../../../base/common/lifecycle.js';
 import { IChatMarkdownAnchorService } from '../../../../browser/widget/chatContentParts/chatMarkdownAnchorService.js';
 import { MarkdownString } from '../../../../../../../base/common/htmlContent.js';

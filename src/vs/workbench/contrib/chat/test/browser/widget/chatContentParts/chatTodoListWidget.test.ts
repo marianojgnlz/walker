@@ -11,7 +11,7 @@ import { URI } from '../../../../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { IConfigurationService } from '../../../../../../../platform/configuration/common/configuration.js';
 import { TestConfigurationService } from '../../../../../../../platform/configuration/test/common/testConfigurationService.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { ChatTodoListWidget } from '../../../../browser/widget/chatContentParts/chatTodoListWidget.js';
 import { IChatTodo, IChatTodoListService } from '../../../../common/tools/chatTodoListService.js';
 

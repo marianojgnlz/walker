@@ -8,7 +8,7 @@ import { mainWindow } from '../../../../../../../base/browser/window.js';
 import { Emitter } from '../../../../../../../base/common/event.js';
 import { toDisposable } from '../../../../../../../base/common/lifecycle.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { ChatCustomConfirmationWidget, type IChatConfirmationButton } from '../../../../browser/widget/chatContentParts/chatConfirmationWidget.js';
 import type { IChatContentPartRenderContext } from '../../../../browser/widget/chatContentParts/chatContentParts.js';
 

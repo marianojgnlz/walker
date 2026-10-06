@@ -502,3 +502,13 @@ src/vs/workbench/contrib/preferences/browser/settingsTreeModels.ts
 Scope: remove ONLY the chat-feature-filter code (AGENTS_WINDOW_SETTING_TAG consumers preserved).
 src/vs/workbench/contrib/imageCarousel/browser/imageCarouselEditor.ts
 Scope: stale chat-attachment comment removal only.
+
+## Size dispositions (parent)
+
+- U05.c.035 (ChatContext RPC pair): ACCEPTED as a single coupled-pair mechanical review batch (~460 authored lines). Rationale: the pair is bidirectionally shape-coupled; the recorded split analysis shows no safe ≤400 seam without a forbidden inert shim or a non-compiling half-leaf. This is a per-pair review-batch disposition under the deletion-review policy (like the D-batches), NOT a blanket size:exception for authored scope — the 400 cap remains the hard limit everywhere else, and future coupled pairs must pause and record their split analysis the same way.
+- C4 deletion ORDERING CONSTRAINT (binding): `accountPolicyService.test.ts` imports Chat session-type helpers and the service is registered in `web.main.ts`/`desktop.main.ts` — resolve that A2/A3-owned tail BEFORE the parent deletes the Chat tree.
+- Untracked in-scope files (`api/common/extHostLanguageModelAccessInformation.ts`, `test/browser/productDebloatChatIntegrations.test.ts`) are parent-staged at commit time (`git add -A -- ':!.pi'`); `.pi/` never enters commits.
+
+### U05 dispositions (2026-10-06)
+- `approve-sessionArchiveNudge-import`: `src/vs/sessions/contrib/chat/test/browser/sessionArchiveNudge.test.ts` APPROVED — repoint the single `TestChatEntitlementService` import to `workbench/contrib/chat/test/common/chatTestServices.js` and remove the common re-export shim (both shared test factories become Chat-free).
+- Five paused C2 bridge pairs (`LanguageModels`, `ChatAgents2`, `ChatSessions`, `ChatDebug`, `LanguageModelTools`): each ACCEPTED as a single coupled-pair mechanical review batch (645–3,730 authored lines per the recorded split analyses) under the same disposition as U05.c.035 — deletion-heavy bridge/DTO/proxy/test retirement reviewed per-pair, NOT a blanket size:exception; the 400 cap remains the hard limit for authored feature work. Record each pair's analysis + measurement in `deletion-review.md` as its own D-style batch.

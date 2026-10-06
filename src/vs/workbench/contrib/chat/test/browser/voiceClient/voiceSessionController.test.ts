@@ -26,8 +26,8 @@ import { NullTelemetryService, NullTelemetryServiceShape } from '../../../../../
 import { IAuthenticationService } from '../../../../../services/authentication/common/authentication.js';
 import { ChatEntitlement, IChatEntitlementService } from '../../../../../services/chat/common/chatEntitlementService.js';
 import { IWorkbenchEnvironmentService } from '../../../../../services/environment/common/environmentService.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
-import { TestChatEntitlementService } from '../../../../../test/common/workbenchTestServices.js';
+import { TestChatEntitlementService } from '../../common/chatTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { IVoiceTranscriptStore, IVoiceTranscriptTurn } from '../../../../agentsVoice/common/voiceTranscriptStore.js';
 import { AgentSessionStatus, IAgentSessionsModel } from '../../../browser/agentSessions/agentSessionsModel.js';
 import { IAgentSessionsService } from '../../../browser/agentSessions/agentSessionsService.js';

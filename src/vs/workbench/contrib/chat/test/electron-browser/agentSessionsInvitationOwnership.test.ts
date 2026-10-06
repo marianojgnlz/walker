@@ -30,7 +30,7 @@ import { IWorkspaceContextService, WorkspaceFolder } from '../../../../../platfo
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
 import { IWorkbenchAssignmentService } from '../../../../services/assignment/common/assignmentService.js';
 import { NullWorkbenchAssignmentService } from '../../../../services/assignment/test/common/nullAssignmentService.js';
-import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../common/chatWorkbenchTestServices.js';
 import { IChatWidget, IChatWidgetService } from '../../browser/chat.js';
 import { AgentSessionStatus, IAgentSession, IAgentSessionsModel } from '../../browser/agentSessions/agentSessionsModel.js';
 import { IAgentSessionsService } from '../../browser/agentSessions/agentSessionsService.js';

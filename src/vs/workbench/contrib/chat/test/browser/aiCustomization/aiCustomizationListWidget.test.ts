@@ -14,7 +14,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/
 import { ICommandService } from '../../../../../../platform/commands/common/commands.js';
 import { IListService, ListService } from '../../../../../../platform/list/browser/listService.js';
 import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { AICustomizationListWidget, getAlwaysVisibleCustomizationGroupKeys, getCollapsedCustomizationGroupKey, getCustomizationItemAriaLabel, getTargetedCreateActionLabel, usesCustomizationCardLayout } from '../../../browser/aiCustomization/aiCustomizationListWidget.js';
 import { IAICustomizationListItem } from '../../../browser/aiCustomization/aiCustomizationItemSource.js';
 import { IAICustomizationItemsModel } from '../../../browser/aiCustomization/aiCustomizationItemsModel.js';

@@ -20,7 +20,7 @@ import { buildDefaultChatUri, buildSubagentChatUri, Changeset, ChangesetState, C
 import { IClipboardService } from '../../../../../../platform/clipboard/common/clipboardService.js';
 import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
 import { IOpenerService } from '../../../../../../platform/opener/common/opener.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { BrowserEditorInput } from '../../../../browserView/common/browserEditorInput.js';
 import { IBrowserViewModel, IBrowserViewWorkbenchService } from '../../../../browserView/common/browserView.js';
 import { IEditorService } from '../../../../../services/editor/common/editorService.js';

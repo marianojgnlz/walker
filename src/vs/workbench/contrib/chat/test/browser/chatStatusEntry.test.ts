@@ -15,7 +15,7 @@ import { IMarkdownRendererService } from '../../../../../platform/markdown/brows
 import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
 import { ChatEntitlement, IChatEntitlementService, IChatSentiment } from '../../../../services/chat/common/chatEntitlementService.js';
 import { IStatusbarEntry, IStatusbarEntryAccessor, IStatusbarService, ToggleTooltipCommand } from '../../../../services/statusbar/browser/statusbar.js';
-import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../common/chatWorkbenchTestServices.js';
 import { InEditorZenModeContext } from '../../../../common/contextkeys.js';
 import { ChatQuotaResumeState, ChatStatusBarEntry, computeQuotaResumeState } from '../../browser/chatStatus/chatStatusEntry.js';
 import { IChatStatusItemService } from '../../browser/chatStatus/chatStatusItemService.js';

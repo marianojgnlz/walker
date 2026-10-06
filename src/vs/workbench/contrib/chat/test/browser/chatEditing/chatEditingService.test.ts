@@ -26,7 +26,7 @@ import { MockContextKeyService } from '../../../../../../platform/keybinding/tes
 import { IWorkbenchAssignmentService } from '../../../../../services/assignment/common/assignmentService.js';
 import { NullWorkbenchAssignmentService } from '../../../../../services/assignment/test/common/nullAssignmentService.js';
 import { nullExtensionDescription } from '../../../../../services/extensions/common/extensions.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { IWorkspaceEditingService } from '../../../../../services/workspaces/common/workspaceEditing.js';
 import { TestWorkerService } from '../../../../inlineChat/test/browser/testWorkerService.js';
 import { IMcpService } from '../../../../mcp/common/mcpTypes.js';

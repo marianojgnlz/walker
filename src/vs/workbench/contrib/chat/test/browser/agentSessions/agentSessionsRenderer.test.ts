@@ -12,7 +12,7 @@ import { HoverPosition } from '../../../../../../base/browser/ui/hover/hoverWidg
 import { IChatSessionsService } from '../../../common/chatSessionsService.js';
 import { IVoicePlaybackService } from '../../../common/voicePlaybackService.js';
 import { AgentSessionRenderer, AgentSessionSectionRenderer } from '../../../browser/agentSessions/agentSessionsViewer.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 
 suite('AgentSessionsRenderer', () => {
 

@@ -10,7 +10,7 @@ import { DisposableStore } from '../../../../../../../base/common/lifecycle.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { TestConfigurationService } from '../../../../../../../platform/configuration/test/common/testConfigurationService.js';
 import { IConfigurationService } from '../../../../../../../platform/configuration/common/configuration.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { BlockAnimation, ANIMATION_DURATION_MS } from '../../../../browser/widget/chatContentParts/chatIncrementalRendering/animations/blockAnimations.js';
 import { lastBlockBoundary } from '../../../../browser/widget/chatContentParts/chatIncrementalRendering/buffers/paragraphBuffer.js';
 import { WordBuffer } from '../../../../browser/widget/chatContentParts/chatIncrementalRendering/buffers/wordBuffer.js';

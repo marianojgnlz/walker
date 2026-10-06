@@ -15,7 +15,7 @@ import { TestConfigurationService } from '../../../../../../platform/configurati
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { applyCodexAgentHostPreference, ChatSessionsService } from '../../../browser/chatSessions/chatSessions.contribution.js';
 import { ChatSessionOptionsMap, ChatSessionStatus, IChatSession, IChatSessionHistoryItem, IChatSessionItem, IChatSessionItemController, IChatSessionItemsDelta, IChatSessionsExtensionPoint, ReadonlyChatSessionOptionsMap, SessionType } from '../../../common/chatSessionsService.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { AGENT_HOST_ENABLED_CONTEXT_KEY } from '../../../../../../platform/agentHost/common/agentHostEnablementService.js';
 import { AgentHostCodexAgentEnabledSettingId, CodexPreferAgentHostEditorSettingId, GITHUB_COPILOT_PROTECTED_RESOURCE, GITHUB_REPO_PROTECTED_RESOURCE, protectedResourcesRequireGitHubCopilotSignIn } from '../../../../../../platform/agentHost/common/agentService.js';
 import { ProtectedResourceMetadata } from '../../../../../../platform/agentHost/common/state/protocol/state.js';

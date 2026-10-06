@@ -11,7 +11,7 @@ import { IModelService } from '../../../../../../../editor/common/services/model
 import { IDialogService } from '../../../../../../../platform/dialogs/common/dialogs.js';
 import { TestDialogService } from '../../../../../../../platform/dialogs/test/common/testDialogService.js';
 import { FileChangesEvent, FileChangeType, IFileService } from '../../../../../../../platform/files/common/files.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { IPlanReviewFeedbackService, PlanReviewFeedbackService } from '../../../../browser/planReviewFeedback/planReviewFeedbackService.js';
 import { ChatPlanReviewPart, IChatPlanReviewPartOptions } from '../../../../browser/widget/chatContentParts/chatPlanReviewPart.js';
 import { IChatContentPartRenderContext } from '../../../../browser/widget/chatContentParts/chatContentParts.js';

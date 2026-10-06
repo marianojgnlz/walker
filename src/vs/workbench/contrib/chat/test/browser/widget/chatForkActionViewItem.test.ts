@@ -16,7 +16,7 @@ import { URI } from '../../../../../../base/common/uri.js';
 import { upcastPartial } from '../../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
 import { MenuItemAction } from '../../../../../../platform/actions/common/actions.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 import { ForkConversationActionId } from '../../../browser/actions/chatForkActions.js';
 import { ChatForkActionViewItem } from '../../../browser/widget/chatForkActionViewItem.js';
 import { IChatRequestViewModel } from '../../../common/model/chatViewModel.js';

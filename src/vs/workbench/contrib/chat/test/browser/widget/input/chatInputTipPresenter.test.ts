@@ -8,7 +8,7 @@ import * as dom from '../../../../../../../base/browser/dom.js';
 import { DisposableStore, toDisposable } from '../../../../../../../base/common/lifecycle.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { TestInstantiationService } from '../../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { IChatTip, IChatTipService } from '../../../../browser/chatTipService.js';
 import { ChatInputNoticeHost, ChatInputNoticeLane } from '../../../../browser/widget/input/chatInputNoticeHost.js';
 import { ChatInputTipPresenter } from '../../../../browser/widget/input/chatInputTipPresenter.js';

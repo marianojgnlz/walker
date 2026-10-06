@@ -12,7 +12,7 @@ import { ContextKeyService } from '../../../../../../../platform/contextkey/brow
 import { TestConfigurationService } from '../../../../../../../platform/configuration/test/common/testConfigurationService.js';
 import { ExtensionIdentifier } from '../../../../../../../platform/extensions/common/extensions.js';
 import { TestInstantiationService } from '../../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { LanguageModelToolsService } from '../../../../browser/tools/languageModelToolsService.js';
 import { ChatAgentLocation, ChatConfiguration } from '../../../../common/constants.js';
 import { ILanguageModelToolsService, IToolData, ToolDataSource } from '../../../../common/tools/languageModelToolsService.js';

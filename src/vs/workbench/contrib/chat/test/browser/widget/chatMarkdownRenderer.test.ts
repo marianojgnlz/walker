@@ -17,7 +17,7 @@ import { NullHoverService } from '../../../../../../platform/hover/test/browser/
 import { ILabelService } from '../../../../../../platform/label/common/label.js';
 import { MarkedKatexSupport } from '../../../../markdown/browser/markedKatexSupport.js';
 import { allowedChatMarkdownHtmlTags, ChatContentMarkdownRenderer } from '../../../browser/widget/chatContentMarkdownRenderer.js';
-import { workbenchInstantiationService } from '../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../common/chatWorkbenchTestServices.js';
 
 suite('ChatMarkdownRenderer', () => {
 	const store = ensureNoDisposablesAreLeakedInTestSuite();

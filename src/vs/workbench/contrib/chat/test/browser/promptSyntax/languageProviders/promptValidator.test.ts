@@ -15,7 +15,8 @@ import { IFileService } from '../../../../../../../platform/files/common/files.j
 import { TestInstantiationService } from '../../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { ILabelService } from '../../../../../../../platform/label/common/label.js';
 import { IMarkerData, MarkerSeverity, MarkerTag } from '../../../../../../../platform/markers/common/markers.js';
-import { TestPathService, workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { TestPathService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { LanguageModelToolsService } from '../../../../browser/tools/languageModelToolsService.js';
 import { ChatMode, CustomChatMode, IChatModeService } from '../../../../common/chatModes.js';
 import { ChatAgentLocation, ChatConfiguration } from '../../../../common/constants.js';

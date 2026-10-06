@@ -9,7 +9,7 @@ import { Event } from '../../../../../../../base/common/event.js';
 import { observableValue } from '../../../../../../../base/common/observable.js';
 import { URI } from '../../../../../../../base/common/uri.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { IChatToolInvocationSerialized, ToolConfirmKind } from '../../../../common/chatService/chatService.js';
 import { ToolDataSource } from '../../../../common/tools/languageModelToolsService.js';
 import { CodeBlockPart } from '../../../../browser/widget/chatContentParts/codeBlockPart.js';

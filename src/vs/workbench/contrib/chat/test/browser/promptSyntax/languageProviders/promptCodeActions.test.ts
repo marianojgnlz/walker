@@ -15,7 +15,7 @@ import { TestConfigurationService } from '../../../../../../../platform/configur
 import { ContextKeyService } from '../../../../../../../platform/contextkey/browser/contextKeyService.js';
 import { TestInstantiationService } from '../../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { IMarker, IMarkerService, MarkerSeverity } from '../../../../../../../platform/markers/common/markers.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { ChatConfiguration } from '../../../../common/constants.js';
 import { ILanguageModelToolsService, IToolData, ToolDataSource } from '../../../../common/tools/languageModelToolsService.js';
 import { LanguageModelToolsService } from '../../../../browser/tools/languageModelToolsService.js';

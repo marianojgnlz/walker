@@ -19,7 +19,7 @@ import { IMarkdownRendererService } from '../../../../../platform/markdown/brows
 import product from '../../../../../platform/product/common/product.js';
 import { ChatEntitlement, IChatEntitlementService } from '../../../../services/chat/common/chatEntitlementService.js';
 import { IEditorService } from '../../../../services/editor/common/editorService.js';
-import { workbenchInstantiationService } from '../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../common/chatWorkbenchTestServices.js';
 import { ChatStatusDashboard, IChatStatusDashboardOptions } from '../../../chat/browser/chatStatus/chatStatusDashboard.js';
 import { IChatStatusItemService } from '../../../chat/browser/chatStatus/chatStatusItemService.js';
 

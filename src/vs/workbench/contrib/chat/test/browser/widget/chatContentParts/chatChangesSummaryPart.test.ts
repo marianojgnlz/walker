@@ -12,7 +12,7 @@ import { mock } from '../../../../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../../base/test/common/utils.js';
 import { IConfigurationService } from '../../../../../../../platform/configuration/common/configuration.js';
 import { isResourceDiffEditorInput, isResourceMultiDiffEditorInput } from '../../../../../../common/editor.js';
-import { workbenchInstantiationService } from '../../../../../../test/browser/workbenchTestServices.js';
+import { workbenchInstantiationService } from '../../../common/chatWorkbenchTestServices.js';
 import { IEditorService } from '../../../../../../services/editor/common/editorService.js';
 import { IChatResponseFileChangesService } from '../../../../browser/chatResponseFileChangesService.js';
 import { ChatCheckpointFileChangesSummaryContentPart, renderChangesSummaryFileList } from '../../../../browser/widget/chatContentParts/chatChangesSummaryPart.js';
