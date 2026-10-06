@@ -146,11 +146,7 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 			'vs/workbench/workbench.desktop.main.css',
 			'vs/workbench/api/node/extensionHostProcess.js',
 			'vs/code/electron-browser/workbench/workbench.html',
-			'vs/code/electron-browser/workbench/workbench.js',
-			'vs/sessions/sessions.desktop.main.js',
-			'vs/sessions/sessions.desktop.main.css',
-			'vs/sessions/electron-browser/sessions.html',
-			'vs/sessions/electron-browser/sessions.js'
+			'vs/code/electron-browser/workbench/workbench.js'
 		]);
 
 		const src = gulp.src(out + '/**', { base: '.' })
@@ -335,7 +331,6 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 				'resources/win32/react.ico',
 				'resources/win32/ruby.ico',
 				'resources/win32/sass.ico',
-				'resources/win32/sessions.ico',
 				'resources/win32/shell.ico',
 				'resources/win32/sql.ico',
 				'resources/win32/typescript.ico',

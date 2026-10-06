@@ -425,4 +425,22 @@ suite('Product chat integration boundaries', () => {
 		assert.match(sharedProcessMain, /registerChannel\('localGit'/);
 		assert.match(sharedProcessMain, /registerChannel\('playwright'/);
 	});
+
+	test('desktop/web build entry lists and window startup contain no Agents Window sessions residue', () => {
+		const nextIndex = readRepositorySource('build/next/index.ts');
+		assert.doesNotMatch(nextIndex, /vs\/sessions\//);
+		assert.doesNotMatch(nextIndex, /sessionsWebEntryPoint|bundleDevTunnelsWeb|devTunnelsWebOutDir/);
+		assert.match(nextIndex, /vs\/workbench\/workbench\.web\.main\.internal/);
+
+		const gulpfile = readRepositorySource('build/gulpfile.vscode.ts');
+		assert.doesNotMatch(gulpfile, /vs\/sessions\//);
+		assert.doesNotMatch(gulpfile, /sessions\.ico/);
+		assert.match(gulpfile, /vs\/code\/electron-browser\/workbench\/workbench\.html/);
+
+		const windowImpl = readRepositorySource('src/vs/platform/windows/electron-main/windowImpl.ts');
+		assert.doesNotMatch(windowImpl, /vs\/sessions\/electron-browser/);
+		assert.doesNotMatch(windowImpl, /sessions\.ico/);
+		assert.doesNotMatch(windowImpl, /config(uration)?\.isSessionsWindow/);
+		assert.match(windowImpl, /vs\/code\/electron-browser\/workbench\/workbench/);
+	});
 });

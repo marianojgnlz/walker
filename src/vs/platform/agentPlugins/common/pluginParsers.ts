@@ -13,6 +13,7 @@ import { URI } from '../../../base/common/uri.js';
 import { IFileService } from '../../files/common/files.js';
 import { parseFrontMatter } from '../../../base/common/yaml.js';
 import { IMcpRemoteServerConfiguration, IMcpServerConfiguration, IMcpStdioServerConfiguration, McpServerType } from '../../mcp/common/mcpPlatformTypes.js';
+import { normalizeMcpServerConfiguration } from '../../mcp/common/mcpServerConfigurationNormalizer.js';
 import { CustomizationType, McpServerStatus, type AgentCustomization, type HookCustomization, type McpServerCustomization, type RuleCustomization, type SkillCustomization } from '../../agentHost/common/state/protocol/state.js';
 import { DEFAULT_MCP_APP } from '../../agentHost/common/state/protocol/mcpAppDefaults.js';
 import { customizationId } from '../../agentHost/common/state/sessionState.js';
@@ -475,58 +476,11 @@ export function resolveMcpServersMap(raw: unknown): Record<string, unknown> | un
 }
 
 /**
- * Normalizes a raw JSON value into a typed MCP server configuration.
+ * Re-exported for deletion-bound agent-plugin consumers. The retained workspace
+ * `.mcp.json` path imports the neutral module
+ * `platform/mcp/common/mcpServerConfigurationNormalizer.js` directly.
  */
-export function normalizeMcpServerConfiguration(rawConfig: unknown): IMcpServerConfiguration | undefined {
-	if (!rawConfig || typeof rawConfig !== 'object') {
-		return undefined;
-	}
-
-	const candidate = rawConfig as Record<string, unknown>;
-	const type = typeof candidate['type'] === 'string' ? candidate['type'] : undefined;
-	const transport = candidate['transport'] === 'sse' || candidate['transport'] === 'http' ? candidate['transport'] : undefined;
-
-	const command = typeof candidate['command'] === 'string' ? candidate['command'] : undefined;
-	const url = typeof candidate['url'] === 'string' ? candidate['url'] : undefined;
-	const args = Array.isArray(candidate['args']) ? candidate['args'].filter((value): value is string => typeof value === 'string') : undefined;
-	const env = candidate['env'] && typeof candidate['env'] === 'object'
-		? Object.fromEntries(Object.entries(candidate['env'] as Record<string, unknown>)
-			.filter(([, value]) => typeof value === 'string' || typeof value === 'number' || value === null)
-			.map(([key, value]) => [key, value as string | number | null]))
-		: undefined;
-	const envFile = typeof candidate['envFile'] === 'string' ? candidate['envFile'] : undefined;
-	const cwd = typeof candidate['cwd'] === 'string' ? candidate['cwd'] : undefined;
-	const headers = candidate['headers'] && typeof candidate['headers'] === 'object'
-		? Object.fromEntries(Object.entries(candidate['headers'] as Record<string, unknown>)
-			.filter(([, value]) => typeof value === 'string')
-			.map(([key, value]) => [key, value as string]))
-		: undefined;
-	const rawOAuth = candidate['oauth'] && typeof candidate['oauth'] === 'object' ? candidate['oauth'] as Record<string, unknown> : undefined;
-	const oauthClientId = (typeof rawOAuth?.['clientId'] === 'string' ? rawOAuth['clientId'] : undefined)
-		?? (typeof candidate['oauthClientId'] === 'string' ? candidate['oauthClientId'] : undefined);
-	const oauth = oauthClientId ? { clientId: oauthClientId } : undefined;
-	const dev = candidate['dev'] && typeof candidate['dev'] === 'object' ? candidate['dev'] as IMcpStdioServerConfiguration['dev'] : undefined;
-
-	if (type === 'ws') {
-		return undefined;
-	}
-
-	if (type === McpServerType.LOCAL || (!type && command)) {
-		if (!command) {
-			return undefined;
-		}
-		return { type: McpServerType.LOCAL, command, args, env, envFile, cwd, dev };
-	}
-
-	if (type === McpServerType.REMOTE || type === 'streamable-http' || type === 'sse' || (!type && url)) {
-		if (!url) {
-			return undefined;
-		}
-		return { type: McpServerType.REMOTE, ...(type === 'sse' || transport === 'sse' ? { transport: 'sse' as const } : {}), url, headers, ...(oauth ? { oauth } : {}), dev };
-	}
-
-	return undefined;
-}
+export { normalizeMcpServerConfiguration };
 
 /**
  * Characters in a file path that require shell quoting to prevent

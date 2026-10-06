@@ -2252,3 +2252,60 @@ Verification for the pass: compile 0, `agentHostEditMarkerService.test` (32) rem
 3. Entrypoint edits: assert no agent-host/session registration remains in `workbench.{common,desktop,web}.main.ts`, and that removing the sessions token imports cannot break a retained consumer other than the recorded optional splash fields.
 4. `serverServices.ts`/`sharedProcessMain.ts`: no agent-host channel is registered, generic channels survive, and the retained `_agentHostBridgeConnectionToken` parameter is the only residual mention.
 5. The wave manifest's `platform/agentPlugins` correction — do not delete that tree before the MCP normalizer consumer is resolved.
+
+## Pre-wave final leaves — MCP normalizer extraction, C5 residue cleanup, wave-manifest refresh (2026-10-06)
+
+- **Structured status consumed (parent-derived, authoritative):**
+  ```yaml
+  activeChange: product-debloat
+  artifactStore: openspec
+  applyState: ready
+  nextRecommended: sdd-apply
+  actionContext: {mode: implement, workspace: /home/marialez/Work/walker, cwd: /home/marialez/Work/walker, branch: product-debloat (never commit)}
+  delivery: feature-branch-chain; 400 max per authored leaf
+  ```
+  Engram carve-out did not apply (`openspec` store). `tasks.md` was re-read before and after: no row maps to these leaves; no checkbox was changed (the C5 family rows stay `- [ ]` because removing all `src/vs/sessions/**` plus the rspack/vite/component/layer registrations is not complete, and the extraction has no task row). Counts unchanged: **59 unchecked / 49 checked**.
+- **Allowed surfaces used:** `src/vs/platform/agentPlugins/**`, `src/vs/platform/mcp/**`, `src/vs/workbench/contrib/mcp/**` (read-only scan), `src/vs/platform/windows/electron-main/windowImpl.ts`, `build/next/index.ts`, `build/gulpfile.vscode.ts`, `src/vs/workbench/test/**`, and the OpenSpec artifacts. No new path was needed. No staging, unlink, commit, push, dependency mutation or destructive command.
+
+### Leaf 1 — MCP normalizer extraction (397 additions+deletions)
+
+- **RED:** new `src/vs/platform/mcp/test/common/mcpServerConfigurationNormalizer.test.ts` imports `../../common/mcpServerConfigurationNormalizer.js`, which did not exist; the runner could not load the module (`Failed to fetch dynamically imported module … out/vs/platform/mcp/test/common/mcpServerConfigurationNormalizer.test.js`).
+- **GREEN:** created `src/vs/platform/mcp/common/mcpServerConfigurationNormalizer.ts` with `normalizeMcpServerConfiguration` moved verbatim (identical body; only the copyright header, the two type imports and a section comment are new), and repointed the retained `.mcp.json` chain in `src/vs/platform/mcp/common/mcpWorkspaceConfiguration.ts`. Removed the moved function from `src/vs/platform/agentPlugins/common/pluginParsers.ts`, keeping a value import plus `export { normalizeMcpServerConfiguration }` so its deletion-bound consumers (17 agentHost-node, 9 agentHost-test, 15 chat = 9 tests + 6 source, 1 sessions fixture, plus the W21 plugin-discovery test) keep compiling until the wave deletes them. Removed the moved suite from the deletion-bound `pluginParsers.test.ts` (still green, 46/46).
+- **Root-cause fix mid-leaf:** the first re-export-only form (`export { … } from …`) failed compile at `pluginParsers.ts`'s own `parseMcpServerDefinitionMap` call site (TS2304); redone as a value import + local re-export, compile back to 0.
+- **TRIANGULATE:** parity suite **14 tests (runner 15 passing incl. the harness clean-state check)** — 11 moved cases + 3 new (plain `http` type without transport override, string/number/null `env` filtering, string-only `headers`); `mcpWorkspaceConfiguration.test` **13/13**; `pluginMcpDiscovery.test` **2/2**; `mcpTypes.test` **21/21**; `pluginParsers.test` **46/46**; `accountFreeApi.test` **10/10**; `npm run compile-client` **0 errors**.
+- **Deviation from the launch brief (recorded, not hidden):** the brief said "then empty `pluginParsers.ts` (placeholder for the wave)". That cannot be done while the tree must compile: every remaining importer of `pluginParsers.ts` lives inside a deletion-bound tree (W12 agentHost, W1 chat, W19 fixture) and those trees are still live, so a 6-line `export {}` placeholder breaks `compile-client` and the leaf's own compile-0 verification. The file instead keeps only the normalizer re-export plus its agentHost-owned remainder, and must be deleted atomically with or after W12+W1; recorded as W20 in `deletion-review.md` and `removal-inventory.md`.
+- **Workload/PR boundary:** one leaf, **397 measured** additions+deletions (64-line module + 161-line test additions; −51 `pluginParsers.ts`, −114 `pluginParsers.test.ts`, 1+1 repoint), inside the 400 budget.
+
+### Leaf 2 — C5 residue cleanup (58 additions+deletions)
+
+- **RED:** added the absence test `desktop/web build entry lists and window startup contain no Agents Window sessions residue` to `src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts` and compiled it; selector **27 passing / 1 failing** on `vs/sessions/`.
+- **GREEN:** `build/next/index.ts` — removed the sessions desktop/web/code entry points, the `sessionsWebEntryPoint`/`webOnlyEntryPoints` constants and their web-target spread, the two desktop and one web CSS-bundle entries, and the `bundleDevTunnelsWeb`/`devTunnelsWebOutDir` import + call (its output path `vs/sessions/contrib/providers/remoteAgentHost/browser` is inside the sessions tree). `build/gulpfile.vscode.ts` — removed the four `vs/sessions/*` checksum entries and the `resources/win32/sessions.ico` packaging line. `windowImpl.ts` — removed the `configuration.isSessionsWindow` URL branch, the sessions icon override, the `backgroundThrottling` special case and the now-unused `join` import.
+- **Self-caught near-miss:** the first gulpfile splice also dropped `resources/win32/sass.ico`; diff review caught it before verification and the line was restored — the final diff removes only `sessions.ico` and the four checksum lines.
+- **TRIANGULATE:** boundary selector **28/28**; `npm run compile-client` **0 errors**; `npm run typecheck --prefix build` **exit 0, 0 TS errors**.
+- **Recorded tail (outside this leaf's surfaces):** `IWindowCreationOptions.isSessionsWindow` (windowImpl L55) is still passed from `windowsMainService.ts` L1568 and derived at L1555 from `environmentService.agentSessionsWorkspace` (also read at L731, L1479, L1682); removing it needs that path authorized. `resources/win32/sessions.ico` (physical file) and the now zero-importer `build/next/devTunnelsWeb*` helpers ride W22.
+- **Accepted consequence (recorded):** removing the gated `bundleDevTunnelsWeb` call means the sessions-web Dev Tunnels bundle is no longer produced by `build/next`; its consumer is the deleted sessions tree (W11) and account tunnels were removed in U03, so nothing retained loads it.
+- **Workload/PR boundary:** **58 measured** additions+deletions (1 + 18 additions, −39 deletions), inside the 400 budget.
+
+### Leaf 3 — Wave manifest refresh + material readiness finding
+
+- `deletion-review.md`: the agentPlugins bullet is corrected (extraction done; the tree returns as **W20** — 3 files/2,194 lines — deleted atomically with W12+W1); the C5 bullet records the cleanup plus the `windowsMainService.ts` tail; new rows **W21** (MCP plugin-discovery pair, 125+73 lines, must go with W1) and **W22** (`build/next/devTunnelsWeb*` 7 files/295 lines + the `resources/win32/sessions.ico` binary, after W11); the wave total is reconciled to **5,060 tracked files / 1,489,333 text lines + 116 binary files**; the dependency order and the item-8 precondition note are updated.
+- **Material finding — the "all retained Chat-tree edges are gone" readiness claim is false for relative imports.** An exact scan (resolve every relative `import`/`export … from` specifier under `src/vs/**` to a real path, then test it against the deletion roots, excluding importers inside those roots) finds **86 retained files with compile-level edges** (67 chat, 16 agentHost, 7 inlineChat, 2 chat-services, 2 terminal-chatAgentTools, 1 terminal-chat, 1 agentsVoice, 1 agentPlugins; some files have more than one target). 16 are already wave-covered (W8 3, W14 5, W15 4, W16 2, W19 2) and 2 join as W21, leaving **68 uncovered files in no batch**: 23 MCP (including `mcpTypes.ts`, `mcpServer.ts`, `mcpRegistry.ts`, `mcpService.ts` — `mcpTypes.test`, one of this leaf's verification selectors, exercises these imports), 19 browserView AI tools (C3-approved, not yet disconnected), 13 other integrations (`debugChatIntegration`, `issueReporterEditorPane`, `markersChatContext`, `remoteCodingAgentsService`, `scmHistoryChatContext`, `searchChatContext`, `testingChatAgentTool`(+test), `updateTitleBarEntry`, `assignmentFilters.test`, `githubService`→agentHost `githubEndpoints`, `inlineChatAffordance.fixture`), 3 extensions (including `extensions.contribution.ts`), 6 notebook/REPL (`viewModel/*` + `repl.contribution` → inlineChat), 5 terminal. The earlier literal-`contrib/chat/` scans could not see relative specifiers (`../../chat/...`). The parent was notified; the full measured inventory and candidate dispositions (a/b/c) are in `deletion-review.md`. W1/W2/W12 deletion cannot compile until these are disconnected or folded into the wave.
+- `removal-inventory.md`: pre-wave.001–.003 records with measured lines and evidence.
+
+### Verification — this pass (Node 24.18.0)
+
+- `npm run compile-client` → **0 errors** (three runs: post-splice fix, post-C5, post-sass-restore); `npm run typecheck --prefix build` → **exit 0, 0 TS errors**.
+- `./scripts/test.sh --run …`: parity **15 passing** (14 tests + harness clean-state), `mcpWorkspaceConfiguration` **13/13**, `pluginMcpDiscovery` **2/2**, `mcpTypes` **21/21**, `pluginParsers` **46/46**, `accountFreeApi` **10/10**, `productDebloatChatIntegrations` **28/28**.
+- `git diff --check` clean. `git status`: 7 modified tracked files + 2 new untracked source files (+ pre-existing `.pi/`); no path staged, unlinked, committed or pushed.
+
+### Remaining tasks / persisted checkboxes
+
+- No `tasks.md` checkbox maps to these leaves; none was changed. The closest rows remain unchecked, with remaining scope recorded: `- [ ] C5.RED → GREEN: Assert no Agents Window build/restore entries; disconnect sessions desktop/web entrypoints in `build/next/index.ts`, gulp/rspack/vite/component/layer/test registrations and remove **all `src/vs/sessions/`**, HTML/styles/tests/assets and exclusive session icons/resources in measured leaves. Preserve normal desktop/browser workbench builds and ordinary windows.` (build/next + gulp + window URL cleared here; rspack/vite/component/layer registrations and the tree removal remain) and `- [ ] C5.TRIANGULATE → REFACTOR: …` (the wave has not run).
+- Remaining queue: the parent's wave W1–W22; the `windowsMainService.ts` `isSessionsWindow` tail; the 68-file retained→deletion-tree readiness gap disposition.
+
+### Review focus for the verifier
+
+1. `mcpServerConfigurationNormalizer.ts` must be a verbatim move of the previous `pluginParsers.ts` function (only header/imports/section comment added), and `mcpWorkspaceConfiguration.ts` must import the normalizer only from the neutral module.
+2. `pluginParsers.ts` must contain no local definition of the normalizer — only the value import + `export { normalizeMcpServerConfiguration }` — and `pluginParsers.test.ts` must no longer import it.
+3. Boundary test: no `vs/sessions/`, `sessions.ico` or `config(uration)?.isSessionsWindow` reads remain in `build/next/index.ts`, `build/gulpfile.vscode.ts`, `windowImpl.ts`; the workbench fallback URL and the other win32 icons (incl. `resources/win32/sass.ico`) remain.
+4. Wave corrections: W20/W21/W22 rows, the corrected agentPlugins/C5 bullets, and the 68-file readiness inventory — verify the resolution method and choose dispositions before executing W1/W2/W12.

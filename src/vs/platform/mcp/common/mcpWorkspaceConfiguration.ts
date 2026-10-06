@@ -5,7 +5,7 @@
 
 import { parse, ParseError } from '../../../base/common/json.js';
 import { localize } from '../../../nls.js';
-import { normalizeMcpServerConfiguration } from '../../agentPlugins/common/pluginParsers.js';
+import { normalizeMcpServerConfiguration } from './mcpServerConfigurationNormalizer.js';
 import { IInstallableMcpServer } from './mcpManagement.js';
 import { IMcpServerConfiguration, McpServerType } from './mcpPlatformTypes.js';
 
