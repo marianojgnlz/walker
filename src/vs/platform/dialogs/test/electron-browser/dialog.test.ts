@@ -6,7 +6,6 @@
 import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
 import { IOSProperties } from '../../../native/common/native.js';
-import product from '../../../product/common/product.js';
 import { IProductService } from '../../../product/common/productService.js';
 import { createNativeAboutDialogDetails } from '../../electron-browser/dialog.js';
 
@@ -22,66 +21,56 @@ suite('Dialog', () => {
 		cpus: []
 	};
 
-	function getCopilotVersionLines(runtime: string, sdk: string): { details: string[]; detailsToCopy: string[] } {
-		const productService: IProductService = {
-			_serviceBrand: undefined,
-			...product,
-			copilotVersions: { runtime, sdk }
-		};
-		const { details, detailsToCopy } = createNativeAboutDialogDetails(productService, osProperties);
-		const selectCopilotVersionLines = (value: string) => value.split('\n').filter(line => line.startsWith('@github/copilot'));
-
+	function productServiceWith(overrides: Partial<IProductService>): IProductService {
 		return {
-			details: selectCopilotVersionLines(details),
-			detailsToCopy: selectCopilotVersionLines(detailsToCopy)
-		};
+			_serviceBrand: undefined,
+			nameLong: 'Test Product',
+			version: '1.2.3',
+			commit: 'abcdef0',
+			date: '2026-01-02T03:04:05.000Z',
+			...overrides
+		} as IProductService;
 	}
 
-	test('formats Copilot canary versions', () => {
-		assert.deepStrictEqual(
-			getCopilotVersionLines('1.0.84-canary.70.gdb75d0d.unsigned', '0.1.23-canary.45.gabcdef.unsigned'),
-			{
-				details: [
-					'@github/copilot: 1.0.84.70.gdb75d0d',
-					'@github/copilot-sdk: 0.1.23.45.gabcdef'
-				],
-				detailsToCopy: [
-					'@github/copilot: 1.0.84.70.gdb75d0d',
-					'@github/copilot-sdk: 0.1.23.45.gabcdef'
-				]
-			}
-		);
+	test('reports the retained product, runtime and OS details', () => {
+		const { title, details, detailsToCopy } = createNativeAboutDialogDetails(productServiceWith({}), osProperties);
+
+		assert.strictEqual(title, 'Test Product');
+		const lines = details.split('\n');
+		assert.strictEqual(lines[0], 'Version: 1.2.3');
+		assert.strictEqual(lines[1], 'Commit: abcdef0');
+		assert.match(lines[2], /^Date: 2026-01-02T03:04:05\.000Z \([^)]+\)$/, 'the interactive details carry a relative time');
+		assert.deepStrictEqual(lines.slice(3), [
+			`Electron: ${process.versions['electron']}`,
+			`ElectronBuildId: ${process.versions['microsoft-build']}`,
+			`Chromium: ${process.versions['chrome']}`,
+			`Node.js: ${process.versions['node']}`,
+			`V8: ${process.versions['v8']}`,
+			'OS: Test OS test-arch 1.0'
+		]);
+		// The copyable variant carries the same content without the relative time.
+		assert.deepStrictEqual(detailsToCopy.split('\n').filter(line => line.startsWith('Date: ')), ['Date: 2026-01-02T03:04:05.000Z']);
 	});
 
-	test('formats Copilot unstable versions', () => {
-		assert.deepStrictEqual(
-			getCopilotVersionLines('1.0.85-unstable.r35379093703.g3514c9a', '1.0.15-unstable.35393089353.gfc44743'),
-			{
-				details: [
-					'@github/copilot: 1.0.85.r35379093703.g3514c9a',
-					'@github/copilot-sdk: 1.0.15.35393089353.gfc44743'
-				],
-				detailsToCopy: [
-					'@github/copilot: 1.0.85.r35379093703.g3514c9a',
-					'@github/copilot-sdk: 1.0.15.35393089353.gfc44743'
-				]
-			}
-		);
+	test('keeps reporting versions with no product metadata available', () => {
+		const { details } = createNativeAboutDialogDetails(productServiceWith({ commit: undefined, date: undefined }), osProperties);
+
+		assert.deepStrictEqual(details.split('\n').filter(line => line.startsWith('Commit: ') || line.startsWith('Date: ')), [
+			'Commit: Unknown',
+			'Date: Unknown'
+		]);
 	});
 
-	test('preserves stable Copilot versions', () => {
-		assert.deepStrictEqual(
-			getCopilotVersionLines('1.0.84', '0.1.23'),
-			{
-				details: [
-					'@github/copilot: 1.0.84',
-					'@github/copilot-sdk: 0.1.23'
-				],
-				detailsToCopy: [
-					'@github/copilot: 1.0.84',
-					'@github/copilot-sdk: 0.1.23'
-				]
-			}
-		);
+	test('does not report removed Copilot runtime versions', () => {
+		const { details, detailsToCopy } = createNativeAboutDialogDetails(productServiceWith({}), osProperties);
+
+		for (const value of [details, detailsToCopy]) {
+			assert.doesNotMatch(value, /@github\/copilot|@github\/copilot-sdk/, 'the About dialog must not report removed Copilot versions');
+		}
+	});
+
+	test('marks target and universal builds in the version line', () => {
+		assert.match(createNativeAboutDialogDetails(productServiceWith({ target: 'server' }), osProperties).details, /^Version: 1\.2\.3 \(server setup\)/);
+		assert.match(createNativeAboutDialogDetails(productServiceWith({ darwinUniversalAssetId: 'universal' }), osProperties).details, /^Version: 1\.2\.3 \(Universal\)/);
 	});
 });

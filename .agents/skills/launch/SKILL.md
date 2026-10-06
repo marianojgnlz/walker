@@ -121,7 +121,7 @@ The script runs pre-launch (electron download, compile-if-missing, built-in exte
 For repeated launches of the same prepared build, pass `--skip-prelaunch` after one successful normal launch. Only use it while a watch task keeps all output current or neither sources nor build outputs have changed; otherwise the new instance may run stale or incomplete code.
 
 ```json
-{"pid":12345,"cdpPort":53111,"extHostPort":53112,"mainPort":53113,"agentHostPort":53114,"userDataDir":".../user-data","extensionsDir":".../extensions","sharedDataDir":".../shared-data","runDir":"...","logFile":".../code.log","repo":"...","agents":false,"timings":{"profileMs":231,"preLaunchMs":251,"cdpReadyMs":459,"totalMs":941}}
+{"pid":12345,"cdpPort":53111,"extHostPort":53112,"mainPort":53113,"userDataDir":".../user-data","extensionsDir":".../extensions","sharedDataDir":".../shared-data","runDir":"...","logFile":".../code.log","repo":"...","agents":false,"timings":{"profileMs":231,"preLaunchMs":251,"cdpReadyMs":459,"totalMs":941}}
 ```
 
 The additive `timings` object uses monotonic elapsed time to identify time spent preparing the isolated profile, running pre-launch, and starting Code OSS through CDP readiness. `totalMs` covers the complete launcher operation through readiness.
@@ -133,7 +133,6 @@ INFO=$("$LAUNCH" | tail -n1)
 CDP=$(jq -r .cdpPort        <<<"$INFO")
 EXT=$(jq -r .extHostPort    <<<"$INFO")
 MAIN=$(jq -r .mainPort      <<<"$INFO")
-AGENT=$(jq -r .agentHostPort <<<"$INFO")
 LOG=$(jq -r .logFile        <<<"$INFO")
 PID=$(jq -r .pid            <<<"$INFO")
 ```
@@ -145,7 +144,6 @@ $info = & $launch | Select-Object -Last 1 | ConvertFrom-Json
 $cdp = $info.cdpPort
 $ext = $info.extHostPort
 $main = $info.mainPort
-$agent = $info.agentHostPort
 $log = $info.logFile
 $pid = $info.pid
 ```
@@ -157,7 +155,6 @@ $pid = $info.pid
 | `cdpPort` (`--remote-debugging-port`) | Renderer (the workbench window) | `@playwright/cli` over CDP, also Chrome DevTools |
 | `extHostPort` (`--inspect-extensions`) | Extension host (Node) | `dap-cli` (Node inspector protocol) |
 | `mainPort` (`--inspect`) | Electron main process (Node) | `dap-cli` (Node inspector protocol) |
-| `agentHostPort` (`--inspect-agenthost`) | Agent host process (Node) | `dap-cli` (Node inspector protocol) |
 
 ## Drive the UI with @playwright/cli
 
@@ -370,7 +367,6 @@ To set breakpoints in VS Code source while the window is running, attach `dap-cl
 
 - **Extension host** (most common - Copilot Chat extension, built-in extensions, your own extension under development) -> `extHostPort`
 - **Main process** (Electron lifecycle, window/menu wiring, IPC) -> `mainPort`
-- **Local agent host** (`src/vs/platform/agentHost/node/...`, agent session lifecycle, AHP wiring, Claude/Copilot agent providers) -> `agentHostPort`
 - **Renderer** (the workbench itself, `src/vs/workbench/...`) -> `cdpPort`
 
 You can run `@playwright/cli` and `dap-cli` against the **same window simultaneously** - drive the UI with one terminal, hit a breakpoint and inspect state in another.

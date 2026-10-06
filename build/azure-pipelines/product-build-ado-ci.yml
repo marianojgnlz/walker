@@ -73,17 +73,6 @@ parameters:
     displayName: "Use legacy OSS Notice"
     type: boolean
     default: false
-  # SDK -> VS Code integration: override Copilot dependencies with versions
-  # already published to the private feed. 'none' = use the OSS SDK version.
-  # See microsoft/vscode-engineering specs/sdk-vscode-integration.spec.md.
-  - name: VSCODE_SDK_CANARY_VERSION
-    displayName: "SDK canary: @github/copilot-sdk version ('none' = normal build)"
-    type: string
-    default: none
-  - name: VSCODE_CLI_CANARY_VERSION
-    displayName: "Expected SDK-bundled runtime version ('auto' = infer from SDK)"
-    type: string
-    default: auto
 
 variables:
   - name: VSCODE_PRIVATE_BUILD
@@ -94,18 +83,6 @@ variables:
     value: false
   - name: NPM_REGISTRY
     value: ${{ parameters.NPM_REGISTRY }}
-  # Normalize sentinels back to empty so the override script can distinguish
-  # the normal SDK and inferred runtime paths.
-  - name: VSCODE_SDK_CANARY_VERSION
-    ${{ if eq(parameters.VSCODE_SDK_CANARY_VERSION, 'none') }}:
-      value: ""
-    ${{ else }}:
-      value: ${{ parameters.VSCODE_SDK_CANARY_VERSION }}
-  - name: VSCODE_CLI_CANARY_VERSION
-    ${{ if eq(parameters.VSCODE_CLI_CANARY_VERSION, 'auto') }}:
-      value: ""
-    ${{ else }}:
-      value: ${{ parameters.VSCODE_CLI_CANARY_VERSION }}
   - name: CARGO_REGISTRY
     value: ${{ parameters.CARGO_REGISTRY }}
   - name: VSCODE_QUALITY
@@ -120,10 +97,6 @@ variables:
     value: ${{ or(eq(parameters.VSCODE_BUILD_MACOS, true), eq(parameters.VSCODE_BUILD_MACOS_ARM64, true)) }}
   - name: VSCODE_BUILD_STAGE_WEB
     value: ${{ eq(parameters.VSCODE_BUILD_WEB, true) }}
-  - name: VSCODE_PUBLISH_COUNTER_PREFIX
-    value: $[format('{0:yyyyMMdd}-{1}-{2}', pipeline.startTime, variables['VSCODE_QUALITY'], variables['Build.SourceBranch'])]
-  - name: VSCODE_PUBLISH_COUNTER
-    value: $[counter(variables['VSCODE_PUBLISH_COUNTER_PREFIX'], 1)]
   # Derived as an explicit lowercase string literal so downloadNotice.ts's
   # case-sensitive JS check (process.env['VSCODE_OVERWRITE_TPN'] === 'false')
   # works. ${{ eq(...) }} would emit 'True'/'False' (capitalized) and silently
@@ -325,17 +298,6 @@ extends:
           os: linux
         jobs:
           - template: build/azure-pipelines/product-quality-checks.yml@self
-
-      - stage: Copilot
-        dependsOn: []
-        pool:
-          name: 1es-ubuntu-22.04-x64
-          os: linux
-        jobs:
-          - template: build/azure-pipelines/product-copilot.yml@self
-            parameters:
-              VSCODE_PUBLISH: false
-              VSCODE_RELEASE: false
 
       - ${{ if eq(variables['VSCODE_BUILD_STAGE_WINDOWS'], true) }}:
         - stage: Windows

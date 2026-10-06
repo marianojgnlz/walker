@@ -272,12 +272,12 @@ suite('Product chat integration boundaries', () => {
 
 		const taskTypes = readWorkbenchSource('contrib/tasks/common/tasks.ts');
 		assert.doesNotMatch(taskTypes, /\bChatAgent\b/);
-		for (const taskTool of [
-			'contrib/terminalContrib/chatAgentTools/browser/tools/task/runTaskTool.ts',
-			'contrib/terminalContrib/chatAgentTools/browser/tools/task/createAndRunTaskTool.ts',
-		]) {
-			assert.doesNotMatch(readWorkbenchSource(taskTool), /TaskRunSource\.ChatAgent/);
-		}
+		// The Chat agent tool tree that used to read `TaskRunSource.ChatAgent` is deleted,
+		// so assert that absence instead of reading a file that no longer exists.
+		assert.ok(
+			!existsSync(join(process.cwd(), 'src/vs/workbench', 'contrib/terminalContrib/chatAgentTools')),
+			'the removed Chat agent tool tree must not come back'
+		);
 	});
 
 	test('preferences and image carousel contain no stale Chat-only residue', () => {
@@ -365,7 +365,7 @@ suite('Product chat integration boundaries', () => {
 		assert.doesNotMatch(terminalExports, /import \{[^}]*\bterminalChatAgentToolsConfiguration\b|\.\.\.terminalChatAgentToolsConfiguration\b/);
 		assert.doesNotMatch(terminalExports, /terminalContrib\/chat(?:AgentTools)?\/|TerminalChat(?:CommandId|ContextKeyStrings|AgentToolsSettingId)/);
 		// These four Chat consumers were redirected off the generic terminal bridge in
-		// U05.c.026 and are parent-owned C4 deletion candidates. Check them only while
+		// U05.c.026 and their whole tree has since been deleted. Check them only while
 		// they still exist so this retained boundary test survives their deletion.
 		for (const chatTerminalConsumer of [
 			'contrib/chat/browser/actions/chatAccessibilityHelp.ts',
@@ -378,6 +378,10 @@ suite('Product chat integration boundaries', () => {
 				assert.doesNotMatch(readFileSync(chatTerminalConsumerPath, 'utf8'), /terminalContribExports/);
 			}
 		}
+		assert.ok(
+			!existsSync(join(process.cwd(), 'src/vs/workbench', 'contrib/chat')),
+			'the removed Chat tree must not come back'
+		);
 		assert.match(terminalExports, /terminalInitialHintConfiguration/);
 		assert.match(terminalExports, /terminalSuggestConfiguration/);
 
@@ -408,10 +412,65 @@ suite('Product chat integration boundaries', () => {
 		assert.match(tracker, /export interface IExternalEditCorrelation \{/);
 		assert.match(tracker, /export interface IExternalEditCorrelationResolution \{/);
 
-		// The Agent Host marker service is now a parent-owned deletion candidate: its
-		// agent-host protocol imports and implementation are gone from the retained tree.
-		const markerService = readWorkbenchSource('contrib/editTelemetry/browser/telemetry/agentHostEditMarkerService.ts');
-		assert.doesNotMatch(markerService, /platform\/agentHost|AgentHostEditMarkerService|IAgentHostEditMarkerService/);
+		// The Agent Host marker service died with the Agent Host tree, so assert its
+		// absence instead of reading a file that no longer exists.
+		assert.ok(
+			!existsSync(join(process.cwd(), 'src/vs/workbench', 'contrib/editTelemetry/browser/telemetry/agentHostEditMarkerService.ts')),
+			'the removed Agent Host edit marker service must not come back'
+		);
+	});
+
+	test('retained startup, policy and product surfaces carry no Agent Host debug or config-sync residue', () => {
+		// Debug ports: only the retained pty-host and shared-process inspectors stay parseable.
+		const argv = readRepositorySource('src/vs/platform/environment/common/argv.ts');
+		assert.doesNotMatch(argv, /'inspect-agenthost'|'inspect-brk-agenthost'/);
+		assert.match(argv, /'inspect-ptyhost'\?: string;/);
+		assert.match(argv, /'inspect-sharedprocess'\?: string;/);
+
+		const argvOptions = readRepositorySource('src/vs/platform/environment/node/argv.ts');
+		assert.doesNotMatch(argvOptions, /'inspect-agenthost'|'inspect-brk-agenthost'/);
+		assert.match(argvOptions, /'inspect-ptyhost': \{ type: 'string'/);
+		assert.match(argvOptions, /'inspect-sharedprocess': \{ type: 'string'/);
+
+		const environmentService = readRepositorySource('src/vs/platform/environment/node/environmentService.ts');
+		assert.doesNotMatch(environmentService, /parseAgentHostDebugPort|5878/);
+		assert.match(environmentService, /export function parsePtyHostDebugPort/);
+		assert.match(environmentService, /export function parseSharedProcessDebugPort/);
+
+		// Settings no longer mirror into a deleted agent host root configuration.
+		const configurationRegistry = readRepositorySource('src/vs/platform/configuration/common/configurationRegistry.ts');
+		assert.doesNotMatch(configurationRegistry, /IAgentHostConfigurationSync|getAgentHostSyncConfigurations|AgentHostConfigurationSyncScope|agentHostSyncConfigurations/);
+		assert.match(configurationRegistry, /getPolicyConfigurations\(\): Map<PolicyName, string>/);
+		assert.match(configurationRegistry, /Cannot register '\{0\}'\. A setting must not declare both 'policy' and 'policyReference'\./);
+
+		const requestConfiguration = readRepositorySource('src/vs/platform/request/common/request.ts');
+		assert.doesNotMatch(requestConfiguration, /agentHost: \{ key:|AgentHostConfigurationSyncScope/);
+		assert.match(requestConfiguration, /'http\.proxy'/);
+		assert.match(requestConfiguration, /'http\.noProxy'/);
+		assert.match(requestConfiguration, /function registerProxyConfigurations\(useHostProxy/);
+
+		// The About dialog and the dev product fallback no longer read Copilot versions.
+		const product = readRepositorySource('src/vs/base/common/product.ts');
+		assert.doesNotMatch(product, /copilotVersions/);
+		const productDefaults = readRepositorySource('src/vs/platform/product/common/product.ts');
+		assert.doesNotMatch(productDefaults, /copilotVersions|copilotRuntimeVersion|@github\/copilot-sdk/);
+		assert.match(productDefaults, /version: packageConfiguration\.version/);
+		const dialog = readRepositorySource('src/vs/platform/dialogs/electron-browser/dialog.ts');
+		assert.doesNotMatch(dialog, /copilot|formatCopilotVersion/i);
+		assert.match(dialog, /localize\(\{ key: 'aboutDetail'/);
+
+		// The removed Copilot packages are not dependencies of the retained product.
+		const manifest = readRepositorySource('package.json');
+		assert.doesNotMatch(manifest, /@github\/copilot-sdk|@vscode\/copilot-api|copilotRuntimeVersion/);
+		assert.match(manifest, /"compile": "npm run compile-client"/);
+	});
+
+	test('workspace build tasks carry no Copilot watcher scripts', () => {
+		const tasks = readRepositorySource('.vscode/tasks.json');
+
+		assert.doesNotMatch(tasks, /copilot/i);
+		assert.match(tasks, /"script": "watch-client-transpiled"/);
+		assert.match(tasks, /"label": "VS Code - Build"/);
 	});
 
 	test('server and shared process do not wire Agent Host starters or channels', () => {

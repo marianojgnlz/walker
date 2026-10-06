@@ -2856,3 +2856,227 @@ Parent-derived status: `activeChange: product-debloat`, `artifactStore: openspec
 3. Smoke: `test/smoke/src/main.ts` no longer references the deleted area; the 64 `test/smoke` tsc errors are exactly the W36.a-internal ones and disappear on `git rm`; the retained `browserView`/`utils.ts`/`mock-llm-server.ts` chain is untouched.
 4. Manifest: W36 is exactly six files / 3,261 lines; no retained file references them.
 5. Do not treat the 2/28 stale `productDebloatChatIntegrations` failures as this leaf’s regression — the ENOENT paths were deleted in C4/U06–U07 and the file is outside the granted surfaces.
+
+## C6 cleanup leaf + U09/P2/P3 (C7) — kill the Copilot build machinery (2026-10-07, `c6.cleanup-a` + `p2.green`/`p2.red` + `c7.disconnect`)
+
+### Structured status and scope
+
+- Parent-derived status consumed: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`, `actionContext: {mode: implement, workspace/cwd: /home/marialez/Work/walker, branch: product-debloat (never commit), never commit}`, `delivery: feature-branch-chain`, 400 authored lines per leaf; `taskAccounting` at input `{total: 109, remaining: 41, checked: 68}`. Strict TDD is off per `openspec/config.yaml`; the task-named RED→GREEN order was still followed per leaf. Node 24.18.0 via the authorized mise PATH.
+- Assigned work: the C6 cleanup grant ("C6 cleanup additions"), U09/P2/P3 (Copilot build machinery + dependency tails), the C7 disconnection sweep and its manifest entry, and the completed-row accounting.
+- Entry worktree: only the pre-existing untracked `.pi/` present; every pre-existing tracked file preserved except the recorded edits below. No stage/commit/publish; nothing written outside the granted surfaces.
+
+### Leaf C6.cleanup-a — stale ENOENT test reads + W34 `.github` residue (62 changed lines, 4 files)
+
+- **RED:** `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` on the pre-fix tree → **26 passing / 2 failing**, both failures `ENOENT: no such file or directory`: `contrib/terminalContrib/chatAgentTools/browser/tools/task/runTaskTool.ts` (C4 chat tree) and `contrib/editTelemetry/browser/telemetry/agentHostEditMarkerService.ts` (U06/U07 wave). Recorded verbatim in the previous leaf's report.
+- **GREEN:** the two reads became absence assertions (`assert.ok(!existsSync(...))`) that name the deleted trees, plus a new `contrib/chat` tree-absence assertion in the same retained-boundary test. The four guarded `chatTerminalConsumer` reads keep their `existsSync` guard (their comment now says the whole tree is deleted).
+- **TRIANGULATE:** `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` → **28 passing / 0 failing** (was 26/2).
+- **W34 `.github` residue:** `.github/skills/code-oss-logs/SKILL.md` no longer points at the deleted `agent-host-logs` skill (description + `agenthost.log` mention); `.github/skills/memory-leak-audit/SKILL.md` drops the removed `npm run perf:chat-leak`/`chat-perf` step; `.github/CODENOTIFY` loses the five `src/vs/platform/agentHost/**` entries and the two absent W34 refs (`sessions.instructions.md`, `skills/sessions/SKILL.md`). W34 whole-file deletions stay parent-owned and already recorded in `deletion-review.md`.
+
+### Leaf P2.red — Copilot-free packaging contract (183 new lines, 2 files)
+
+- New `build/lib/test/copilotFreePackaging.test.ts` (151 lines, 8 tests) asserts, **with no `@github/copilot*` package installed**: no build source imports `build/lib/copilot.ts` (recursive scan), the module is not loadable once deleted, neither packaging task list schedules a shim fixup (exact task-list shape), no packaging manifest/npm dir/filter/lint surface points at a Copilot package, both Darwin merge files keep ripgrep/os-proxy-resolver/mxc and drop Copilot, and ordinary Search + retained native payload selection still maps every shipped platform. The two `@microsoft/mxc-sdk` cases and the ripgrep payload cases that used to live in `build/lib/test/copilot.test.ts` are carried here (`getMxcExcludeFilter`) or in `build/lib/test/ripgrep.test.ts`.
+- New neutral `build/lib/mxc.ts` (32 lines): `getMxcExcludeFilter` extracted out of the dying `build/lib/copilot.ts` (same P1 pattern as `build/lib/ripgrep.ts`) so the retained terminal-sandbox packaging keeps its per-architecture payload filter.
+- **RED evidence (worktree-preserving):** the new assertions were evaluated against `git show HEAD:<file>` for the committed pre-edit content — **12/12 targeted RED checks failed** (desktop/REH gulpfile import the helper and call the shim, `.moduleignore` carries Copilot+Koffi rules, `dirs.ts` installs the deleted extension, `lib/extensions.ts`/`gulpfile.extensions.ts` know the Copilot extension, `filters.ts` carves it out, both Darwin files reference Copilot natives).
+
+### Leaf P2.green — Copilot build machinery disconnection (255 changed lines, 9 files)
+
+- `build/gulpfile.vscode.ts` (56): dropped the `lib/copilot.ts` import, the `getCopilotRuntimeVersion`/`package.json.copilotRuntimeVersion` equality check, the `packageLock`/`getLockedPackageVersion` helper, the `copilotVersions` product stamping, `ensureCopilotPlatformPackage` + `getCopilotRuntimePrebuildFiles` merge, `getCopilotExcludeFilter`/`getCopilotTgrepExcludeFilter`, the `@github/copilot-sdk-*` ASAR-unpack rule, the `tgrep.exe`/`OneAuthInterop.dll` patch globs and the whole `prepareCopilotRipgrepShimTask` fixup plus its task-list slot. `build/gulpfile.reh.ts` (27): same treatment for the REH packager.
+- `build/.moduleignore` (40): all `@github/copilot*`, `@github/copilot-sdk*` and the Copilot-only `koffi`/`@koromix/koffi-*` rules removed; the `@vscode/os-proxy-resolver` block is untouched.
+- `build/darwin/create-universal-app.ts` (59) + `build/darwin/verify-macho.ts` (20): Copilot cross-copy blocks, `filesToSkip`, `singleArchFiles`, `x64ArchFiles` and Mach-O skip patterns removed; ripgrep-universal, os-proxy-resolver and mxc-sdk entries kept verbatim.
+- `build/lib/extensions.ts` (30): `packageCopilotExtensionStream` deleted, `'copilot'` removed from `excludedExtensions`, stale comment fixed. `build/gulpfile.extensions.ts` (7): `compile-copilot-extension-build` task removed. `build/npm/dirs.ts` (1): `'extensions/copilot'` removed. `build/filters.ts` (15): the four `!extensions/copilot/**` blocks and three dead `src/vs/platform/agentHost/node/codex/protocol/generated/**` entries removed.
+- Verified: `npm run typecheck --prefix build` **exit 0**; `cd build && node --test lib/test/{ripgrep,walkerProduct,copilotFreePackaging}.test.ts` → **34/34 pass**; `cd build && node --test next/test/build-fast.test.ts` → **12/12 pass** (after the C7 lane removal); `npm run gulp compile-extensions` **exit 0** (0 errors, retained extensions only).
+
+### Leaf P2/P3 deps — manifest, lock and Cargo tails (516 changed lines, 4 files)
+
+- `package-lock.json` (**468 deletions**, generated file): the 29 removed member blocks are split into two review groups — (a) the SDK entry + its 8 `@github/copilot-sdk-{darwin,linux,linuxmusl,win32}-*` platform packages and the root `dependencies` line; (b) the 20 nested `node_modules/@github/copilot-sdk/node_modules/**` entries (`koffi`, 17 `@koromix/koffi-*`, `zod`). Both groups are pure dependency-graph removals with no hand-authored logic; JSON validity re-checked by parse, and `node_modules/zod` is retained because `zod` is still a root dependency. The nested `vscode-jsonrpc` copy is retained for the dev-tunnels packages (checked: those four packages depend on it).
+- `package.json` (18): `@github/copilot-sdk` dependency, `copilotRuntimeVersion`, the `koffi` override and the `koffi@3.2.1` `allowScripts` entry removed; `compile-copilot`, `watch-copilot`, `watch-copilotd`, `kill-watch-copilotd`, `copilot:setup`, `copilot:get_token` removed and `compile`/`watch`/`watch-transpile` re-pointed at the retained targets. `compile-client` was accidentally dropped in the first edit and restored in the same pass — `npm run compile` **exit 0** re-proves it.
+- `cli/Cargo.toml` (2) + `cli/Cargo.lock` (28): the unused `ahp`/`ahp-types` 0.9.0 dependencies removed (zero `ahp` references remain in `cli/src/**` after W35). `cargo check --manifest-path cli/Cargo.toml` **exit 0** (only the two pre-existing W35 dead-code warnings).
+
+### Leaf C7.disconnect — retained consumers of the bundled Copilot extension (recorded as three review units)
+
+- **C7.workflows (374 changed lines, 10 files):** `.github/workflows/pr.yml` loses the four whole Copilot jobs (`copilot-check-test-cache`, `copilot-check-telemetry`, `copilot-linux-tests`, `copilot-windows-tests`, 226 lines); `pr-node-modules.yml` loses the `copilot-linux`/`copilot-windows` cache jobs (66); the `Compile Copilot Chat extension for smoke tests` step is removed from `pr-linux-test.yml`/`pr-win32-test.yml`/`pr-darwin-test.yml`; `.github/codeql/codeql-config.yml` drops its 27 `extensions/copilot/**` exclusions; `.github/instructions/oss-third-party-notices.instructions.md` loses the deleted-extension example; `.github/CODENOTIFY` loses the 23 `extensions/copilot/**` code-owner entries.
+- **C7.pipelines (230 changed lines, 21 files):** the `Copilot` stage is removed from `product-build.yml`, `product-build-template.yml`, `product-build-ado-ci.yml` and `product-smoke-flaky.yml` (whose three OS stages no longer `dependsOn: Copilot`); the detached/attach VSIX steps are removed from the alpine/darwin/linux/win32/web compile pipelines; the `apply-sdk-canary.yml` include is removed from all 8 consumers plus the canary parameters/variables from `product-build.yml`/`product-build-ado-ci.yml`; the now-dead `VSCODE_PUBLISH_COUNTER*` variables are removed from `product-build.yml`, `product-build-ado-ci.yml`, `product-build-variables.yml` and `product-smoke-flaky.yml`; per-OS compile/test steps drop the `copilot/pull-test-cache.yml` and `copilot/test-integration-steps.yml` includes; the packaged-Agent-Host smoke step (`build/azure-pipelines/common/smokeTestAgentHost.ts`, C6 tail) is disconnected from all three compile pipelines; `oss/scan-licenses.ts` and `oss/platform-binary.test.ts` use retained packages in their examples; `downloadNotice.ts`/linux test comments no longer cite deleted Copilot machinery.
+- **C7.build-discovery (110 changed lines, 5 files):** `.vscode-test.js` drops the `copilot` test label and gains absence invariants (no Copilot label, no `extensions/copilot`/`@github/copilot-sdk`/`copilotRuntimeVersion` in npm discovery, extension packaging or the root manifest, and no Copilot reference in the five retained PR workflows); `build/next/build-fast.ts` + its test drop the Copilot build lane/input/output/env fingerprint; `build/hygiene.ts` + `build/gulpfile.hygiene.ts` drop `checkCopilotEnginesVersion` (it read the deleted `extensions/copilot/package.json` on every staged `package.json`).
+- Verified: `node --check .vscode-test.js` + dynamic import **exit 0** (all invariants hold); `node --test build/next/test/build-fast.test.ts` **12/12**; `npm run gulp compile-extensions` **exit 0**; a reference sweep over `*.yml|ts|js|json|md|sh|bat` shows **no retained file references** `extensions/copilot`, `downloadCopilotVsix`, `product-copilot`, `apply-sdk-canary`, `copilot/pull-test-cache.yml`, `copilot/test-integration-steps.yml`, `chat-lib-package` or `smokeTestAgentHost` (self-references only).
+
+### Verification evidence (this pass)
+
+| Command | Result |
+| --- | --- |
+| `npm run compile-client` (Node 24.18.0) | **exit 0**, 0 errors (run before and after the build-machinery edits) |
+| `npm run compile` (after the script fix) | **exit 0** — client + retained extensions, no Copilot target |
+| `npm run gulp compile-extensions` | **exit 0** — every retained extension "0 errors" |
+| `npm run typecheck-client` | **exit 0** |
+| `npm run typecheck --prefix build` | **exit 0** (pretypecheck DTO copy regenerated only) |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` | RED **26 passing / 2 failing (ENOENT)** → GREEN **28 passing / 0 failing** |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing** (maintenance check on retained auth boundary) |
+| `cd build && node --test lib/test/{ripgrep,walkerProduct,copilotFreePackaging}.test.ts` | **34/34 pass** |
+| `cd build && node --test next/test/build-fast.test.ts` | **12/12 pass** |
+| `cargo check --manifest-path cli/Cargo.toml` | **exit 0** (2 pre-existing unused-function warnings from W35) |
+| `node --check .vscode-test.js` + config import | **exit 0**, no invariant violation |
+| `git diff --check` | **clean** |
+
+### Incidents and disclosures
+
+- **`npm run gulp --tasks-simple` ran the default gulp task.** npm consumed `--tasks-simple` as an npm CLI config ("Unknown cli config") and passed no task to gulp, so the default task started the extension `clean-extension-*`/`compile-extension-*` sequence for a few seconds before the pipe closed. Only **authorized generated outputs** were touched (`extensions/**/out/**`, `**/*.tsbuildinfo`); `git status` shows no modified tracked file and no new tracked file outside the listed edits, and the same tasks were subsequently run deliberately (`npm run gulp compile-extensions`, exit 0) to leave the tree consistent. No user data, no repository source, no vcs state affected. The accidental run is not used as verification evidence.
+- **Coupling discovered after the dependency removal:** `src/vs/platform/product/common/product.ts` reads `packageJson.copilotRuntimeVersion` + the `@github/copilot-sdk` lock version to populate `product.copilotVersions`, and `src/vs/platform/dialogs/electron-browser/dialog.ts` prints those two values in the About dialog. With the dependency and runtime field gone the fields are simply absent (no crash, no type error — both fields are optional), so the About dialog now shows "@github/copilot: Unknown / @github/copilot-sdk: Unknown". Cleaning that readout needs paths outside this pass's grant (see the escalation below).
+- **Budget honesty:** `C7.workflows` (374) and `C7.pipelines` (230) and `C7.build-discovery` (110) are recorded as three review units; `package-lock.json` (468) is split into the two member groups above. All disconnection review units are ≤400 authored lines; `P2.green` (255) and `P2.red` (183) are separate leaves.
+
+### Escalation — genuinely new paths (closed option set)
+
+The grant's two C6.TRIANGULATE paths could not be used as written: `src/vs/workbench/contrib/preferences/common/configurationRegistry.ts` **does not exist**, and the `inspect-agenthost` debug ports are not in `src/vs/workbench/contrib/debug/**` but in `src/vs/platform/environment/**`. The derived candidate set (exact, repository-relative) is:
+
+```text
+O1  src/vs/platform/environment/node/environmentService.ts        remove the caller-less parseAgentHostDebugPort
+    (+ the already-granted src/vs/platform/environment/{common,node}/argv.ts entries it reads)
+O2  src/vs/platform/configuration/common/configurationRegistry.ts  remove the consumer-less IAgentHostConfigurationSync mechanism
+O3  src/vs/platform/request/common/request.ts                      remove the 3 `agentHost:` descriptors that are its only producers
+O4  .vscode/tasks.json                                             remove the Copilot build/kill tasks that call the removed npm scripts
+O5  src/vs/platform/product/common/product.ts                      remove the copilotVersions fallback
+    src/vs/platform/dialogs/electron-browser/dialog.ts             remove the About-dialog Copilot rows
+    src/vs/platform/dialogs/test/electron-browser/dialog.test.ts   follow the dialog change
+    src/vs/base/common/product.ts                                  remove the copilotVersions type member (already granted in U06)
+O6  .agents/skills/launch/SKILL.md                                 drop the stale agentHostPort/--inspect-agenthost row
+```
+
+Also recorded as C7/P3 follow-ups outside every grant so far: `eslint.config.js` (Copilot plugin import + `extensions/copilot/**` patterns + `copilot-local` blocks), `.eslint-ignore`, the two `.eslint-allowed-*` files, `@vscode/copilot-api` + `src/typings/copilot-api.d.ts`, `src/vs/platform/otel/common/{genAiAttributes,spanData}.ts` comments, `src/vs/workbench/services/extensionManagement/test/common/ignoredExtensionsManagementService.test.ts`, `test/smoke/src/utils.ts`, `extensions/dotnet-toolchain/README.md`, and the `build/agent-sdk/**` / `build/codex/**` / `build/dictation-runtime/**` producers with their pipeline templates (P3.GREEN).
+
+### Pending physical deletion (parent `git rm`) — W37
+
+`deletion-review.md` §“W37 — Bundled Copilot extension tree + its packaging/CI tails” lists every entry with per-file evidence and confirms each is disconnected. Summary: `extensions/copilot/**` (whole tree) · `build/lib/copilot.ts` · `build/lib/test/copilot.test.ts` · `build/azure-pipelines/copilot/**` (6 files) · `build/azure-pipelines/product-copilot.yml` · `product-copilot-recovery.yml` · `common/downloadCopilotVsix.ts` · `common/apply-sdk-canary.yml` · `common/apply-sdk-canary-override.ts` · `common/smokeTestAgentHost.ts` (C6 tail) · `build/copilot-migrate-pr.ts` · `.github/workflows/chat-lib-package.yml` · `.github/skills/otel/SKILL.md` · plus the W34 pair already recorded (`chat-perf.yml` + `skills/chat-perf/**`). Coupled lint/ignore entries must be removed **in the same commit** as their files. W36 (Agent Host smoke/automation tails) is still awaiting its own deletion.
+
+### Persisted task state
+
+- `tasks.md` re-read after this pass: **109 rows / 69 checked / 40 unchecked** (`- [x]` count verified by disk scan). Newly checked: **P2.RED** (the packaging contract test exists and runs green).
+- Deliberately left unchecked, with the exact remaining scope: **P2.GREEN** (all disconnection + dependency/runtime-version work is done; the two whole-file deletions `build/lib/copilot.ts` and `build/lib/test/copilot.test.ts` are parent-owned, so the row closes when the deletion is observed) · **C7.RED → GREEN** (disconnection done; `extensions/copilot/**` physical deletion is W37/parent-owned) · **C7.TRIANGULATE → REFACTOR** (needs a clean packaged build with no Copilot extension/runtime, i.e. the V1/package stage) · **P3.GREEN** (the `build/agent-sdk`/`build/codex`/`build/dictation-runtime` producers and the agent-only dependency inventory remain for their own leaf) · **P2/P3.TRIANGULATE → REFACTOR** (requires `npm run build-fast` + `vscode-linux-x64` packaging runs, not authorized in this pass) · **C6.TRIANGULATE → REFACTOR** (blocked on the O1–O3 paths above + the W36 deletion; the `build/azure-pipelines/common/smokeTestAgentHost.ts` tail from that row **is** now disconnected).
+
+### Review focus for the verifier
+
+1. Packaging still works without any Copilot fixup: both gulpfile task lists, `build/.moduleignore`, `build/filters.ts`, `build/npm/dirs.ts` and both Darwin merge files are Copilot-free, while ripgrep/os-proxy-resolver/mxc filters and the ASAR unpack rules are byte-identical in intent; `compile-extensions` and `typecheck --prefix build` are green.
+2. `build/lib/mxc.ts` is a faithful extraction of `getMxcExcludeFilter` (same two-architecture semantics + armhf stripping), and no retained module reads Copilot payloads (the new `copilotFreePackaging.test.ts` enforces this).
+3. `package-lock.json` contains no `copilot-sdk`/`koffi` entry and is valid JSON; `zod`/`vscode-jsonrpc` remain for their retained consumers.
+4. The five retained PR workflows and the per-OS pipelines still express their original stages/steps minus Copilot (no dangling `dependsOn: Copilot`, no orphan template include, no removed variable still referenced).
+5. The stale-test fix replaced only the two ENOENT reads and added tree-absence assertions; every other retained-boundary assertion in that suite is unchanged.
+
+## C6/C7 follow-up leaf — `approve-all-six` (O1–O6) + P3 consumers (2026-10-07)
+
+### Structured status and scope
+
+- Parent decision consumed verbatim: **`approve-all-six`** — O1–O6 approved "at their real paths" plus the recorded C7-lane consumers (`@vscode/copilot-api`, `src/typings/copilot-api.d.ts`, `src/vs/platform/otel/**` comments) as **P3.GREEN** scope; whole-file decisions stay parent-owned. `actionContext` unchanged (implement, `/home/marialez/Work/walker`, branch `product-debloat`, never commit); Node 24.18.0; standard mode with the RED→GREEN evidence contract per leaf.
+- Grant-path notes (disclosed, not widened): the enumerated `parent-authorization.md` list names `.github/skills/**` while O6 is `.agents/skills/launch/SKILL.md`, and it does not enumerate `src/vs/platform/environment/node/environmentService.ts` — both are explicitly named by the O1/O6 scope lines, so they were edited and are called out here rather than silently treated as covered.
+- Extra compile-necessity path: removing the `agentHost` schema member surfaced one more producer, `src/vs/workbench/api/common/configurationExtensionPoint.ts` (the extension-contributed-configuration guard that errors on `agentHost` and deletes it). That file is covered by the standing U05 `src/vs/workbench/api/**` grant and is recorded as such.
+
+### RED → GREEN
+
+- **RED:** the two new tests plus the O1–O6/P3 assertions were evaluated against the committed pre-edit content (`git show HEAD:<file>`): **11/11 targeted checks failed** — argv still declared `inspect-agenthost`, `parseAgentHostDebugPort` still existed, `IAgentHostConfigurationSync`/`getAgentHostSyncConfigurations` were still declared, `request.ts` still produced the three descriptors, the product type still declared `copilotVersions`, the dev fallback still read `copilotRuntimeVersion`, the About dialog still printed `@github/copilot*`, `.vscode/tasks.json` still called `watch-copilotd`, and the root manifest still depended on `@vscode/copilot-api`.
+- **GREEN + TRIANGULATE:** `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` → **30 passing / 0 failing** (28 before; the two new tests are "retained startup, policy and product surfaces carry no Agent Host debug or config-sync residue" and "workspace build tasks carry no Copilot watcher scripts"). `./scripts/test.sh --run vs/platform/dialogs/test/electron-browser/dialog.test` → **5 passing / 0 failing** (the rewritten retention test: version/commit/date/runtime/OS rows, unknown-metadata fallback, target/universal marks, and a new "does not report removed Copilot runtime versions" absence assertion).
+
+### Work executed
+
+- **O1 — debug ports:** `parseAgentHostDebugPort` (and its `5878` port) removed from `src/vs/platform/environment/node/environmentService.ts`; `'inspect-agenthost'`/`'inspect-brk-agenthost'` removed from `src/vs/platform/environment/common/argv.ts` (type) and `node/argv.ts` (option table). `parsePtyHostDebugPort`/`parseSharedProcessDebugPort` and their callers are untouched (verified by grep + both suites).
+- **O2 — configurationRegistry:** the whole `IAgentHostConfigurationSync` + `AgentHostConfigurationSyncScope` surface removed: interface + enum, the `IConfigurationRegistry.getAgentHostSyncConfigurations()` declaration and getter, the `IRegisteredConfigurationPropertySchema.agentHost` member, the private `agentHostSyncConfigurations`/`excludedAgentHostSyncKeys` fields and constructor init, the registration capture and `included: false` mirroring side table, both deregistration cleanups, and the duplicate-key validation branch. Policy/policyReference/experiment behaviour is untouched (assertions in the boundary test cover the retained policy path).
+- **O3 — request.ts:** the three `agentHost:` descriptors (`http.proxy`, `http.proxyKerberosServicePrincipal`, `http.noProxy`) and the `AgentHostConfigurationSyncScope` import removed; `registerProxyConfigurations` and the proxy settings themselves are unchanged.
+- **O3a — extension-point guard** (compile necessity, U05 grant): `src/vs/workbench/api/common/configurationExtensionPoint.ts` no longer guards/deletes `propertyConfiguration.agentHost`, since the schema member it deleted no longer exists.
+- **O4 — `.vscode/tasks.json`:** the `Copilot - Build` (32 lines) and `Kill Copilot - Build` (12 lines) npm tasks removed, their `dependsOn` entries dropped from `VS Code - Build`/`Kill VS Code - Build`, and the `Install & Watch (All)` detail text re-worded. File re-validated as JSON (40 tasks; `VS Code - Build` = Core - Transpile, Core - Typecheck, Ext - Build).
+- **O5 — About dialog/product:** `copilotVersions` removed from `IProductConfiguration` (`src/vs/base/common/product.ts`); `copilotRuntimeVersion`/`dependencies`/`getDependencyVersion` and the `copilotVersions` fallback removed from `src/vs/platform/product/common/product.ts`; the `@github/copilot`/`@github/copilot-sdk` rows and `formatCopilotVersion` removed from `src/vs/platform/dialogs/electron-browser/dialog.ts` (localize placeholders renumbered `{8}` for OS, key/comment updated). `src/vs/platform/dialogs/test/electron-browser/dialog.test.ts` rewritten from Copilot-version formatting to retained-behaviour coverage.
+- **O6 — launch skill:** the `agentHostPort`/`--inspect-agenthost` port row, the JSON sample field, the `jq`/PowerShell extractions and the "Local agent host" debugging bullet removed from `.agents/skills/launch/SKILL.md`.
+- **P3 consumers:** `@vscode/copilot-api` removed from `package.json` + `package-lock.json` (7 generated lines); `src/vs/platform/otel/common/genAiAttributes.ts` + `spanData.ts` comments no longer point at the deleted extension's mirrors.
+
+### Verification evidence (this leaf)
+
+| Command | Result |
+| --- | --- |
+| `npm run compile-client` (Node 24.18.0) | **exit 0**, 0 errors (first run correctly failed on the `configurationExtensionPoint.ts` dangling `agentHost` read; fixed, then green) |
+| `npm run typecheck-client` | **exit 0 / 0 errors** |
+| `npm run typecheck --prefix build` | **exit 0 / 0 errors** |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` | **30 passing** (was 28) |
+| `./scripts/test.sh --run vs/platform/dialogs/test/electron-browser/dialog.test` | **5 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing** |
+| `cd build && node --test lib/test/{ripgrep,walkerProduct,copilotFreePackaging}.test.ts next/test/build-fast.test.ts` | **46/46 pass** |
+| `git diff --check` | **clean** |
+| Reference sweep | zero remaining `inspect-agenthost`/`parseAgentHostDebugPort`/`getAgentHostSyncConfigurations`/`IAgentHostConfigurationSync`/`copilotVersions`/`copilotRuntimeVersion`/`@vscode/copilot-api` references outside the parent-owned W37 manifest items, the ungranted launcher scripts and my own absence assertions |
+
+### Workload / review boundary
+
+- Single cohesive review unit at **388 authored lines**: `.vscode/tasks.json` 52 · `productDebloatChatIntegrations.test.ts` +53 · `configurationRegistry.ts` 111 · `dialog.test.ts` 99 · `dialog.ts` 13 · `product/common/product.ts` 13 · `otel/spanData.ts` 8 · `launch/SKILL.md` 6 · `base/common/product.ts` 5 · `request.ts` 5 · `environmentService.ts` 4 · `configurationExtensionPoint.ts` 4 · `otel/genAiAttributes.ts` 3 · two argv files 4 · `package.json` 1 · `package-lock.json` 7 (generated). Inside the 400-line cap; no size exception.
+- Whole-file decision: `src/typings/copilot-api.d.ts` → **W37.l** in `deletion-review.md` (parent `git rm`); its dependency is already gone.
+
+### Persisted task state
+
+- `tasks.md` re-read: **109 rows / 69 checked / 40 unchecked** — unchanged this leaf, deliberately:
+  - **C6.TRIANGULATE → REFACTOR** stays `- [ ]`. Every executor-owned tail in its text is now removed (process-info/URL-restoration tails = the debug ports; the SDK/native dependency group named by the row = `@github/copilot-sdk`, `@vscode/copilot-api`, `ahp`/`ahp-types`; plus the `smokeTestAgentHost.ts` pipeline tail). The row's own closing clause — "Close T10 credit only after actual source/package deletion" — is not satisfiable yet: **W36** (6 Agent Host smoke/automation files) and **W37** (`extensions/copilot/**`, `build/lib/copilot.ts`, `build/lib/test/copilot.test.ts`, the Copilot pipelines, `src/typings/copilot-api.d.ts`, …) are parent-owned `git rm` work. Check this row once those deletions are observed.
+  - **P3.GREEN** stays `- [ ]`: its named cleanups are done (`build/lib/extensions.ts`, `build/npm/dirs.ts`, `build/filters.ts`, package scripts, platform-pipeline Copilot jobs/cache/artifact hooks, native/license fixtures) plus the P3 consumers this leaf removed, but its producers are not gone: `build/agent-sdk/**` (still read by `gulpfile.vscode.ts` for the `agentSdks` product stamp and still produced by `agent-sdk-produce.yml`), `build/codex/**` protocol tooling, `build/dictation-runtime/**`, and the agent-only dependency inventory (`@microsoft/mxc-sdk`, `@vscode/sandbox-runtime`, `@anthropic-ai/sdk`, `@anthropic-ai/claude-agent-sdk`, `foundry-local-sdk`) remain for their own leaf.
+  - `P2.GREEN` / `C7.RED → GREEN` unchanged (pending the parent deletions); `P2/P3.TRIANGULATE` unchanged (needs the packaging runs).
+
+### Review focus for the verifier
+
+1. `validateProperty`/`doDeregisterConfigurations` still behave correctly for policy/policyReference/experiment and `included: false` settings — the removed agentHost side table was the only special case.
+2. Unknown CLI options are still non-fatal after the argv removals, and the retained `--inspect-ptyhost`/`--inspect-sharedprocess` (with `parsePtyHostDebugPort`/`parseSharedProcessDebugPort` callers in `electronPtyHostStarter`/`nodePtyHostStarter`/`sharedProcess`) are intact.
+3. `.vscode/tasks.json` is valid JSON with no dangling `dependsOn` label, and `VS Code - Build` still covers core + extensions.
+4. The About dialog still prints version/commit/date/Electron/Chromium/Node/V8/OS exactly once each with the right placeholders (`{8}` = OS) — the rewritten dialog test pins this.
+5. The two new boundary tests are the permanent guard for this leaf; they must keep failing if any of these references returns.
+
+## Deletion-coupling cleanup for W37 — lint/ignore, launcher scripts, product comment (2026-10-07, ratified deletion-coupling grant)
+
+### Structured status and scope
+
+- Parent-derived status consumed: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`, `actionContext: {mode: implement, workspace/cwd: /home/marialez/Work/walker, branch: product-debloat (never commit)}`, `taskAccounting` at input `{total: 109, remaining: 40, checked: 69}`; delivery `feature-branch-chain` (already resolved), 400 authored lines per review unit; strict TDD off per `openspec/config.yaml`; Node 24.18.0 via the authorized mise PATH. No status field was missing.
+- Assigned work (all under the ratified grant in `parent-authorization.md` §"Ratifications + deletion-coupling grant", 2026-10-06): (1) the lint/ignore coupling for the W37 deletion — copilot eslint plugin import, `extensions/copilot/**` patterns, copilot-allowed lists, and every allow-list/ignore entry naming W37 files; (2) the launcher-script residues (agent-host port allocation, `--inspect-agenthost`, `agentHostPort` emission); (3) the `src/vs/base/common/product.ts` comment citing the deleted agent-host roadmap.
+- Entry worktree: the previous C6/C7 follow-up leaf's uncommitted edits were present and were preserved untouched (`package.json`, `package-lock.json`, `configurationRegistry.ts`, `dialog*.ts`, `argv*.ts`, `environmentService.ts`, `otel/*`, `product/common/product.ts`, `request.ts`, `configurationExtensionPoint.ts`, `productDebloatChatIntegrations.test.ts`, `build/lib/mxc.ts`, `build/lib/test/copilotFreePackaging.test.ts`). Nothing outside the granted surfaces was edited; no stage/commit/publish; no user data touched.
+
+### Unit A — `eslint.config.js` W37 coupling removal (408 deletions, atomic)
+
+- Removed `import * as pluginCopilotLocal from './extensions/copilot/.eslintplugin/index.ts';` and the entire copilot extension config block (lines formerly 2571–2970, 400 lines: `// copilot extension - main sources`, the `copilot-local` plugin/rule registrations, allow-node-imports, override-files, TSX-linebreak, test-only, no-explicit-any and the `chatLibMain` exception).
+- Removed both `'extensions/copilot/**/*'` ignore entries (the `no-in-operator` rule and the `extensions/**` dynamic-require rule) and the three copilot entries in the import-pattern lists (`@github/copilot-sdk` in the hasNode `allow` list; `@vscode/copilot-api` and `@github/copilot-sdk` in the `src/vs/platform/agentHost/~` restrictions). Safety evidence for the three dependency-allow removals: both packages were already removed from `package.json`/`package-lock.json` (P2/P3 deps + W37.m), and a repo-wide grep finds zero live importers outside the W37-bound `build/lib/copilot.ts`, `build/lib/test/copilot.test.ts`, `build/azure-pipelines/common/apply-sdk-canary-override.ts` and `src/typings/copilot-api.d.ts`.
+- Removed the now-unused `import { builtinModules } from 'module';` and `import pluginImport from 'eslint-plugin-import';` — their only consumers were inside the deleted block (verified by grep before removal).
+- Atomic-unit rationale: removing the plugin import while any `pluginCopilotLocal`/`copilot-local` reference survives makes ESLint fail to load the config with `ERR_MODULE_NOT_FOUND`; the whole block had to go in one splice. The removal was executed as an anchor-verified unique-text splice (both anchors asserted unique; removal-range shape, member presence and a 3-reference `pluginCopilotLocal` count asserted), then `node --check` plus a real ESLint load proved the config parses and loads.
+- **Review-budget disclosure:** 408 changed lines exceed the 400-line leaf ceiling by 8; no smaller cohesive slice exists (any subset leaves a dangling plugin/identifier reference). This is reported rather than hidden; no `size:exception` is claimed, and no comment/blank line was compressed to shrink it.
+
+### Unit B — ignore/allow-list coupling (144 changed lines: 3 insertions / 141 deletions across three files)
+
+- `.eslint-ignore`: 17 `**/extensions/copilot/**` entries removed (17 deletions). These governed generated/vendored copilot paths (chat-lib, simulation fixtures, `.eslintplugin`, testdata, etc.).
+- `.eslint-allowed-javascript-files`: 30 `extensions/copilot/**` entries removed (30 deletions).
+- `.eslint-allowed-bracket-notation-files`: the `# Copilot extension (90 files)` header plus all 90 entries removed, and the W37.g `build/azure-pipelines/common/apply-sdk-canary-override.ts` entry removed with its section count recounted `48` → `47` (94 deletions + 1 recount insertion).
+- **Discovered regression + repair (important):** the W27–W34 stale-prune commit `d50e03b4e77` had also removed two **live-file** entries from `.eslint-allowed-javascript-files` — `.vscode-test.js` and `eslint.config.js` itself — even though its own recorded intent was "every entry naming an absent path removed; live-file entries kept on purpose". Both files exist in the worktree and are live (`.vscode-test.js` is the test runner config; `eslint.config.js` is the lint entry point). Restoring the two entries was required for the assigned `node build/eslint.ts eslint.config.js` spot-check to be meaningful; both are restored at their pre-prune positions (2 insertions). The other pruned entries (`.vscode-test.js`'s neighbours `build/npm/stubs/sharp/index.js`, `build/next/devTunnelsShims/{bufferutil,utf8Validate}.cjs`, `src/vs/sessions/test/e2e/*`) name verifiably absent paths and stay removed.
+
+### Unit C — launcher scripts + product comment (16 changed lines: 4 insertions / 12 deletions)
+
+- `.agents/skills/launch/scripts/launch.sh`: header comment no longer claims an agent-host port; the port allocator creates 3 listeners instead of 4; `read -r` drops `AGENTHOST_PORT`; the `--inspect-agenthost=$AGENTHOST_PORT` argument is gone; the JSON emission drops `agentHostPort`. (`bash -n` clean.)
+- `.agents/skills/launch/scripts/launch.ps1`: `Get-FreePorts` allocates 3 ports, `$agentHostPort = $ports[3]` is gone, the launch-argument line is gone, the `[PSCustomObject]` output drops `agentHostPort`. (Matches the already-cleaned `SKILL.md` port table; no PowerShell host is available here, so verification is structural plus grep.)
+- `src/vs/base/common/product.ts`: the `IAgentSdkProductConfig` doc comment no longer cites the deleted `src/vs/platform/agentHost/node/claude/roadmap.md` Phase 15. The pre-existing uncommitted `copilotVersions` removal from the previous leaf is preserved. (3 deletions here; the file's working-tree diff is 8 deletions.)
+
+### Verification evidence (this pass)
+
+| Command | Result |
+| --- | --- |
+| `npm run compile-client` (Node 24.18.0) | **exit 0**, 0 errors |
+| `npm run typecheck-client` | **exit 0** |
+| `npm run typecheck --prefix build` | **exit 0** |
+| `node build/eslint.ts eslint.config.js src/vs/base/common/product.ts .vscode-test.js` | **0 problems** (config/rule file + live files) |
+| `node build/eslint.ts src/vs/workbench/browser/parts/titlebar/titlebarPart.ts src/vs/workbench/browser/web.main.ts` | **0 problems** (workbench spot-check) |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing**, exit 0 |
+| `cd build && node --test lib/test/copilotFreePackaging.test.ts` | **8/8 pass**, exit 0 |
+| `cd build && node --test lib/test/eslint.test.ts` | **3/3 pass**, exit 0 (`.eslint-ignore`–derived `eslintFilter` still consistent) |
+| `bash -n .agents/skills/launch/scripts/launch.sh` | exit 0 |
+| `node --check eslint.config.js` | exit 0 |
+| `git diff --check` | clean |
+
+- Pre-existing, not caused by this pass (recorded, not remediated): `node build/eslint.ts` on `accountFreeApi.test.ts` reports 2 `local/code-import-patterns` warnings for `fs`/`path` imports; `productDebloatChatIntegrations.test.ts` reports 3; `extHost.api.impl.ts` reports 2 unused `local/code-no-dangerous-type-assertions` disable directives; `.eslint-plugin-local`'s own tsconfig is red at HEAD for untouched rule files. None of these paths were edited by this pass.
+
+### Residual coupling (recorded, outside this pass's W37 scope)
+
+- `eslint.config.js` still contains three `copilot` strings inside blocks whose `files` roots are already physically deleted: the agentHost `_meta` block's `copilotSdkMeta.ts` ignore (W12 coupling) and the sessions `copilotChatSessions` provider-internal import restriction (W11 coupling). They name neither live nor soon-deleted W37 files and were left untouched.
+- W37 physical deletion remains parent-owned (`deletion-review.md` §W37 and §W37 addition); this pass removed the lint/ignore coupling only. `src/typings/copilot-api.d.ts` (W37.l) remains parent-owned.
+- **New finding (path outside this pass's surfaces):** `remote/package.json` (lines 7/12/81) and `remote/package-lock.json` (50 copilot lines) still declare `@github/copilot-sdk`, `@vscode/copilot-api` and `copilotRuntimeVersion`. `remote/` is a live packaging input (`build/npm/dirs.ts:51`; `build/gulpfile.reh.ts:322` streams its manifest and `:357-359` copies `getProductionDependencies(REMOTE_FOLDER)` into the server package, with the Copilot `.moduleignore` rules already removed), so the W37 `git rm` alone will not remove the Copilot runtime from the REH/server payload. Recorded in `deletion-review.md`; the still-open P2.GREEN "root/remote/extension locks/dependency entries with measured regeneration" item owns the fix.
+- The recorded follow-ups outside this grant did **not** change: `src/vs/workbench/services/extensionManagement/test/common/ignoredExtensionsManagementService.test.ts` copilot entries, `test/smoke/src/utils.ts`, `extensions/dotnet-toolchain/README.md`, `build/agent-sdk/**`, `build/codex/**`, `build/dictation-runtime/**`.
+
+### Persisted task state
+
+- `tasks.md` re-read after the pass: **109 rows / 69 checked / 40 unchecked — unchanged deliberately**. No row closes here: `P2.GREEN` and `C7.RED → GREEN` still wait on the parent's W37 `git rm` (`build/lib/copilot.ts`, `build/lib/test/copilot.test.ts`, `extensions/copilot/**`), and `C7.TRIANGULATE → REFACTOR` still needs the packaged-build stage. This pass is deletion-coupling prep, so no `- [x]` flip is justified and none was made.
+
+### Review focus for the verifier
+
+1. `eslint.config.js` loads and lints with the copilot plugin absent: the config has zero `pluginCopilotLocal`/`copilot-local`/`extensions/copilot` references, `node --check` parses, and both spot-check invocations exit 0.
+2. The three lint/ignore files contain zero entries naming `extensions/copilot`, `build/lib/copilot.ts`, the azure-pipelines copilot files or any other W37 path; the restored `.vscode-test.js`/`eslint.config.js` entries are live-file repairs, not W37 regressions — verify with `git show d50e03b4e77 -- .eslint-allowed-javascript-files`.
+3. Both launcher scripts are agent-host-port-free and their port counts are internally consistent (Bash 3 listeners/3 reads/3 args; PowerShell 3 ports/3 consumers).
+4. The product comment cites no deleted roadmap; the pre-existing `copilotVersions` deletion is untouched.

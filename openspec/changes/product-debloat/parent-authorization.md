@@ -596,3 +596,24 @@ src/vs/workbench/contrib/preferences/common/configurationRegistry.ts
 build/lib/i18n.ts
 .github/workflows/**
 Scope: (1) fix the stale ENOENT reads in productDebloatChatIntegrations.test (assert absence instead — the files died in earlier waves); (2) C6.TRIANGULATE residues: `inspect-agenthost`/`inspect-brk-agenthost` debug configs + caller-less `parseAgentHostDebugPort`, the consumer-less `configurationRegistry` agentHost-sync mechanism, remaining W34 `.github` agent-host files. (The editTelemetry `agentHost` category is T10-owned — leave for the telemetry stage.)
+
+### C6/C7 follow-up grant (2026-10-06, `approve-all-six` O1–O6; ~150 authored lines)
+src/vs/platform/configuration/common/configurationRegistry.ts
+src/vs/platform/request/common/request.ts
+src/vs/workbench/contrib/debug/**
+src/vs/workbench/contrib/preferences/**
+src/vs/platform/product/common/product.ts
+src/vs/workbench/contrib/update/**
+.vscode/tasks.json
+.github/skills/**
+src/vs/workbench/contrib/welcomeGettingStarted/**
+Scope: O1 (inspect-agenthost/inspect-brk-agenthost argv + caller-less parseAgentHostDebugPort), O2/O3 (the agentHost configuration-sync mechanism at its REAL path platform/configuration + its producers in platform/request), O4 (.vscode/tasks.json dangling copilot watch scripts), O5 (About-dialog copilotVersions readout rows), O6 (launch skill debug-port citation). Whole-file decisions remain parent git rm. Also authorized: `@vscode/copilot-api` + `src/typings/copilot-api.d.ts` + `src/vs/platform/otel/**` comment cleanup as the recorded C7-lane consumers (P3.GREEN scope).
+
+### Ratifications + deletion-coupling grant (2026-10-06)
+RATIFIED (grant-scope reliance, all consistent with their scope lines): `.agents/skills/launch/SKILL.md` (O6), `src/vs/platform/environment/node/environmentService.ts` (O1), `src/vs/workbench/api/common/configurationExtensionPoint.ts` (O3a, under the standing U05 api/** grant).
+eslint.config.js
+.eslint-ignore
+.eslint-allowed-javascript-files
+.eslint-allowed-bracket-notation-files
+.agents/skills/launch/scripts/**
+Scope: (1) the lint/ignore coupling for the W37 deletion — remove the copilot eslint plugin import, `extensions/copilot/**` patterns, copilot-allowed lists and every allow-list/ignore entry naming W37 files (must land with the tree deletion in the same commit); (2) the launcher-script residues (agent-host port allocation, `--inspect-agenthost`, `agentHostPort` emission); (3) `src/vs/base/common/product.ts` comment citing the deleted agent-host roadmap. (otel log prefixes stay T9/T10-owned; ignoredExtensions test / smoke utils / dotnet-toolchain README stay recorded follow-ups.)

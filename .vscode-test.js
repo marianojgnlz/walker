@@ -80,11 +80,6 @@ const extensions = [
 	{
 		label: 'git-base',
 		mocha: { timeout: 60_000 }
-	},
-	{
-		label: 'copilot',
-		files: 'extensions/copilot/dist/test-extension.js',
-		mocha: { ui: 'tdd', timeout: 60_000 }
 	}
 ];
 
@@ -99,6 +94,27 @@ if (githubIntegrationDiscovery.test(extensionDirectories) || githubIntegrationDi
 if (authenticationProviderDiscovery.test(extensionDirectories) || authenticationProviderDiscovery.test(extensionCompilations)
 	|| extensions.some(extension => extension.label === 'github-authentication' || extension.label === 'microsoft-authentication')) {
 	throw new Error('Removed authentication providers must not be included in extension discovery, compilation, or test labels.');
+}
+if (extensions.some(extension => extension.label === 'copilot')) {
+	throw new Error('The removed Copilot extension must not be included in extension discovery, compilation, or test labels.');
+}
+const copilotFreeBuildSources = [
+	['build/npm/dirs.ts', readFileSync(path.join(__dirname, 'build/npm/dirs.ts'), 'utf8')],
+	['build/lib/extensions.ts', readFileSync(path.join(__dirname, 'build/lib/extensions.ts'), 'utf8')],
+	['package.json', readFileSync(path.join(__dirname, 'package.json'), 'utf8')],
+];
+if (copilotFreeBuildSources.some(([, source]) => /extensions\/copilot|"@github\/copilot-sdk"|copilotRuntimeVersion/.test(source))) {
+	throw new Error('The removed Copilot extension and SDK must not remain in npm directory discovery, extension packaging or the root manifest.');
+}
+const copilotFreeWorkflowSources = [
+	['.github/workflows/pr.yml', readFileSync(path.join(__dirname, '.github/workflows/pr.yml'), 'utf8')],
+	['.github/workflows/pr-node-modules.yml', readFileSync(path.join(__dirname, '.github/workflows/pr-node-modules.yml'), 'utf8')],
+	['.github/workflows/pr-linux-test.yml', readFileSync(path.join(__dirname, '.github/workflows/pr-linux-test.yml'), 'utf8')],
+	['.github/workflows/pr-win32-test.yml', readFileSync(path.join(__dirname, '.github/workflows/pr-win32-test.yml'), 'utf8')],
+	['.github/workflows/pr-darwin-test.yml', readFileSync(path.join(__dirname, '.github/workflows/pr-darwin-test.yml'), 'utf8')],
+];
+if (copilotFreeWorkflowSources.some(([, source]) => /copilot/i.test(source))) {
+	throw new Error('The retained PR workflows must not reference the removed Copilot extension.');
 }
 for (const extension of ['git', 'git-base']) {
 	if (!extensionDirectories.includes(`'extensions/${extension}',`) || !extensionCompilations.includes(`'extensions/${extension}/tsconfig.json',`)) {

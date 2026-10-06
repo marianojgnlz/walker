@@ -2,7 +2,7 @@
 # Launch Code OSS (VS Code from sources) with:
 #   - a fresh, slimmed copy of the authenticated user-data-dir (so Copilot/GitHub auth works)
 #   - an isolated --shared-data-dir (otherwise two instances share ~/.vscode-oss-shared and crash each other)
-#   - unique debug ports for renderer (CDP), extension host, main process, and agent host
+#   - unique debug ports for renderer (CDP), extension host, and main process
 #
 # Auth on macOS comes from the OS keychain (per-app, shared automatically) plus
 # the encrypted blob in User/globalStorage/state.vscdb (per-UDD). The slim copy
@@ -95,7 +95,7 @@ const fail = error => {
 	console.error('[launch.sh] failed to allocate debug ports:', error);
 	process.exit(1);
 };
-const servers = Array.from({ length: 4 }, () => net.createServer().on('error', fail));
+const servers = Array.from({ length: 3 }, () => net.createServer().on('error', fail));
 (async () => {
 	await Promise.all(servers.map(server => new Promise(resolve => server.listen(0, '127.0.0.1', resolve))));
 	const ports = servers.map(server => server.address().port);
@@ -106,7 +106,7 @@ const servers = Array.from({ length: 4 }, () => net.createServer().on('error', f
 })().catch(fail);
 NODE
 )
-read -r CDP_PORT EXTHOST_PORT MAIN_PORT AGENTHOST_PORT <<< "$PORTS"
+read -r CDP_PORT EXTHOST_PORT MAIN_PORT <<< "$PORTS"
 
 STAMP=$(date +%Y%m%d-%H%M%S)-$$
 # mktemp fills in the X's only when they trail the template; elsewhere they stay literal.
@@ -213,7 +213,6 @@ ARGS=(
 	"--remote-debugging-port=$CDP_PORT"
 	"--inspect-extensions=$EXTHOST_PORT"
 	"--inspect=$MAIN_PORT"
-	"--inspect-agenthost=$AGENTHOST_PORT"
 )
 if [[ "$DISABLE_WORKSPACE_TRUST" == "1" ]]; then
 	ARGS+=("--disable-workspace-trust")
@@ -285,7 +284,6 @@ node -e '
 		cdpPort: '"$CDP_PORT"',
 		extHostPort: '"$EXTHOST_PORT"',
 		mainPort: '"$MAIN_PORT"',
-		agentHostPort: '"$AGENTHOST_PORT"',
 		userDataDir: process.argv[1],
 		extensionsDir: process.argv[2],
 		sharedDataDir: process.argv[3],
