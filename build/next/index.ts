@@ -121,8 +121,6 @@ const serverEntryPoints = [
 	'vs/workbench/api/node/extensionHostProcess',
 	'vs/platform/files/node/watcher/watcherMain',
 	'vs/platform/terminal/node/ptyHostMain',
-	'vs/platform/agentHost/node/agentHostMain',
-	'vs/platform/agentHost/node/diffWorkerMain',
 ];
 
 /**

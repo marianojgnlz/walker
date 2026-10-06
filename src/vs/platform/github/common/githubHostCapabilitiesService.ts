@@ -25,7 +25,7 @@ const unavailableCapabilities: GitHubHostCapabilities = {
  * `RequirableByPullRequest` therefore only gets an existence check: `isRequired` is the sole field
  * of that interface, so the interface being present implies the field is available.
  */
-const capabilitiesQuery = `query AgentHostGitHubCapabilities {
+const capabilitiesQuery = `query GitHubHostCapabilities {
 	pullRequest: __type(name: "PullRequest") { fields { name } }
 	repository: __type(name: "Repository") { fields { name } }
 	requirableByPullRequest: __type(name: "RequirableByPullRequest") { name }
@@ -207,7 +207,7 @@ export class GitHubHostCapabilitiesService extends Disposable implements IGitHub
 				this._logService?.debug(`[GitHubHostCapabilitiesService] Host ${credential.account.host} lacks the expected GraphQL schema, disabling GraphQL capabilities: ${detail}`);
 			} else {
 				// Disabling GraphQL forces every pull request fragment onto incomplete REST fallbacks,
-				// which silently stalls Agent Merge, so an unexpected probe error must be visible.
+				// so an unexpected probe error must be visible.
 				this._logService?.warn(`[GitHubHostCapabilitiesService] Capability probe for ${credential.account.host} returned errors, disabling GraphQL capabilities: ${detail}`);
 			}
 			return {

@@ -251,4 +251,10 @@ suite('Agent-producer-free packaging pipeline', () => {
 		assert.match(rehGulpfile, /gulp\.src\(\['remote\/package\.json'\]/, 'REH must keep shipping the remote manifest');
 		assert.match(rehGulpfile, /getProductionDependencies\(REMOTE_FOLDER\)/, 'REH must keep copying the remote production dependencies');
 	});
+
+	test('server bundler entrypoints do not reference the deleted Agent Host modules', () => {
+		const buildIndex = read('build/next/index.ts');
+		assert.ok(!buildIndex.includes("'vs/platform/agentHost/node/agentHostMain'"), 'server build must not try to bundle the deleted Agent Host entrypoint');
+		assert.ok(!buildIndex.includes("'vs/platform/agentHost/node/diffWorkerMain'"), 'server build must not try to bundle the deleted Agent Host diff worker');
+	});
 });

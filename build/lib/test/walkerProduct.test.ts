@@ -352,4 +352,38 @@ suite('Walker packaged product composition', () => {
 			assert.throws(() => composeWalkerProduct({}, mixin), /Invalid Walker Open VSX gallery mixin/);
 		}
 	});
+
+	test('retained generic surfaces omit the approved Agent Host and Copilot hooks', () => {
+		const root = resolve(import.meta.dirname, '../../../');
+		const source = (path: string) => readFileSync(resolve(root, path), 'utf8');
+		const forbiddenSourceMarkers: [string, RegExp][] = [
+			['src/vs/editor/contrib/inlineCompletions/browser/model/renameSymbolProcessor.ts', /github\.copilot\.nes\./],
+			['src/vs/platform/github/common/githubHostCapabilitiesService.ts', /AgentHostGitHubCapabilities|Agent Merge/],
+			['src/vs/workbench/contrib/relauncher/browser/relauncher.contribution.ts', /chat\.agentHost\.otel\.|agentHostOTel/],
+			['src/vs/workbench/contrib/mcp/browser/mcpCommandsAddConfiguration.ts', /github\.copilot\.chat\.mcp\.setup\.|Model-Assisted|chat\.mcp\.assisted\.nuget\.enabled/],
+			['src/vs/workbench/services/assignment/common/assignmentFilters.ts', /CopilotAssignmentFilterProvider|ExtensionsFilter/],
+			['src/vs/workbench/services/assignment/common/assignmentService.ts', /CopilotAssignmentFilterProvider/],
+			['src/vs/workbench/contrib/terminal/browser/terminalMenus.ts', /isAiProfileName|isAiContributedProfile|splitProfiles|splitContributedProfiles|github\.copilot-chat|anthropic\.claude-code/],
+		];
+		for (const [path, marker] of forbiddenSourceMarkers) {
+			assert.doesNotMatch(source(path), marker, `${path} retains a removed Agent Host/Copilot hook`);
+		}
+
+		const renameProcessor = source('src/vs/editor/contrib/inlineCompletions/browser/model/renameSymbolProcessor.ts');
+		assert.ok(renameProcessor.includes('RenameInferenceEngine'), 'generic inline-completion rename inference was removed');
+		assert.ok(renameProcessor.includes('rawRename('), 'generic language-provider rename was removed');
+
+		const capabilities = source('src/vs/platform/github/common/githubHostCapabilitiesService.ts');
+		assert.ok(capabilities.includes('query GitHubHostCapabilities'), 'generic GitHub capability probing was removed');
+		assert.ok(source('src/vs/platform/github/common/pullRequestQueryService.ts').includes('this._capabilities.getCapabilities('), 'the retained non-Copilot pull-request consumer was removed');
+
+		const mcpConfiguration = source('src/vs/workbench/contrib/mcp/browser/mcpCommandsAddConfiguration.ts');
+		assert.ok(mcpConfiguration.includes('Command (stdio)'), 'manual stdio MCP configuration was removed');
+		assert.ok(mcpConfiguration.includes('Browse MCP Servers...'), 'MCP registry browsing was removed');
+		assert.ok(mcpConfiguration.includes('Add from another application...'), 'MCP configuration discovery was removed');
+
+		const terminalMenus = source('src/vs/workbench/contrib/terminal/browser/terminalMenus.ts');
+		assert.ok(terminalMenus.includes('for (const p of profiles)'), 'generic terminal profiles are not presented');
+		assert.ok(terminalMenus.includes('for (const contributed of contributedProfiles)'), 'generic contributed profiles are not presented');
+	});
 });

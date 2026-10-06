@@ -639,3 +639,19 @@ RATIFIED (retroactive, all I7-row-mandated or standing-grant-covered): scripts/t
 - u11.i.001 (741 lines): ACCEPTED as a coupled deletion-review batch per its recorded analysis (`ITypeScriptServiceClient.telemetryReporter` threads 23 files; no compilable sub-seam) — the established c.035/U07.a.001 precedent, not a blanket size:exception.
 scripts/**
 Scope: the crash-reporter argv tail — remove `--crash-reporter-directory`/`--crash-reporter-id` from the test/CI runners + their `environmentService` getters, desktop help entry, `server.cli.ts` validation (all inert inputs after the crashReporter removal).
+
+### V1 evidence-stage grant (2026-10-07)
+src/vs/platform/terminal/common/terminalPlatformConfiguration.ts
+src/vs/workbench/contrib/terminal/browser/terminalProfileResolverService.ts
+src/vs/workbench/contrib/terminal/test/**
+Scope: remove the shipped `terminal.integrated.agentHostProfile.{linux,osx,windows}` settings + their resolver path (Agent Host config residue); generic terminal profile resolution preserved.
+
+### V1 remnant grant (2026-10-07)
+src/vs/editor/contrib/inlineCompletions/browser/model/renameSymbolProcessor.ts
+src/vs/platform/github/common/githubHostCapabilitiesService.ts
+src/vs/workbench/contrib/relauncher/browser/relauncher.contribution.ts
+Scope: remove the shipped Agent-Host/Copilot feature remnants (the `chat.agentHost.otel.*` relauncher observers, the `AgentHostGitHubCapabilities` probe wiring, the optional `github.copilot.nes.*`/Copilot-MCP command hooks and the installed-Copilot assignment/terminal-profile classification). Retain generic GitHub capability infrastructure ONLY if it has non-Copilot consumers; otherwise it joins the parent manifest. Generic inline-completions behavior preserved.
+
+### V1 residual grant (2026-10-07): TS-extension Copilot integration
+extensions/typescript-language-features/**
+Scope: remove the `github.copilot-chat` integration — the `quickFix.ts` AI-backed code-action offer (`vscode.extensions.getExtension('github.copilot-chat')` check), the `suggestNativePreview.ts` and `typescriptServiceClient.ts` extension-ID special cases. Generic TS quick-fix/suggest/native-preview behavior preserved (the non-Copilot paths).

@@ -87,6 +87,7 @@ suite('MCP configuration entry points', () => {
 		const selections: (IRange | undefined)[] = [];
 		const started: string[] = [];
 		const errors: Parameters<INotificationService['error']>[0][] = [];
+		const commandCalls: string[] = [];
 		const existenceChecks: string[] = [];
 		const installs: { server: IInstallableMcpServer; options: IWorkbencMcpServerInstallOptions | undefined }[] = [];
 		const servers = observableValue<readonly IMcpServer[]>('servers', []);
@@ -118,7 +119,10 @@ suite('MCP configuration entry points', () => {
 			return undefined;
 		});
 		instantiation.stub(ICommandService, {});
-		instantiation.stub(ICommandService, 'executeCommand', async () => false);
+		instantiation.stub(ICommandService, 'executeCommand', async (command: string) => {
+			commandCalls.push(command);
+			return false;
+		});
 		instantiation.stub(IWorkbenchEnvironmentService, {});
 		instantiation.stub(IOpenerService, {});
 		instantiation.stub(INotificationService, { error: error => errors.push(error) });
@@ -161,7 +165,7 @@ suite('MCP configuration entry points', () => {
 				return upcastPartial<IWorkbenchMcpServer>({ id: local.id, name: local.name, local });
 			},
 		});
-		return { instantiation, quickInput, folder, secondFolder, workspace, opened, selections, started, errors, existenceChecks, installs, servers, runtimeServer, destination: instantiation.createInstance(McpConfigurationDestination) };
+		return { instantiation, quickInput, folder, secondFolder, workspace, opened, selections, started, errors, commandCalls, existenceChecks, installs, servers, runtimeServer, destination: instantiation.createInstance(McpConfigurationDestination) };
 	}
 
 	for (const enabled of [false, true]) {
@@ -267,6 +271,21 @@ suite('MCP configuration entry points', () => {
 		const fixture = setup(true);
 		await assert.rejects(fixture.destination.selectForAdd(fixture.folder, { ...installable, inputs: [{ id: 'token', type: McpServerVariableType.PROMPT, description: 'Token', password: true }] }, WorkspaceMcpConfigKind.Root));
 		assert.deepStrictEqual({ pickers: fixture.quickInput.pickLabels, installs: fixture.installs }, { pickers: [], installs: [] });
+	});
+
+	test('manual server setup does not invoke Copilot MCP hooks', async () => {
+		const fixture = setup(true);
+		fixture.quickInput.selections.push('Command (stdio)', 'Global');
+		fixture.quickInput.inputs.push('node server.js', 'manual-server');
+
+		await new AddConfigurationAction().run(fixture.instantiation);
+
+		assert.deepStrictEqual(fixture.commandCalls, []);
+		assert.deepStrictEqual(fixture.installs[0].server.config, {
+			type: McpServerType.LOCAL,
+			command: 'node',
+			args: ['server.js'],
+		});
 	});
 
 	for (const enabled of [false, true]) {

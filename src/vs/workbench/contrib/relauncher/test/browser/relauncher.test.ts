@@ -131,5 +131,16 @@ suite('SettingsChangeRelauncher', () => {
 		assert.strictEqual(restartCount, 0);
 	});
 
+	test('does not prompt to restart for obsolete Agent Host OTel setting changes', async () => {
+		confirmResult = true;
+		await changeSetting(
+			'chat.agentHost.otel.enabled',
+			() => ({ chat: { agentHost: { otel: { enabled: true } } } }),
+			c => c.chat.agentHost.otel.enabled = false);
+
+		assert.strictEqual(confirmCount, 0, 'obsolete OTel settings must not request a restart');
+		assert.strictEqual(restartCount, 0, 'obsolete OTel settings must not restart the workbench');
+	});
+
 	ensureNoDisposablesAreLeakedInTestSuite();
 });

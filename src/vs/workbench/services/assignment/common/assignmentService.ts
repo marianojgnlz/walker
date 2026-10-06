@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { localize } from '../../../../nls.js';
-import { createDecorator, IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
+import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
 import type { IKeyValueStorage, IExperimentationTelemetry, ExperimentationService as TASClient } from 'tas-client';
 import { Memento } from '../../../common/memento.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
@@ -18,9 +18,8 @@ import { IConfigurationRegistry, Extensions as ConfigurationExtensions, Configur
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
 import { resolveAmdNodeModulePath } from '../../../../amdX.js';
 import { timeout } from '../../../../base/common/async.js';
-import { CopilotAssignmentFilterProvider } from './assignmentFilters.js';
 import { AssignmentContextFilter } from './assignmentContextFilter.js';
-import { Disposable, DisposableStore, toDisposable } from '../../../../base/common/lifecycle.js';
+import { Disposable, toDisposable } from '../../../../base/common/lifecycle.js';
 import { Emitter, Event } from '../../../../base/common/event.js';
 import { experimentsEnabled } from './assignmentExperiments.js';
 import { CancellationError } from '../../../../base/common/errors.js';
@@ -135,7 +134,6 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 	declare readonly _serviceBrand: undefined;
 
 	private tasClient: Promise<TASClient> | undefined;
-	private readonly tasSetupDisposables = this._register(new DisposableStore());
 
 	private networkInitialized = false;
 	private setupGeneration = 0;
@@ -157,7 +155,6 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IProductService private readonly productService: IProductService,
 		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
 	) {
 		super();
 
@@ -246,8 +243,6 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 	}
 
 	private async setupTASClient(): Promise<TASClient> {
-		this.tasSetupDisposables.clear();
-
 		// Each setup supersedes the previous client; track a generation so a stale client's
 		// initialFetch cannot flip networkInitialized for a newer client.
 		const generation = ++this.setupGeneration;
@@ -303,10 +298,6 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 			this.environmentService.isSessionsWindow ? WindowKind.Agents : WindowKind.Editor
 		);
 
-		const extensionsFilterProvider = this.instantiationService.createInstance(CopilotAssignmentFilterProvider);
-		this.tasSetupDisposables.add(extensionsFilterProvider);
-		this.tasSetupDisposables.add(extensionsFilterProvider.onDidChangeFilters(() => this.refetchAssignments()));
-
 		const tasConfig = this.productService.tasConfig!;
 
 		// tas-client ships as pure ESM; load it via a runtime-resolved URL so bundlers do not
@@ -315,7 +306,7 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 		const tasClientModule = await import(/* webpackIgnore: true */ /* @vite-ignore */ `${tasClientUrl}`) as typeof import('tas-client');
 
 		const tasClient = new tasClientModule.ExperimentationService({
-			filterProviders: [filterProvider, extensionsFilterProvider],
+			filterProviders: [filterProvider],
 			telemetry,
 			storageKey: ASSIGNMENT_STORAGE_KEY,
 			keyValueStorage,
@@ -335,19 +326,6 @@ export class WorkbenchAssignmentService extends Disposable implements IAssignmen
 		}).catch(() => undefined);
 
 		return tasClient;
-	}
-
-	private async refetchAssignments(): Promise<void> {
-		if (!this.tasClient) {
-			return; // Setup has not started, assignments will use latest filters
-		}
-
-		// Await the client to be setup and the initial fetch to complete
-		const tasClient = await this.tasClient;
-		await tasClient.initialFetch;
-
-		// Refresh the assignments
-		await tasClient.getTreatmentVariableAsync('vscode', 'refresh', false);
 	}
 
 	async getCurrentExperiments(): Promise<string[] | undefined> {

@@ -22,7 +22,6 @@ import { ILabelService } from '../../../../platform/label/common/label.js';
 import { IMcpRemoteServerConfiguration, IMcpServerConfiguration, IMcpServerVariable, IMcpStdioServerConfiguration, McpServerType } from '../../../../platform/mcp/common/mcpPlatformTypes.js';
 import { IGalleryMcpServerConfiguration, RegistryType } from '../../../../platform/mcp/common/mcpManagement.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
-import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IQuickInputService, IQuickPickItem, QuickPickInput } from '../../../../platform/quickinput/common/quickInput.js';
 import { isWorkspaceFolder, IWorkspaceContextService, IWorkspaceFolder, WorkbenchState } from '../../../../platform/workspace/common/workspace.js';
 import { IFileDialogService } from '../../../../platform/dialogs/common/dialogs.js';
@@ -30,7 +29,7 @@ import { IEditorService } from '../../../services/editor/common/editorService.js
 import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
 import { IWorkbenchLocalMcpServer, IWorkbenchMcpManagementService } from '../../../services/mcp/common/mcpWorkbenchManagementService.js';
 import { McpCommandIds } from '../common/mcpCommandIds.js';
-import { allDiscoverySources, ExternalDiscoverySource, mcpDiscoverySection, mcpStdioServerSchema, mcpWorkspaceRootConfig } from '../common/mcpConfiguration.js';
+import { allDiscoverySources, ExternalDiscoverySource, mcpDiscoverySection, mcpWorkspaceRootConfig } from '../common/mcpConfiguration.js';
 import { IMcpRegistry } from '../common/mcpRegistryTypes.js';
 import { IMcpService, McpConnectionState } from '../common/mcpTypes.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
@@ -39,77 +38,13 @@ import { IWorkspaceMcpConfigurationTarget, McpConfigurationDestination } from '.
 export const enum AddConfigurationType {
 	Stdio,
 	HTTP,
-
-	NpmPackage,
-	PipPackage,
-	NuGetPackage,
-	DockerImage,
 }
-
-type AssistedConfigurationType = AddConfigurationType.NpmPackage | AddConfigurationType.PipPackage | AddConfigurationType.NuGetPackage | AddConfigurationType.DockerImage;
 
 type McpInstallTarget = { kind: 'local'; target: ConfigurationTarget | IWorkspaceFolder };
 
 
 
-export const AssistedTypes = {
-	[AddConfigurationType.NpmPackage]: {
-		title: localize('mcp.npm.title', "Enter NPM Package Name"),
-		placeholder: localize('mcp.npm.placeholder', "Package name (e.g., @org/package)"),
-		pickLabel: localize('mcp.serverType.npm', "NPM Package"),
-		pickDescription: localize('mcp.serverType.npm.description', "Install from an NPM package name"),
-		enabledConfigKey: null, // always enabled
-	},
-	[AddConfigurationType.PipPackage]: {
-		title: localize('mcp.pip.title', "Enter Pip Package Name"),
-		placeholder: localize('mcp.pip.placeholder', "Package name (e.g., package-name)"),
-		pickLabel: localize('mcp.serverType.pip', "Pip Package"),
-		pickDescription: localize('mcp.serverType.pip.description', "Install from a Pip package name"),
-		enabledConfigKey: null, // always enabled
-	},
-	[AddConfigurationType.NuGetPackage]: {
-		title: localize('mcp.nuget.title', "Enter NuGet Package Name"),
-		placeholder: localize('mcp.nuget.placeholder', "Package name (e.g., Package.Name)"),
-		pickLabel: localize('mcp.serverType.nuget', "NuGet Package"),
-		pickDescription: localize('mcp.serverType.nuget.description', "Install from a NuGet package name"),
-		enabledConfigKey: 'chat.mcp.assisted.nuget.enabled',
-	},
-	[AddConfigurationType.DockerImage]: {
-		title: localize('mcp.docker.title', "Enter Docker Image Name"),
-		placeholder: localize('mcp.docker.placeholder', "Image name (e.g., mcp/imagename)"),
-		pickLabel: localize('mcp.serverType.docker', "Docker Image"),
-		pickDescription: localize('mcp.serverType.docker.description', "Install from a Docker image"),
-		enabledConfigKey: null, // always enabled
-	},
-};
 
-const enum AddConfigurationCopilotCommand {
-	/** Returns whether MCP enhanced setup is enabled. */
-	IsSupported = 'github.copilot.chat.mcp.setup.check',
-
-	/** Takes an npm/pip package name, validates its owner. */
-	ValidatePackage = 'github.copilot.chat.mcp.setup.validatePackage',
-
-	/** Returns the resolved MCP configuration. */
-	StartFlow = 'github.copilot.chat.mcp.setup.flow',
-}
-
-type ValidatePackageResult =
-	{ state: 'ok'; publisher: string; name?: string; version?: string }
-	| { state: 'error'; error: string; helpUri?: string; helpUriLabel?: string };
-
-type AssistedServerConfiguration = {
-	type?: 'assisted';
-	name?: string;
-	server: Omit<IMcpStdioServerConfiguration, 'type'>;
-	inputs?: IMcpServerVariable[];
-	inputValues?: Record<string, string>;
-} | {
-	type: 'mapped';
-	name?: string;
-	server: Omit<IMcpStdioServerConfiguration, 'type'>;
-	inputs?: IMcpServerVariable[];
-};
 
 export class McpAddConfigurationCommand {
 	constructor(
@@ -120,7 +55,6 @@ export class McpAddConfigurationCommand {
 		@IWorkbenchEnvironmentService private readonly _environmentService: IWorkbenchEnvironmentService,
 		@ICommandService private readonly _commandService: ICommandService,
 		@IMcpRegistry private readonly _mcpRegistry: IMcpRegistry,
-		@IOpenerService private readonly _openerService: IOpenerService,
 		@IEditorService private readonly _editorService: IEditorService,
 		@IFileService private readonly _fileService: IFileService,
 		@INotificationService private readonly _notificationService: INotificationService,
@@ -136,36 +70,6 @@ export class McpAddConfigurationCommand {
 			{ kind: AddConfigurationType.Stdio, label: localize('mcp.serverType.command', "Command (stdio)"), description: localize('mcp.serverType.command.description', "Run a local command that implements the MCP protocol") },
 			{ kind: AddConfigurationType.HTTP, label: localize('mcp.serverType.http', "HTTP (HTTP or Server-Sent Events)"), description: localize('mcp.serverType.http.description', "Connect to a remote HTTP server that implements the MCP protocol") }
 		];
-
-		let aiSupported: boolean | undefined;
-		try {
-			aiSupported = await this._commandService.executeCommand<boolean>(AddConfigurationCopilotCommand.IsSupported);
-		} catch {
-			// ignored
-		}
-
-		if (aiSupported) {
-			items.unshift({ type: 'separator', label: localize('mcp.serverType.manual', "Manual Install") });
-
-			const elligableTypes = Object.entries(AssistedTypes).map(([type, { pickLabel, pickDescription, enabledConfigKey }]) => {
-				if (enabledConfigKey) {
-					const enabled = this._configurationService.getValue<boolean>(enabledConfigKey) ?? false;
-					if (!enabled) {
-						return;
-					}
-				}
-				return {
-					kind: Number(type) as AddConfigurationType,
-					label: pickLabel,
-					description: pickDescription,
-				};
-			}).filter(x => !!x);
-
-			items.push(
-				{ type: 'separator', label: localize('mcp.serverType.copilot', "Model-Assisted") },
-				...elligableTypes
-			);
-		}
 
 		items.push({ type: 'separator' });
 
@@ -291,123 +195,6 @@ export class McpAddConfigurationCommand {
 		return target ? { kind: 'local', target } : undefined;
 	}
 
-	private async getAssistedConfig(type: AssistedConfigurationType): Promise<{ name?: string; server: Omit<IMcpStdioServerConfiguration, 'type'>; inputs?: IMcpServerVariable[]; inputValues?: Record<string, string> } | undefined> {
-		const packageName = await this._quickInputService.input({
-			ignoreFocusLost: true,
-			title: AssistedTypes[type].title,
-			placeHolder: AssistedTypes[type].placeholder,
-		});
-
-		if (!packageName) {
-			return undefined;
-		}
-
-		const enum LoadAction {
-			Retry = 'retry',
-			Cancel = 'cancel',
-			Allow = 'allow',
-			OpenUri = 'openUri',
-		}
-
-		const loadingQuickPickStore = new DisposableStore();
-		const loadingQuickPick = loadingQuickPickStore.add(this._quickInputService.createQuickPick<IQuickPickItem & { id: LoadAction; helpUri?: URI }>());
-		loadingQuickPick.title = localize('mcp.loading.title', "Loading package details...");
-		loadingQuickPick.busy = true;
-		loadingQuickPick.ignoreFocusOut = true;
-
-		const packageType = this.getPackageType(type);
-
-		this._commandService.executeCommand<ValidatePackageResult>(
-			AddConfigurationCopilotCommand.ValidatePackage,
-			{
-				type: packageType,
-				name: packageName,
-				targetConfig: {
-					...mcpStdioServerSchema,
-					properties: {
-						...mcpStdioServerSchema.properties,
-						name: {
-							type: 'string',
-							description: 'Suggested name of the server, alphanumeric and hyphen only',
-						}
-					},
-					required: [...(mcpStdioServerSchema.required || []), 'name'],
-				},
-			}
-		).then(result => {
-			if (!result || result.state === 'error') {
-				loadingQuickPick.title = result?.error || 'Unknown error loading package';
-
-				const items: Array<IQuickPickItem & { id: LoadAction; helpUri?: URI }> = [];
-
-				if (result?.helpUri) {
-					items.push({
-						id: LoadAction.OpenUri,
-						label: result.helpUriLabel ?? localize('mcp.error.openHelpUri', 'Open help URL'),
-						helpUri: URI.parse(result.helpUri),
-					});
-				}
-
-				items.push(
-					{ id: LoadAction.Retry, label: localize('mcp.error.retry', 'Try a different package') },
-					{ id: LoadAction.Cancel, label: localize('cancel', 'Cancel') },
-				);
-
-				loadingQuickPick.items = items;
-			} else {
-				loadingQuickPick.title = localize(
-					'mcp.confirmPublish', 'Install {0}{1} from {2}?',
-					result.name ?? packageName,
-					result.version ? `@${result.version}` : '',
-					result.publisher);
-				loadingQuickPick.items = [
-					{ id: LoadAction.Allow, label: localize('allow', "Allow") },
-					{ id: LoadAction.Cancel, label: localize('cancel', 'Cancel') }
-				];
-			}
-			loadingQuickPick.busy = false;
-		});
-
-		const loadingAction = await new Promise<{ id: LoadAction; helpUri?: URI } | undefined>(resolve => {
-			loadingQuickPickStore.add(loadingQuickPick.onDidAccept(() => resolve(loadingQuickPick.selectedItems[0])));
-			loadingQuickPickStore.add(loadingQuickPick.onDidHide(() => resolve(undefined)));
-			loadingQuickPick.show();
-		}).finally(() => loadingQuickPickStore.dispose());
-
-		switch (loadingAction?.id) {
-			case LoadAction.Retry:
-				return this.getAssistedConfig(type);
-			case LoadAction.OpenUri:
-				if (loadingAction.helpUri) { this._openerService.open(loadingAction.helpUri); }
-				return undefined;
-			case LoadAction.Allow:
-				break;
-			case LoadAction.Cancel:
-			default:
-				return undefined;
-		}
-
-		const config = await this._commandService.executeCommand<AssistedServerConfiguration>(
-			AddConfigurationCopilotCommand.StartFlow,
-			{
-				name: packageName,
-				type: packageType
-			}
-		);
-
-		if (config?.type === 'mapped') {
-			return {
-				name: config.name,
-				server: config.server,
-				inputs: config.inputs,
-			};
-		} else if (config?.type === 'assisted' || !config?.type) {
-			return config;
-		} else {
-			assertNever(config?.type);
-		}
-	}
-
 	/** Shows the location of a server config once it's discovered. */
 	private showOnceDiscovered(installed: IWorkbenchLocalMcpServer) {
 		const store = new DisposableStore();
@@ -451,9 +238,6 @@ export class McpAddConfigurationCommand {
 
 		// Step 2: Get server details based on type
 		let config: IMcpServerConfiguration | undefined;
-		let suggestedName: string | undefined;
-		let inputs: IMcpServerVariable[] | undefined;
-		let inputValues: Record<string, string> | undefined;
 		switch (serverType) {
 			case AddConfigurationType.Stdio:
 				config = await this.getStdioConfig();
@@ -461,17 +245,6 @@ export class McpAddConfigurationCommand {
 			case AddConfigurationType.HTTP:
 				config = await this.getSSEConfig();
 				break;
-			case AddConfigurationType.NpmPackage:
-			case AddConfigurationType.PipPackage:
-			case AddConfigurationType.NuGetPackage:
-			case AddConfigurationType.DockerImage: {
-				const r = await this.getAssistedConfig(serverType);
-				config = r?.server ? { ...r.server, type: McpServerType.LOCAL } : undefined;
-				suggestedName = r?.name;
-				inputs = r?.inputs;
-				inputValues = r?.inputValues;
-				break;
-			}
 			default:
 				assertNever(serverType);
 		}
@@ -481,7 +254,7 @@ export class McpAddConfigurationCommand {
 		}
 
 		// Step 3: Get server ID
-		const name = await this.getServerId(suggestedName);
+		const name = await this.getServerId();
 		if (!name) {
 			return;
 		}
@@ -493,7 +266,7 @@ export class McpAddConfigurationCommand {
 		}
 
 		const { target } = installTarget;
-		const installable = { name, config, inputs };
+		const installable = { name, config };
 		const workspaceConfig = isWorkspaceFolder(target)
 			? await this._instantiationService.createInstance(McpConfigurationDestination).selectForAdd(target, installable, this.configurationTarget?.kind)
 			: undefined;
@@ -502,11 +275,6 @@ export class McpAddConfigurationCommand {
 		}
 		const installed = await this._mcpManagementService.install(installable, { target, workspaceConfig });
 
-		if (inputValues) {
-			for (const [key, value] of Object.entries(inputValues)) {
-				await this._mcpRegistry.setSavedInput(key, (isWorkspaceFolder(target) ? ConfigurationTarget.WORKSPACE_FOLDER : target) ?? ConfigurationTarget.WORKSPACE, value);
-			}
-		}
 
 		this.showOnceDiscovered(installed);
 	}
@@ -558,24 +326,6 @@ export class McpAddConfigurationCommand {
 		}
 	}
 
-	private getPackageType(serverType: AddConfigurationType): string | undefined {
-		switch (serverType) {
-			case AddConfigurationType.NpmPackage:
-				return 'npm';
-			case AddConfigurationType.PipPackage:
-				return 'pip';
-			case AddConfigurationType.NuGetPackage:
-				return 'nuget';
-			case AddConfigurationType.DockerImage:
-				return 'docker';
-			case AddConfigurationType.Stdio:
-				return 'stdio';
-			case AddConfigurationType.HTTP:
-				return 'sse';
-			default:
-				return undefined;
-		}
-	}
 }
 
 export class McpInstallFromManifestCommand {

@@ -57,7 +57,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Known suite names (used for help text and validation)
-KNOWN_SUITES="api-folder api-workspace colorize terminal-suggest typescript markdown emmet git git-base ipynb notebook-renderers configuration-editing copilot css html json"
+KNOWN_SUITES="api-folder api-workspace colorize terminal-suggest typescript markdown emmet git git-base ipynb notebook-renderers configuration-editing css html json"
 
 if $HELP; then
 	echo "Usage: $0 [options]"
@@ -124,7 +124,7 @@ should_run_suite() {
 }
 
 VSCODEUSERDATADIR=`mktemp -d 2>/dev/null`
-VSCODELOGSDIR=$ROOT/.build/logs/integration-tests
+VSCODELOGSDIR="${VSCODELOGSDIR:-$ROOT/.build/logs/integration-tests}"
 
 # Seed user settings for the test profile
 mkdir -p "$VSCODEUSERDATADIR/User"
@@ -298,14 +298,6 @@ echo
 echo "### Configuration editing tests"
 echo
 npm run test-extension -- -l configuration-editing "${GREP_ARGS[@]}"
-kill_app
-fi
-
-if should_run_suite copilot; then
-echo
-echo "### Copilot tests"
-echo
-npm run test-extension -- -l copilot "${GREP_ARGS[@]}"
 kill_app
 fi
 

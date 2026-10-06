@@ -122,6 +122,17 @@ suite('Copilot-free packaging pipeline', () => {
 		assert.doesNotMatch(read('build/filters.ts'), /copilot/i, 'formatting/lint filters must not carve out a deleted tree');
 	});
 
+	test('the integration runners do not advertise or schedule the removed Copilot suite', () => {
+		for (const runner of ['scripts/test-integration.sh', 'scripts/test-integration.bat']) {
+			assert.doesNotMatch(read(runner), /\bcopilot\b/i, `${runner} must not expose the removed Copilot suite`);
+		}
+	});
+
+	test('the integration runners honor a redirected log directory without changing their default', () => {
+		assert.ok(read('scripts/test-integration.sh').includes('VSCODELOGSDIR="${VSCODELOGSDIR:-$ROOT/.build/logs/integration-tests}"'));
+		assert.ok(read('scripts/test-integration.bat').includes('if not defined VSCODELOGSDIR set "VSCODELOGSDIR=%SCRIPT_DIR%..\\.build\\logs\\integration-tests"'));
+	});
+
 	test('the Darwin universal merge keeps the retained native payloads', () => {
 		const universal = read('build/darwin/create-universal-app.ts');
 

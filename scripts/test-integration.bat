@@ -60,7 +60,7 @@ if defined SHOW_HELP (
 	echo Available suites:
 	echo   api-folder, api-workspace, colorize, terminal-suggest, typescript,
 	echo   markdown, emmet, git, git-base, ipynb, notebook-renderers,
-	echo   configuration-editing, copilot, css, html, json
+	echo   configuration-editing, css, html, json
 	echo.
 	echo All other options are forwarded to the node.js test runner ^(see scripts\test.bat --help^).
 	echo Note: extra options are not forwarded to extension host suites ^(--suite mode^).
@@ -77,7 +77,7 @@ if defined SHOW_HELP (
 )
 
 set VSCODEUSERDATADIR=%TEMP%\vscodeuserfolder-%RANDOM%-%TIME:~6,2%
-set VSCODELOGSDIR=%SCRIPT_DIR%\..\.build\logs\integration-tests
+if not defined VSCODELOGSDIR set "VSCODELOGSDIR=%SCRIPT_DIR%..\.build\logs\integration-tests"
 
 :: Seed an empty user settings file for the test profile
 if not exist "%VSCODEUSERDATADIR%\User" mkdir "%VSCODEUSERDATADIR%\User"
@@ -105,12 +105,12 @@ echo Storing log files into '%VSCODELOGSDIR%'.
 :: Validate --suite filter matches at least one known suite
 if defined SUITE_FILTER (
 	set "_any_match="
-	for %%s in (api-folder api-workspace colorize terminal-suggest typescript markdown emmet git git-base ipynb notebook-renderers configuration-editing copilot css html json) do (
+	for %%s in (api-folder api-workspace colorize terminal-suggest typescript markdown emmet git git-base ipynb notebook-renderers configuration-editing css html json) do (
 		call :should_run_suite %%s && set "_any_match=1"
 	)
 	if not defined _any_match (
 		echo Error: no suites match filter '%SUITE_FILTER%'
-		echo Available suites: api-folder api-workspace colorize terminal-suggest typescript markdown emmet git git-base ipynb notebook-renderers configuration-editing copilot css html json
+		echo Available suites: api-folder api-workspace colorize terminal-suggest typescript markdown emmet git git-base ipynb notebook-renderers configuration-editing css html json
 		goto :failed
 	)
 )
@@ -262,17 +262,6 @@ if defined GREP_PATTERN (
 )
 if %errorlevel% neq 0 exit /b %errorlevel%
 :skip_configuration_editing
-
-call :should_run_suite copilot || goto skip_copilot
-echo.
-echo ### Copilot tests
-if defined GREP_PATTERN (
-	call npm run test-extension -- -l copilot --grep "%GREP_PATTERN%"
-) else (
-	call npm run test-extension -- -l copilot
-)
-if %errorlevel% neq 0 exit /b %errorlevel%
-:skip_copilot
 
 :: Tests standalone (CommonJS)
 
