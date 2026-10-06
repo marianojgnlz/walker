@@ -2432,3 +2432,73 @@ Re-verified after the cleanup: `npm run compile-client` **0 errors**; `accountFr
 3. `accountFreeApi.test`: the physical-deletion list must match the wave exactly and the positive registration assertions must still pass; no deleted bridge file may reappear.
 4. `workbenchTestServices`/`fixtureUtils`/onboarding/gallery/policy tests: no `platform/defaultAccount` import exists in any granted file; after the approved stub cleanup the only remaining importer under `src/` is the deletion-bound `services/accounts/browser/managedSettings.ts` remnant.
 5. Physical-deletion manifest: all three entries are ready — `git rm` the `services/accounts` `managedSettings.ts` + test pair and `src/vs/platform/defaultAccount/common/defaultAccount.ts` together; re-run `compile-client` after the deletion (zero remaining importers, verified).
+
+## Bounded remediation — verify round-3 findings 1–2 + two warning residues (2026-10-06)
+
+**Structured status consumed:** `activeChange: product-debloat`, `artifactStore: openspec`, `applyState: ready`, `nextRecommended: sdd-apply (remediate round-3 findings)`, `actionContext.mode: remediate`, workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat` (never commit). No goal set in this session; todo #18 is parent-owned and untouched. Failed evidence accepted as authoritative: `verify-report.md` round 3, `evidence_revision: sha256:bc216d2c84d3a08d04e61b492f6f3032f319b87ecfc0354795cf4c6f2f021b7f`, verdict `fail`, two blockers. The round-3 report was **not** reset — it stands as the historical failure record; this pass produced new evidence for a fresh independent round 4. Scope was exactly the four parent-listed remediation items; nothing was widened.
+
+**Edit surfaces used (narrowed):** `build/lib/test/walkerProduct.test.ts`, `.vscode-test.js`, `src/vs/workbench/contrib/mcp/common/mcpTypes.ts`, `src/vs/workbench/contrib/mcp/common/mcpCommandIds.ts`, `openspec/changes/product-debloat/compatibility.md`, `openspec/changes/product-debloat/apply-progress.md`. No other path was touched; the pre-existing `verify-report.md` worktree modification was preserved.
+
+### Item 1 — `build/lib/test/walkerProduct.test.ts` reconciled to post-wave reality
+
+- Added `existsSync` to the `fs` import.
+- Four stale `readFileSync` guards on deleted `src/vs/sessions/*` entrypoints replaced with physical-absence assertions (`existsSync === false`):
+  - tunnel test: the sessions desktop/web rows were removed from the read loop and asserted absent; `sharedProcessMain.ts` keeps its direct-read positive checks (`ISharedTunnelsService`/`ISharedProcessTunnelService`, no `remoteTunnel`); the deleted-file `sshAgentHost.contribution.js` retention branch is gone.
+  - gallery-account test: `sessions.desktop.main.ts` removed from the read list and asserted absent.
+  - Chat-integration test: the three sessions entrypoint rows removed from the read list and asserted absent; the also-stale `agentHostConnectionsService.js` "U07 Agent Host prerequisite remains registered" assertion (`platform/agentHost` is deleted) inverted to `!commonWorkbench.includes('agentHost')`.
+  - Agents-Window native test: the `sessions.desktop.main.ts` read (and its now-vacuous dead-file guards) replaced with an absence assertion.
+- The superseded `EditorRemoteAgentHostServiceClient` retention quartet dropped/inverted: the same test now asserts `!workbenchWeb.includes('AgentHost')` and `!workbenchWeb.includes('agentHost')`, consistent with the wave deleting `platform/agentHost` and every workbench agent-host registration; the two Chat-owned exporter absence assertions were kept.
+- Result: **17/17 passing** (was 12 passing / 5 failing). Product state was not touched by this item.
+
+### Item 2 — `.vscode-test.js` absence-safe handling
+
+- Imported `existsSync` alongside `readFileSync`.
+- The four unguarded `readFileSync` calls on deleted paths (`workbench/services/accounts/browser/defaultAccount.ts`, `workbench/services/authentication/common/authentication.ts`, `sessions/sessions.common.main.ts`, `sessions/browser/parts/mobile/mobileTitlebarPart.ts`) were replaced with a positive physical-absence loop; the still-live `workbench/browser/workbench.contribution.ts` account-avatar setting guard was retained; the `registerUpdateTitleBarMenuPlacement` retention check was dropped as superseded (the Sessions entrypoint no longer exists).
+- Evidence: `node -e "import('./.vscode-test.js')…"` → `vscode-test-config: evaluated OK`, exit 0 (read-only config-evaluation smoke proving the previous ENOENT-on-parse defect is gone; the integration suite itself remains parent-run evidence only).
+
+### Item 3 — inert MCP residues removed (C3 cleanup leaf)
+
+- `mcpTypes.ts`: removed the unproduced `kind: 'agentHost'` union member and its doc bullet from `IMcpToolCallUIData`; the type is now the single generic `local` shape. This closes the standing U06/U07-prerequisite leaf (c) disposition recorded earlier in this file (~line 2140), which could not be executed pre-wave because `mcpToolCallUI.ts`/`chatMcpAppModel.ts` consumed the variant — the wave deleted those consumers. Post-edit scan: zero `IMcpToolCallUIData` references outside its declaration, zero `connectionAuthority`, zero `kind: 'agentHost'`.
+- `mcpCommandIds.ts`: removed the unconsumed `AgentHostServerOptions` command id. Post-edit scan: zero references repo-wide.
+- Generic MCP server/config/tool semantics untouched.
+
+### Item 4 — `compatibility.md` terminal prerequisite marked resolved
+
+- The "Terminal Chat service prerequisite (U05/U07)" section now records the wave outcome: the `agentHostTerminalService` implementation and `IAgentHostTerminalService` registration are deleted; the only survivor is the inert `ITerminalChatService` declaration in `terminal/browser/terminal.ts` (decorator + interface, zero implementations/consumers), and the retained `productDebloatChatIntegrations.test.ts` asserts the terminal tabbed view carries no Chat references. The no-restore boundary wording was preserved.
+
+### Verification — this pass (Node 24.18.0 via the mise PATH)
+
+| Exact command | Observed result |
+| --- | --- |
+| `cd build && node --test lib/test/walkerProduct.test.ts` | exit 0; **17 tests, 17 pass, 0 fail** (was exit 1, 12/5) |
+| `npm run compile-client` | exit 0; compile-src 0 errors, monaco typecheck 0 errors |
+| `npm run typecheck-client` | exit 0 |
+| `npm run gulp compile-extensions` | exit 0; all extension tsconfig compilations 0 errors (the parent-authorized exact form; the previously non-existent `npm run compile-extensions` was not used) |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | exit 0; **10 passing** |
+| `./scripts/test.sh --run vs/platform/mcp/test/common/mcpTypes.test` | **exit 1** — dynamic import of `out/vs/platform/mcp/test/common/mcpTypes.test.js` fails; no such test exists in `src/vs/platform/mcp/test/common/` (authorized path names a non-existent file) |
+| `./scripts/test.sh --run vs/workbench/contrib/mcp/test/common/mcpTypes.test` | exit 0; **21 passing** (the actual edited MCP type suite; run as the corrected form of the same authorized leg) |
+| `node -e "import('./.vscode-test.js')…"` | exit 0; `vscode-test-config: evaluated OK` (no ENOENT) |
+
+`git diff --check` clean. No file was staged, committed, pushed, published, deleted or dependency-mutated. Worktree after the pass: the five edited files plus the pre-existing untracked `.pi/` and the pre-existing `verify-report.md` modification; no generated `out/**` appears in `git status`.
+
+### Measured workload / review boundary
+
+- 5 authored files, **+48 / −73** (`git diff --numstat`: `.vscode-test.js` 13/18, `walkerProduct.test.ts` 24/28, `compatibility.md` 2/2, `mcpCommandIds.ts` 0/1, `mcpTypes.ts` 9/24). Well under the 400-line budget; no size exception claimed or needed. (The `apply-progress.md` documentation append is separate.)
+
+### Persisted task state
+
+- `tasks.md` re-read after the edits: **63 checked / 45 unchecked / 108 rows — unchanged**. No unchecked row is completed by this remediation: the corrected tests/config are verify-finding fixes, and the C5/C6 family rows remain open for their documented build/vite sessions tails and agent native/SDK tails. Checkboxes were deliberately not altered; no completed task work is hidden behind an unchecked row.
+
+### Deviations and notes
+
+1. **MCP test path:** the parent-authorized `vs/platform/mcp/test/common/mcpTypes.test` does not exist and exits 1 on a failed dynamic import. The same intended coverage was executed at the real path `vs/workbench/contrib/mcp/test/common/mcpTypes.test` (21 passing). No different suite was substituted, and the failing authorized command is recorded above rather than hidden.
+2. **Extra read-only smoke:** the `.vscode-test.js` config-evaluation check is not in the authorized command list; it is a safe, non-mutating import of the repaired config used solely to prove the round-3 ENOENT defect class is gone. The integration suite itself was not launched.
+3. **No task checkbox update** — rationale in "Persisted task state".
+
+### Review focus for the verifier (round 4)
+
+1. Confirm the five authored diffs contain only the four authorized remediation items and nothing from outside the narrowed surfaces; `verify-report.md` round 3 must remain untouched as the historical failure record.
+2. `walkerProduct.test.ts`: all deleted-path `readFileSync` guards must be gone, absence assertions must be physical (`existsSync === false`), and the suite must be freshly 17/17.
+3. `.vscode-test.js`: no unguarded read of a deleted path may remain; evaluating the config must not throw.
+4. MCP: no `agentHost` transport discriminator, no `AgentHostServerOptions`, no `connectionAuthority` residue may remain; generic MCP suites must stay green.
+5. Issue an independent round-4 verdict; this pass does not self-verify its own fixes.

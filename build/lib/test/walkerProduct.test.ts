@@ -5,7 +5,7 @@
 
 import assert from 'assert';
 import es from 'event-stream';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import { suite, test } from 'node:test';
 import File from 'vinyl';
@@ -112,22 +112,19 @@ suite('Walker packaged product composition', () => {
 			assert.ok(!source.includes('tunnelAgentHost'), `${entrypoint} wires the account tunnel agent host`);
 		}
 
-		const remoteTunnelEntrypoints = [
+		const removedSessionsEntrypoints = [
 			'src/vs/sessions/sessions.desktop.main.ts',
 			'src/vs/sessions/sessions.web.main.ts',
-			'src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts',
 		];
-		for (const entrypoint of remoteTunnelEntrypoints) {
-			const source = readFileSync(resolve(import.meta.dirname, '../../../', entrypoint), 'utf8');
-			assert.ok(!source.includes('remoteTunnel'), `${entrypoint} wires RemoteTunnel services or IPC`);
-			if (entrypoint.endsWith('sharedProcessMain.ts')) {
-				assert.ok(source.includes('ISharedTunnelsService'), 'shared process retains generic tunnel forwarding');
-				assert.ok(source.includes('ISharedProcessTunnelService'), 'shared process retains its generic tunnel channel');
-			}
-			if (entrypoint.endsWith('sessions.desktop.main.ts')) {
-				assert.ok(source.includes('sshAgentHost.contribution.js'), 'Sessions retains key-based SSH Agent Host connections');
-			}
+		for (const entrypoint of removedSessionsEntrypoints) {
+			assert.ok(!existsSync(resolve(import.meta.dirname, '../../../', entrypoint)), `${entrypoint} survived the Sessions tree removal`);
 		}
+
+		const sharedProcessEntrypoint = 'src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts';
+		const sharedProcessSource = readFileSync(resolve(import.meta.dirname, '../../../', sharedProcessEntrypoint), 'utf8');
+		assert.ok(!sharedProcessSource.includes('remoteTunnel'), `${sharedProcessEntrypoint} wires RemoteTunnel services or IPC`);
+		assert.ok(sharedProcessSource.includes('ISharedTunnelsService'), 'shared process retains generic tunnel forwarding');
+		assert.ok(sharedProcessSource.includes('ISharedProcessTunnelService'), 'shared process retains its generic tunnel channel');
 
 		const cliEntrypoints = [
 			'src/vs/code/node/cli.ts',
@@ -176,22 +173,19 @@ suite('Walker packaged product composition', () => {
 	test('desktop entrypoints do not import the inert gallery account contribution', () => {
 		const entrypoints = [
 			'src/vs/workbench/workbench.desktop.main.ts',
-			'src/vs/sessions/sessions.desktop.main.ts',
 		];
 
 		for (const entrypoint of entrypoints) {
 			const source = readFileSync(resolve(import.meta.dirname, '../../../', entrypoint), 'utf8');
 			assert.ok(!source.includes('extensionGalleryAccountService.js'), `${entrypoint} imports the inert gallery account contribution`);
 		}
+		assert.ok(!existsSync(resolve(import.meta.dirname, '../../../src/vs/sessions/sessions.desktop.main.ts')), 'the Sessions desktop entrypoint survived the Sessions tree removal');
 	});
 
 	test('workbench and Sessions entrypoints do not register Chat integrations', () => {
 		const entrypoints = [
 			['src/vs/workbench/workbench.common.main.ts', ['services/chat/', 'contrib/chat/', 'contrib/inlineChat/', 'contrib/agentsVoice/', 'contrib/welcomeAgentSessions/']],
 			['src/vs/workbench/workbench.desktop.main.ts', ['contrib/chat/', 'contrib/agentsVoice/']],
-			['src/vs/sessions/sessions.common.main.ts', ['services/chat/', 'contrib/chat/', 'contrib/agentsVoice/', 'contrib/chatDebug/', 'contrib/providers/copilotChatSessions/']],
-			['src/vs/sessions/sessions.desktop.main.ts', ['contrib/chat/', 'pluginGitService.js', 'NativePluginGitCommandService']],
-			['src/vs/sessions/sessions.web.main.ts', ['contrib/chat/', 'BrowserAgentHostDebugLogsExportService']],
 		] as const;
 
 		for (const [entrypoint, forbiddenImports] of entrypoints) {
@@ -201,12 +195,18 @@ suite('Walker packaged product composition', () => {
 			}
 		}
 
+		const removedSessionsEntrypoints = [
+			'src/vs/sessions/sessions.common.main.ts',
+			'src/vs/sessions/sessions.desktop.main.ts',
+			'src/vs/sessions/sessions.web.main.ts',
+		];
+		for (const entrypoint of removedSessionsEntrypoints) {
+			assert.ok(!existsSync(resolve(import.meta.dirname, '../../../', entrypoint)), `${entrypoint} survived the Sessions tree removal`);
+		}
+
 		const commonWorkbench = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/workbench.common.main.ts'), 'utf8');
 		assert.ok(commonWorkbench.includes('./contrib/notebook/browser/notebook.contribution.js'), 'ordinary notebook contribution remains registered');
-		assert.ok(commonWorkbench.includes('../platform/agentHost/browser/agentHostConnectionsService.js'), 'U07 Agent Host prerequisite remains registered');
-
-		const sessionsDesktop = readFileSync(resolve(import.meta.dirname, '../../../src/vs/sessions/sessions.desktop.main.ts'), 'utf8');
-		assert.ok(sessionsDesktop.includes('sshAgentHost.contribution.js'), 'Sessions SSH Agent Host registration remains available for U07');
+		assert.ok(!commonWorkbench.includes('agentHost'), 'Agent Host wiring is not retained in the workbench entrypoint');
 	});
 
 	test('code-OSS fallback and web startup omit Chat-owned product wiring', () => {
@@ -218,10 +218,8 @@ suite('Walker packaged product composition', () => {
 		const workbenchWeb = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/workbench.web.main.ts'), 'utf8');
 		assert.ok(!workbenchWeb.includes('BrowserAgentHostDebugLogsExportService'), 'browser entrypoint imports the Chat-owned Agent Host debug exporter');
 		assert.ok(!workbenchWeb.includes('IAgentHostDebugLogsExportService'), 'browser entrypoint registers the Chat-owned Agent Host debug service');
-		assert.ok(workbenchWeb.includes('EditorRemoteAgentHostServiceClient'), 'U07 Agent Host client remains available');
-		assert.ok(workbenchWeb.includes('registerSingleton(IAgentHostService, EditorRemoteAgentHostServiceClient'), 'U07 Agent Host client remains registered');
-		assert.ok(workbenchWeb.includes('registerSingleton(IRemoteAgentHostService, NullRemoteAgentHostService'), 'generic remote Agent Host fallback remains registered');
-		assert.ok(workbenchWeb.includes('webAgentHostEnablementService.js'), 'U07 Agent Host enablement remains registered');
+		assert.ok(!workbenchWeb.includes('AgentHost'), 'browser entrypoint retains Agent Host wiring');
+		assert.ok(!workbenchWeb.includes('agentHost'), 'browser entrypoint retains lower-case agent host wiring');
 	});
 
 	test('desktop startup does not construct or route to Chat/Agent Host windows', () => {
@@ -257,9 +255,7 @@ suite('Walker packaged product composition', () => {
 		assert.ok(!windowsMainService.includes('openAgentsWindow('), 'main window service still implements Agents Window opening');
 		assert.ok(windowsMainService.includes('async open(openConfig: IOpenConfiguration)'), 'ordinary workbench window opening remains');
 
-		const sessionsDesktop = readFileSync(resolve(import.meta.dirname, '../../../src/vs/sessions/sessions.desktop.main.ts'), 'utf8');
-		assert.ok(!sessionsDesktop.includes('registerOpenAgentsWindowCommand'), 'Sessions entrypoint still registers the Open Agents Window command');
-		assert.ok(!sessionsDesktop.includes('openAgentsWindow.contribution.js'), 'Sessions entrypoint still registers Agents Window keybindings');
+		assert.ok(!existsSync(resolve(import.meta.dirname, '../../../src/vs/sessions/sessions.desktop.main.ts')), 'the Sessions desktop entrypoint survived the Sessions tree removal');
 	});
 
 	test('Walker product has no default Chat agent or Agents Window extension allowlist', () => {

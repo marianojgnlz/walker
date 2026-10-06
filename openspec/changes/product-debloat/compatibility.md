@@ -15,9 +15,9 @@ The public `vscode.authentication` namespace remains available as an inert compa
 
 The `authLearnMore`, `authIssuers`, and `authSession` proposal checks remain in force where their proposed options are used. The compatibility boundary does not restore provider discovery, account state, network/authentication requests, consent UI, or account services. Existing internal authentication services/RPC remain temporarily for their not-yet-disconnected consumers; their later removal belongs to A2 and is not claimed by this leaf.
 
-## Terminal Chat service prerequisite (U05/U07)
+## Terminal Chat service prerequisite (U05/U07) — resolved by the wave
 
-The retained terminal workbench no longer uses `ITerminalChatService` to render hidden Chat terminal tabs or drive generic tab visibility. Preserve the `ITerminalChatService` interface and the `agentHostTerminalService` implementation/consumer as a U07 Agent Host prerequisite until its owner disconnects the Chat-specific terminal-host paths. This retained interface does not authorize restoring terminal Chat UI registrations, Chat-agent tools, Chat-owned speech sessions, or Chat settings in generic terminal code. Physical removal of disconnected terminal Chat source remains parent-owned.
+The U05/U07 terminal prerequisite is resolved by the U06/U07 removal wave. The `agentHostTerminalService` implementation and its `IAgentHostTerminalService` registration were deleted, so the retained terminal workbench no longer renders hidden Chat terminal tabs or drives generic tab visibility through a Chat service. The only survivor is the inert `ITerminalChatService` interface declaration in `terminal/browser/terminal.ts` (decorator plus interface, zero implementations and zero consumers); the retained `productDebloatChatIntegrations.test.ts` asserts the terminal tabbed view carries no Chat references. This declaration does not authorize restoring terminal Chat UI registrations, Chat-agent tools, Chat-owned speech sessions, or Chat settings in generic terminal code.
 
 ## Account-free browser embedder API (A2-D2.001)
 

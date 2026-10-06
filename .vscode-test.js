@@ -6,7 +6,7 @@
 //@ts-check
 
 import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'url';
 import * as path from 'path';
 import * as os from 'os';
@@ -151,26 +151,21 @@ if (!lintAllowLists[1].includes('src/vs/platform/github/common/githubTransport.t
 	throw new Error('Generic GitHub transport must remain in the bracket-notation allowlist.');
 }
 
-const defaultAccountSource = readFileSync(path.join(__dirname, 'src/vs/workbench/services/accounts/browser/defaultAccount.ts'), 'utf8');
-const accountSettingSource = readFileSync(path.join(__dirname, 'src/vs/workbench/services/authentication/common/authentication.ts'), 'utf8');
 const workbenchConfiguration = readFileSync(path.join(__dirname, 'src/vs/workbench/browser/workbench.contribution.ts'), 'utf8');
-const sessionsEntrypoint = readFileSync(path.join(__dirname, 'src/vs/sessions/sessions.common.main.ts'), 'utf8');
-const mobileTitlebar = readFileSync(path.join(__dirname, 'src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts'), 'utf8');
-if (/account|avatar|sign.?in|sign.?out/i.test(mobileTitlebar)) {
-	throw new Error('The mobile titlebar must not contain account or sign-in presentation.');
-}
-if (/DEFAULT_ACCOUNT_SIGN_IN_COMMAND|DefaultAccountProviderContribution/.test(defaultAccountSource)) {
-	throw new Error('Default-account sign-in commands and provider activation must not be registered.');
-}
-if (/ACCOUNTS_AVATAR_SETTING|workbench\.accounts\.showAvatar/.test(accountSettingSource)
-	|| /ACCOUNTS_AVATAR_SETTING|workbench\.accounts\.showAvatar/.test(workbenchConfiguration)) {
+if (/ACCOUNTS_AVATAR_SETTING|workbench\.accounts\.showAvatar/.test(workbenchConfiguration)) {
 	throw new Error('The account-avatar configuration setting must not be declared or registered.');
 }
-if (sessionsEntrypoint.includes("contrib/accountMenu/browser/account.contribution.js")) {
-	throw new Error('The Sessions entrypoint must not import account menu contributions.');
-}
-if (!sessionsEntrypoint.includes('registerUpdateTitleBarMenuPlacement')) {
-	throw new Error('The generic Sessions titlebar update placement must remain available.');
+
+const removedAccountAndSessionsSources = [
+	'src/vs/workbench/services/accounts/browser/defaultAccount.ts',
+	'src/vs/workbench/services/authentication/common/authentication.ts',
+	'src/vs/sessions/sessions.common.main.ts',
+	'src/vs/sessions/browser/parts/mobile/mobileTitlebarPart.ts',
+];
+for (const removedSource of removedAccountAndSessionsSources) {
+	if (existsSync(path.join(__dirname, removedSource))) {
+		throw new Error(`The removed account/Sessions source '${removedSource}' must not remain in the repository.`);
+	}
 }
 
 const staleProviderPaths = [
