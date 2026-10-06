@@ -77,7 +77,6 @@ import '../platform/remote/electron-browser/sharedProcessTunnelService.js';
 import './services/tunnel/electron-browser/tunnelService.js';
 import '../platform/diagnostics/electron-browser/diagnosticsService.js';
 import '../platform/profiling/electron-browser/profilingService.js';
-import '../platform/telemetry/electron-browser/customEndpointTelemetryService.js';
 import './services/files/electron-browser/elevatedFileService.js';
 import './services/search/electron-browser/searchService.js';
 import './services/workingCopy/electron-browser/workingCopyHistoryService.js';

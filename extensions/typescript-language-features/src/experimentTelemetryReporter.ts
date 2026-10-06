@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import VsCodeTelemetryReporter from '@vscode/extension-telemetry';
 import * as vscode from 'vscode';
 import * as tas from 'vscode-tas-client';
 
@@ -12,40 +11,28 @@ export interface IExperimentationTelemetryReporter extends tas.IExperimentationT
 }
 
 /**
- * This reporter *supports* experimentation telemetry,
- * but will only do so when passed to an {@link ExperimentationService}.
+ * A no-op experimentation telemetry adapter.
+ *
+ * The direct `@vscode/extension-telemetry` reporter was removed. `vscode-tas-client`
+ * already returns its telemetry-disabled experiment service whenever
+ * `vscode.env.isTelemetryEnabled` is false, which is always the case in this product,
+ * so nothing below is ever invoked by the experimentation service.
  */
-
 export class ExperimentationTelemetryReporter implements IExperimentationTelemetryReporter {
 
-	private _sharedProperties: Record<string, string> = {};
-	private readonly _reporter: VsCodeTelemetryReporter;
-
-	constructor(reporter: VsCodeTelemetryReporter) {
-		this._reporter = reporter;
+	setSharedProperty(_name: string, _value: string): void {
+		// Reporting removed.
 	}
 
-	setSharedProperty(name: string, value: string): void {
-		this._sharedProperties[name] = value;
+	postEvent(_eventName: string, _props: Map<string, string>): void {
+		// Reporting removed.
 	}
 
-	postEvent(eventName: string, props: Map<string, string>): void {
-		const propsObject = {
-			...this._sharedProperties,
-			...Object.fromEntries(props),
-		};
-		this._reporter.sendTelemetryEvent(eventName, propsObject);
+	postEventObj(_eventName: string, _props: { [prop: string]: string }): void {
+		// Reporting removed.
 	}
 
-	postEventObj(eventName: string, props: { [prop: string]: string }) {
-		this._reporter.sendTelemetryEvent(eventName, {
-			...this._sharedProperties,
-			...props,
-		});
-	}
-
-	dispose() {
-		this._reporter.dispose();
+	dispose(): void {
+		// noop
 	}
 }
-

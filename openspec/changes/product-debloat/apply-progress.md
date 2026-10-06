@@ -3238,3 +3238,211 @@ Also recorded as C7/P3 follow-ups outside every grant so far: `eslint.config.js`
 2. Deletion coupling is honest: the only edit inside the doomed tree is the 5-line `IProductService`/`dictationRuntime` read removal, and it is disclosed in both the W38 addition and here.
 3. `package-lock.json` lost `foundry-local-sdk` **and** its orphaned `adm-zip`, while `vscode-jsonrpc`, `zod` and all retained native packages stay resolved (0 unresolved edges).
 4. `build/next/index.ts` no longer lists any entry point whose source tree is absent (`localTranscription` + the two agent-host entries); `npm run build-fast`'s desktop target can resolve again.
+
+## U10 `telemetry-infrastructure-cutoff` executed (2026-10-07; I1–I7 + I.ALL disconnection + B1)
+
+### Structured status consumed
+
+Parent-derived status as supplied (`applyState: ready`, `nextRecommended: sdd-apply`, `actionContext.mode: implement`, workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat`, never commit, `delivery: feature-branch-chain`, 400-line review budget). No `actionContext` warnings were emitted; no todo or goal was written by this executor (todo #18 stays parent-owned). The standing grant's Engram-store carve-out was irrelevant: `artifactStore: openspec`.
+
+### Leaves executed (each consumed its predecessor's green state)
+
+| Leaf | Scope | Result |
+| --- | --- | --- |
+| `u10.i7-crash` | `src/main.ts` crash-reporter import/start/`configureCrashReporter`/argv schema+parse; `app.ts` `updateCrashReporterEnablement` argv.json writes; crash flags in `scripts/test.sh`, `test-integration.{sh,bat}`, `test-remote-integration.{sh,bat}` | No `crashReporter` remains in the main entry; old `--crash-reporter-directory`/`enable-crash-reporter`/`crash-reporter-id` inputs are inert because nothing starts or configures the reporter. Ordinary uncaught-error handling is untouched. |
+| `u10.i1-main` | `telemetryServiceRegistration.ts` → unconditional no-op binding with no reporting-descriptor seam; `app.ts` binds it and drops the appender client/config/common-properties/ErrorTelemetry construction; `productDebloat.test.ts` transitions to the no-op binding assertion | Main process resolves the `NullTelemetryService` object (never the singleton as a constructor). |
+| `u10.i4-shared` | `sharedProcessMain.ts` | Shared process binds the no-op service; `telemetryAppender` + `customEndpointTelemetry` channels, 1DS/log appenders, custom-endpoint service and shutdown flush are gone. |
+| `u10.i5-server` | `serverServices.ts` | Server binds the no-op service; `IServerTelemetryService` reporting graph, server/remote `telemetry` channel, 1DS/log appenders, `ErrorTelemetry` and the `telemetry-level` argv mapping are gone; the machine-ID reads that existed only for reporting are dropped. Gallery/remote channels untouched. |
+| `u10.i2-desktop-renderer` | `workbench/services/telemetry/electron-browser/telemetryService.ts` now registers the no-op shape + no-op endpoint service; `workbench.desktop.main.ts` drops the custom-endpoint side-effect import; `contrib/telemetry/browser/telemetry.contribution.ts` drops `ErrorTelemetry` and the `Show Telemetry` status action/output-channel handling (event call-sites stay for U11) | Old all settings cannot construct a reporting renderer service; no shared telemetry channel is requested. |
+| `u10.i3-browser-renderer` | `workbench/services/telemetry/browser/telemetryService.ts` now registers the no-op shape | 1DS web appender, local telemetry log and consent-driven re-initialization are gone. |
+| `u10.i6-facade` | `extHostTelemetry.ts` rewritten as the disabled facade; `mainThreadTelemetry.ts` initializes NONE/false, never announces enablement and drops the Copilot CAPI assignment-context command | Facade always reports disabled state; supplied sender methods, telemetry loggers, common properties and extension-error reporting are never invoked; `onExtensionError` returns false so ordinary error notifications remain. |
+| `u10.i6-facade-tests` | `api/test/browser/extHostTelemetry.test.ts` rewritten to count sender/flush calls and enablement emissions; `mainThreadTelemetry.test.ts` rewritten to assert disabled init + no CAPI command | Old reporting-behavior suites replaced by no-op/absence suites. |
+| `u10.i-all-disconnection` | 18 platform reporting modules + 4 platform tests + 2 workbench property builders + 2 workbench property tests + `debug/node/telemetryApp.ts` emptied; `build/next/index.ts` entry removed; `build/gulpfile.vscode.ts` `.build/telemetry/**` stream removed; `cliProcessMain.ts`/`cli.ts` `--telemetry` status command removed; `node/telemetryUtils.ts` emptied (zero consumers) | Nothing importable constructs an appender, channel, error collector, endpoint service or appender child process. Physical deletion is the parent-owned W39 batch (recorded in `deletion-review.md`). |
+| `u10.i-all-deps` | Root + `remote/` + `remote/web/` manifests and locks lose the 1DS packages and their three orphaned transitives; `extensions/git` closure is B1 | Hoisting-aware check: no new unresolved edges in any lockfile. |
+| `u10.b1-git` | `extensions/git`: reporter import/construction/dispose, ctor parameters and all `sendTelemetryEvent` calls + GDPR blocks removed from `main/model/repository/commands/cloneManager`; `aiKey`, `@vscode/extension-telemetry` and its 11-package closure removed from manifest/lock | Git behavior, askpass/SSH/credential-provider paths, logs and repository operations are unchanged; only the payload-only `totalTime`/`statusLength`/`id` values were dropped with their events. |
+
+### Verification evidence (this pass, Node 24.18.0)
+
+| Command | Result |
+| --- | --- |
+| `npm run compile-client` | **exit 0**, 0 compile errors |
+| `npm run typecheck-client` | **exit 0** |
+| `npm run gulp compile-extensions` | **exit 0** |
+| `npm run gulp compile-extension:git` | **exit 0**, 0 errors (git tsconfig) |
+| `./scripts/test.sh --run vs/code/test/electron-main/productDebloat.test` | **6 passing** (no-op binding; process/crash/renderer/facade absence; git reporter absence) |
+| `./scripts/test.sh --run vs/platform/telemetry/test/common/nullTelemetryService.test` | **2 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/browser/extHostTelemetry.test` | **5 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/browser/mainThreadTelemetry.test` | **2 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing** |
+| `cd build && node --test lib/test/agentProducerFreePackaging.test.ts` | **8/8 passing** |
+| `git diff --check` | clean (the two `.bat` files were restored to CRLF) |
+| Lockfile closure checks (root/remote/web) | 0 new unresolved edges vs `HEAD`; 44-line generated removals per lock, byte-faithful formatting |
+| `npm run test --prefix extensions/git` | **not a runnable selector in this tree** (`mocha: No test files found: "test"`) — the extension's suites run through the integration runner |
+| `./scripts/test-integration.sh --suite 'git,git-base'` | **exit 1 in this environment before and independently of this pass** — the extension host exits without loading tests and logs the pre-existing `Missing proxy instance MainThreadEmbeddings` startup error; `--suite 'emmet'` fails identically on the current tree, so this is not a B1 regression. Recorded as environment evidence, not claimed as a pass. |
+
+### Persisted task state
+
+- `tasks.md` flips: **I1, I2, I3, I4, I5, I6, I7, B1 → `- [x]`**. `I.ALL` stays `- [ ]` with a single remaining step: the parent's W39 `git rm` of the 26 recorded stubbed modules (no physical deletion was performed by this executor), after which the emptied modules disappear and the same verification set is re-run; the settings/argv schema closure and the `@vscode/telemetry-extractor`/`mixin-telemetry-docs` removal remain T11-owned per the ledger and are not claimed here.
+- `deletion-review.md` gained the W39 batch record (26 files / 3,026 tracked lines, per-file readiness evidence).
+
+### Workload / PR boundary (≤400 authored lines per review unit)
+
+| Review unit | Authored changed lines | Notes |
+| --- | ---: | --- |
+| `u10.i7-crash` | 166 | `src/main.ts` 114, `app.ts` crash method ~30, five runner scripts 22 |
+| `u10.i1-main` | 146 | seam 17, `app.ts` registration ~44, fixture 85 |
+| `u10.i4-shared` | 49 | one registration block |
+| `u10.i5-server` | 64 | one registration block + channel/collector removal |
+| `u10.i2-desktop-renderer` | 201 | service 131, contribution 69, entrypoint 1 |
+| `u10.i3-browser-renderer` | 131 | service only |
+| `u10.i6-facade` | 385 | facade 319 + bridge 66 (implementation pair) |
+| `u10.i6-facade-tests` | 375 | two test files (the suite pair that proves the facade) |
+| `u10.i-all-disconnection` | ~4,200 across 26 files | Whole-file content replacement (each stub 5–6 authored lines); reviewed as the W39 deletion-coupling batch, exactly like the D/W38 precedents — not one oversized authored feature leaf |
+| `u10.i-all-deps` | 427 generated + 8 manifest | root/remote closure 276, git closure 151 |
+| `u10.b1-git` | 128 source + 151 manifest/lock | under the cap |
+
+No `size:exception` is claimed. The two `u10.i6-*` units are a facade/test pair split at the implementation boundary so each unit stays under 400; the `u10.i-all-disconnection` batch is whole-file deletion preparation whose review is the recorded W39 batch, not a feature leaf.
+
+### Review focus for the verifier
+
+1. **Every retained context resolves the no-op object/shape**: main (object via `ServiceCollection.set`), shared/server/CLI (object), desktop/browser renderer (dependency-free `NullTelemetryServiceShape` descriptor), extension host (disabled facade). No settings-dependent wrapper can reconstruct a reporting service.
+2. **No transport remains**: no `telemetryAppender`/`customEndpointTelemetry`/`telemetry` channel registration, no 1DS/log appender construction, no appender child-process entry point, no crash-reporter start, and the `.build/telemetry/**` product stream is gone.
+3. **Legacy enablement is powerless**: `telemetry.telemetryLevel`, `telemetry.enableTelemetry`, `enable-crash-reporter`, `crash-reporter-id`, `--telemetry-level` and `--crash-reporter-directory` have no reader that can activate reporting; the settings schema itself is retained as a T11 item so retained readers keep coherent defaults.
+4. **B1 keeps Git intact**: reporter params/calls/payload-only values removed, manifest/lock closure removed, no `@vscode/extension-telemetry` import; askpass/SSH/credential-provider/log paths untouched.
+5. **W39 readiness**: the stubbed modules have zero importers (compile-verified with them on disk), so the parent `git rm` cannot strand a reference; the productDebloat guard is deletion-stable.
+
+### Remaining in this assignment
+
+- `I.ALL` — parent W39 `git rm`; then re-run the verification set. The settings/argv closure and the telemetry-extractor dependency are T11-owned.
+- `B2–B8` — **not started: the seven target extension trees are outside this brief's authoritative allowed-edit surfaces** (`extensions/git/**`, `extensions/git-base/**`). The exact candidate paths were derived and a parent decision is requested (see the interaction raised with this report).
+
+## U10 continuation — List A (B2–B8 direct reporters) + List B (welcome telemetry notice), parent `approve-both-lists` (2026-10-07)
+
+### Parent grant consumed
+
+The parent answered the recorded interaction with **`approve-both-lists`** and recorded it in `parent-authorization.md` under "U10 grant additions (2026-10-07, approve-both-lists)": List A = the seven extension trees' `@vscode/extension-telemetry` reporters — **reporters only, each extension's features + tests preserved**; List B = the welcome telemetry notice (the three `welcomeGettingStarted` files + the `showTelemetryOptOut` field). Protocol unchanged: no physical deletion by this executor, no commit, unique-text splices only, Node 24.18.0.
+
+### Units executed
+
+| Unit | Scope | Result |
+| --- | --- | --- |
+| `u10.b2-b8-reporters` | `extensions/{typescript-language-features,html-language-features,json-language-features,markdown-language-features,merge-conflict,media-preview,simple-browser}` | Every direct `@vscode/extension-telemetry` import/construction is gone; each manifest lost `aiKey` and the dependency; each lock lost the identical 11-package closure (0 unresolved edges, no nested copies). `typescript-language-features` keeps a documented no-op `ExperimentationTelemetryReporter` for the `vscode-tas-client` API shape (TAS itself already returns its telemetry-disabled service because `env.isTelemetryEnabled` is always false) and its feature instrumentation stays inert for T9. `html`/`json`/`markdown`/`merge-conflict` had their reporter interfaces, wrappers, parameters, calls and sole-purpose payloads removed; `media-preview`/`simple-browser` were manifest/lock-only. |
+| `u10.list-b-welcome` | `welcomeGettingStarted/browser/{gettingStarted,gettingStartedInput,startupPage}.ts`, `src/vs/base/common/product.ts` | The consent notice can no longer render or persist: opt-out storage write, `showTelemetryOptOut` first-launch branch, `showTelemetryNotice` editor option/property, telemetry footer builder and both footer render branches are removed; the two services that only served them (`IProductService` in `startupPage`, `IMarkdownRendererService` in `gettingStarted`) are un-injected. |
+| `u10.guard-tests` | `src/vs/code/test/electron-main/productDebloat.test.ts` | Two permanent guards added: all seven extensions must ship no `aiKey`/reporter dependency/lock entry, and the welcome surface must contain no consent-notice symbol. |
+
+### Verification evidence (this pass, Node 24.18.0)
+
+| Command | Result |
+| --- | --- |
+| `npm run compile-client` | **exit 0**, 0 compile errors |
+| `npm run typecheck-client` | **exit 0** |
+| `npm run gulp compile-extensions` | **exit 0**, every retained extension 0 errors |
+| `extensions/{typescript,markdown,merge-conflict,media-preview,simple-browser}-language-features: npm run typecheck-web` | **exit 0** each (browser tsconfigs) |
+| `./scripts/test.sh --run vs/code/test/electron-main/productDebloat.test` | **8 passing** (now including the extension-reporter and welcome-notice absence guards) |
+| `./scripts/test.sh --run vs/platform/telemetry/test/common/nullTelemetryService.test` | **2 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/browser/extHostTelemetry.test` | **5 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/browser/mainThreadTelemetry.test` | **2 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing** |
+| `cd build && node --test lib/test/agentProducerFreePackaging.test.ts` | **8/8 passing** |
+| Lock closure checks (seven extension locks) | 0 unresolved edges; every reporter/1DS/applicationinsights entry gone |
+| `git diff --check` | clean |
+
+- The extensions have no runnable standalone unit-test selectors (their suites execute through the integration runner, whose extension-host startup fails in this environment for a pre-existing, telemetry-unrelated reason — the same `Missing proxy instance MainThreadEmbeddings` error fails the untouched `emmet` suite). Their typecheck/build coverage above is the available evidence; the parent's integration verification remains the authoritative behavior check.
+
+### Persisted task state
+
+- `tasks.md` flips: **B2, B3, B4, B5, B6, B7, B8 → `- [x]`** (with B1, I1–I7 from the first half). Re-read after the flips: **109 rows / 86 checked / 23 unchecked**.
+- Remaining unchecked rows: `I.ALL` (parent W39 `git rm` + re-verification; settings/argv closure and extractor removal T11-owned), `C5.*`, `C7.*`, `P3.GREEN`, `P2/P3.TRIANGULATE`, `T1–T12`, `V1.*`, `V2.*` — no row of the U10 assignment remains except `I.ALL`'s parent-deletion step.
+- `deletion-review.md` W39 gained the W39.e stub entry (`extensions/markdown-language-features/src/telemetryReporter.ts`, 60 lines) and the seven extension reporter closures.
+
+### Workload / PR boundary
+
+| Review unit | Changed lines |
+| --- | ---: |
+| `u10.b2-b8-reporters` (source + manifests, excluding generated locks) | 358 |
+| `u10.b2-b8-reporters` generated lock closures (7 files) | 1,047 |
+| `u10.list-b-welcome` | 65 |
+| `u10.guard-tests` | 113 |
+
+The authored source/manifest unit is under the 400 cap; the generated lock closures are mechanical member removals with an orphan proof and are reviewable as one repeated pattern (the same 11-package closure in seven locks), consistent with the earlier lock-batch precedents. No `size:exception` is claimed.
+
+### Residuals disclosed for the verifier (T9-owned, inert)
+
+- `typescript-language-features`: the internal `logging/telemetry.ts` wrapper and its `logTelemetry`/`logTraceEvent` call-sites remain, but there is no longer any reporting destination — the wrapper's reporter is the documented no-op adapter and `vscode-tas-client` returns its telemetry-disabled service because `env.isTelemetryEnabled` is always false. The `enableDiagnosticsTelemetry` setting and `DiagnosticsTelemetryManager` sampling stay for T9's event-schema/payload pruning.
+- `extensions/markdown-language-features/src/telemetryReporter.ts` is an empty module pending the parent's W39.e `git rm`.
+- The `package.json`/argv settings schema for `telemetry.telemetryLevel`/`enableCrashReporter` remains T11-owned and is powerless (no reporting service exists).
+
+## Deletion-completion fix-up — U10 retained-module reductions re-applied after the parent W39 over-deletion/restore incident (2026-10-07, `mode: remediate`)
+
+### Incident record and restoration
+
+- The parent's W39 `git rm` of the 26 recorded stub modules (`deletion-review.md` W39.a–d: 17 platform reporting modules, 4 platform reporting tests, 4 workbench property builders/tests, 1 utility-process appender entry) was executed correctly and the 26 staged deletions are intact.
+- A parent-side over-deletion + restore cycle then restored five **retained** modules to their pre-U10 `HEAD` state (they showed as unmodified in `git status`): `platform/telemetry/common/telemetryService.ts`, `platform/telemetry/electron-main/telemetryUtils.ts`, `workbench/services/telemetry/browser/telemetryService.ts`, `workbench/services/telemetry/electron-browser/telemetryService.ts`, `workbench/contrib/telemetry/browser/telemetry.contribution.ts`. This left exactly 7 dangling relative imports (verified by a resolver-based scan of the three allowed source roots) because the reporting modules they imported are physically gone.
+- This pass re-applied the U10 reductions described by the W39 "Not manifest items" note plus the `u10.i2-desktop-renderer` / `u10.i3-browser-renderer` evidence rows. No file was unlinked, staged, or committed; the 26 staged deletions were not touched.
+
+### Re-applied reductions (files changed)
+
+| File | End state |
+| --- | --- |
+| `platform/telemetry/electron-main/telemetryUtils.ts` | Machine-identity resolution only (T1-owned; `app.ts` consumes all four exports). The deleted `node/telemetryUtils.ts` cache logic is inlined over the retained `base/node/id.ts` primitives: state-cache read, macOS iBridge replacement for the machine ID, `stripUTF8BOM` for the dev device ID, and the existing validate/re-set path. No reporting import remains. |
+| `platform/telemetry/common/telemetryService.ts` | Settings-schema registration only (exactly the W39 not-manifest state): the reporting `TelemetryService` class, `ITelemetryServiceConfig`, buffering/appender/cleanup logic and their imports are pruned; `getTelemetryLevelSettingDescription` + the `telemetry.telemetryLevel` / `telemetry.feedback.enabled` / `telemetry.enableTelemetry` registration remain (T11-owned). |
+| `workbench/services/telemetry/browser/telemetryService.ts` | 8-line no-op registration only: `registerSingleton(ITelemetryService, new SyncDescriptor(NullTelemetryServiceShape))`. |
+| `workbench/services/telemetry/electron-browser/telemetryService.ts` | No-op shape + no-op endpoint service only: the same `NullTelemetryServiceShape` registration plus `registerSingleton(ICustomEndpointTelemetryService, NullEndpointTelemetryService, InstantiationType.Delayed)` (required by the retained `contrib/debug/browser/debugSession.ts` injection). |
+| `workbench/contrib/telemetry/browser/telemetry.contribution.ts` | The `ErrorTelemetry` registration and the `handleTelemetryOutputVisibility` "Show Telemetry" action/output-channel block are removed, along with their now-unused imports/constructor injections (`Event`, `IProductService`, `Action2`/`registerAction2`, `localize2`, `Categories`, `IOutputService`, `ILoggerService`/`ILoggerResource`/`LogLevel`, `supportsTelemetry`, `TelemetryLogGroup`/`telemetryLogId`). The U11/T3-owned event call-sites (workspace load, file get/put, configuration telemetry incl. `TerminalContribSettingId.SuggestEnabled`) remain. |
+
+### Deviations and corrections disclosed
+
+1. **Contribution wording vs recorded end state:** the launch prompt said "reduce to an empty/no-op module", but the artifact end state (`u10.i2-desktop-renderer`: "drops `ErrorTelemetry` and the `Show Telemetry` status action/output-channel handling (event call-sites stay for U11)") and two retained guards require otherwise: `productDebloat.test.ts` asserts the contribution does not match `/ErrorTelemetry|showTelemetry|TelemetryLogGroup|telemetryLogId/`, and `productDebloatChatIntegrations.test.ts` asserts it still contains `TerminalContribSettingId.SuggestEnabled`. Literally emptying the module would fail a retained boundary test outside this pass's edit surfaces and would preempt T3/U11. The artifact end state was followed; the deviation is recorded here rather than silently resolved.
+2. **`common/telemetryService.ts` pruning:** performed as the fifth retained module per the launch prompt's explicit sibling requirement ("must keep ONLY the settings-schema registration per the manifest"). It had no dangling import but still carried the reporting class the W39 note records as pruned.
+3. **Compile correction during the pass:** the first registration rewrite imported `SyncDescriptor` from `instantiation/common/extensions.js`, which re-exports it only locally (TS2459 ×2). It is now imported from `instantiation/common/descriptors.js`; `npm run compile-client` is clean at 0 errors.
+4. **Behavior note (T1 surface):** `validateDevDeviceId` keeps the original semantics (fresh `getDevDeviceId` compared against the stripped cached value; cache write only on mismatch). The retained machine-ID trace lines were preserved.
+
+### Verification evidence (this pass, Node 24.18.0)
+
+| Command | Result |
+| --- | --- |
+| resolver-based dangling-import scan over `platform/telemetry/common/**`, `workbench/{services,contrib}/telemetry/**` (+ `electron-main/telemetryUtils.ts`) | **0 dangling** (7 before the fix) |
+| `npm run compile-client` | **exit 0, 0 compile errors** (gate) |
+| `npm run typecheck-client` | **exit 0** |
+| `./scripts/test.sh --run vs/code/test/electron-main/productDebloat.test` | **8 passing** (RED before this pass: 7 passing / 1 failing on "renderer telemetry registrations resolve the no-op shape") |
+| `./scripts/test.sh --run vs/platform/telemetry/test/common/nullTelemetryService.test` | **2 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/browser/extHostTelemetry.test` | **5 passing** |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` | **30 passing** (extra retained boundary; includes the contribution content assertions) |
+| `git diff --check` | clean |
+
+Strict TDD is not declared (`openspec/config.yaml`: `strict_tdd: false`); the existing committed guard test supplied the RED→GREEN cycle for this remediation.
+
+### Persisted task state
+
+- **No checkbox flips in this pass.** The re-applied work belongs to already-checked rows I2/I3 (and the W39 physical deletion completed by the parent). Re-read of `tasks.md`: **109 rows / 86 checked / 23 unchecked — unchanged**.
+- `I.ALL` remains open deliberately: its scope also covers the T11-owned settings/argv schema closure and the `@vscode/telemetry-extractor`/`mixin-telemetry-docs` removal, which are not part of this fix-up. Exact remaining relevant rows:
+  - `- [ ] I.ALL.TRIANGULATE → REFACTOR: After all contexts resolve no-op, delete platform appenders, reporting telemetryService/telemetryIpc/remoteTelemetryChannel/server/custom-endpoint/error/log infrastructure and reporting tests/UI/config/consent/status/extractor/package streams in measured leaves. Retain minimal no-op/public shape only; remove exclusive 1DS/reporting dependencies and identity/payload collection with consumer evidence. Run cross-context no-network/no-telemetry-log/no-flush fixtures under old settings and record cutoff acceptance separately from remaining T inventory.`
+  - `- [ ] T1: Finish main/code/server/bootstrap/platform/environment/product/externalServices/telemetry service callsite/identity/payload pruning, including OS/proxy/metered reporting in app.ts; retain separately justified generic identity/security/perf behavior and normal logs. Close all infrastructure leftovers and temporary custom-endpoint no-op signatures after final consumer removal.`
+  - `- [ ] T3: Prune workbench shell/common/services ... constructor/test stubs and payload helpers; preserve personalization, profile switching, command/lifecycle/disposable behavior with focused service/browser tests.`
+  - `- [ ] T11: Remove telemetry-only build/packaging/extractor/artifact/script/CLI configuration and dependencies across root/remote/extension manifests/locks and build tasks/pipelines. ...`
+
+### Structured status consumed
+
+`activeChange: product-debloat` · `artifactStore: openspec` · `applyState: ready` · `nextRecommended: sdd-apply` · `actionContext: { mode: remediate (deletion-completion), workspace/cwd: /home/marialez/Work/walker, branch: product-debloat }` · `taskAccounting: { total: 109, remaining: 23, checked: 86 }`. No `actionContext` blockers or warnings; the narrowed edit surfaces were sufficient (no file outside them was touched). Session todo #18 and the goal pool were read-only context and were not modified.
+
+### Workload / PR boundary
+
+| Review unit (one file each) | Added | Deleted |
+| --- | ---: | ---: |
+| `common/telemetryService.ts` (settings-schema only) | 1 | 263 |
+| `electron-main/telemetryUtils.ts` (inlined identity resolution) | 22 | 6 |
+| `contrib/telemetry/browser/telemetry.contribution.ts` | 1 | 69 |
+| `workbench/services/telemetry/browser/telemetryService.ts` | 5 | 157 |
+| `workbench/services/telemetry/electron-browser/telemetryService.ts` | 5 | 122 |
+| **Total** | **34** | **617** |
+
+Each module is an independent reviewable unit under the 400-line ceiling; the aggregate is the bounded W39 retained-module completion, reviewed as the same deletion-coupling batch precedent as D/W38. No `size:exception` is claimed or needed. No comments, tests, or blank-line structure were compressed to reach a budget.
+
+### Review focus for the verifier
+
+1. `common/telemetryService.ts` contains only the settings-schema registration (no `TelemetryService` class, no `ITelemetryServiceConfig`); the schema values are unchanged and T11 owns their final closure.
+2. Both renderer registration modules resolve only `NullTelemetryServiceShape` / `NullEndpointTelemetryService`; no `BaseTelemetryService`, appender, channel, or 1DS symbol remains; `workbench.common.main.ts` still side-effect-imports the reduced contribution.
+3. The contribution retains the U11/T3 event call-sites but has no `ErrorTelemetry`, `Show Telemetry` action, telemetry log group/id or logger/output handling left.
+4. Machine-ID resolution behavior is unchanged (state cache, macOS iBridge replacement, BOM strip, validate/re-set) now that `node/telemetryUtils.ts` is physically deleted.
+5. The 26 parent-staged W39 deletions are untouched; this pass contains no unlink, stage, commit, or out-of-surface write.

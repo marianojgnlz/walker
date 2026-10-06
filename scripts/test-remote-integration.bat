@@ -24,7 +24,6 @@ IF "%VSCODEUSERDATADIR%" == "" (
 )
 
 set REMOTE_EXT_PATH=%AUTHORITY%%EXT_PATH%
-set VSCODECRASHDIR=%~dp0\..\.build\crashes
 set VSCODELOGSDIR=%~dp0\..\.build\logs\integration-tests-remote
 set TESTRESOLVER_DATA_FOLDER=%TMP%\testresolverdatafolder-%RANDOM%-%TIME:~6,5%
 set TESTRESOLVER_LOGS_FOLDER=%VSCODELOGSDIR%\server
@@ -53,13 +52,12 @@ if "%INTEGRATION_TEST_ELECTRON_PATH%"=="" (
  	echo Using %INTEGRATION_TEST_ELECTRON_PATH% as Electron path
 )
 
-echo Storing crash reports into '%VSCODECRASHDIR%'
 echo Storing log files into '%VSCODELOGSDIR%'
 
 
 :: Tests in the extension host
 
-set API_TESTS_EXTRA_ARGS=--disable-telemetry --disable-experiments --skip-welcome --skip-release-notes --crash-reporter-directory=%VSCODECRASHDIR% --logsPath=%VSCODELOGSDIR% --no-cached-data --disable-updates --use-inmemory-secretstorage --disable-inspect --disable-workspace-trust --user-data-dir=%VSCODEUSERDATADIR%
+set API_TESTS_EXTRA_ARGS=--disable-telemetry --disable-experiments --skip-welcome --skip-release-notes --logsPath=%VSCODELOGSDIR% --no-cached-data --disable-updates --use-inmemory-secretstorage --disable-inspect --disable-workspace-trust --user-data-dir=%VSCODEUSERDATADIR%
 
 echo.
 echo ### API tests (folder)

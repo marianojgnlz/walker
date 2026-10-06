@@ -3,24 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SyncDescriptor } from '../../platform/instantiation/common/descriptors.js';
 import { ServiceCollection } from '../../platform/instantiation/common/serviceCollection.js';
 import { ITelemetryService } from '../../platform/telemetry/common/telemetry.js';
 import { NullTelemetryService } from '../../platform/telemetry/common/telemetryUtils.js';
 
 /**
- * Registers the main-process telemetry service. Exported so startup tests can count reporter setup without starting a process or opening the shared-process channel.
+ * Registers the main-process telemetry service. Reporting has been removed from the
+ * product, so this always binds the shared no-op object and exposes no reporting-descriptor
+ * seam. Exported so startup tests can assert the binding without starting a process.
  */
-export function registerMainTelemetryService(
-	services: ServiceCollection,
-	telemetrySupported: boolean,
-	createReportingDescriptor: () => SyncDescriptor<ITelemetryService>
-): boolean {
-	if (telemetrySupported) {
-		services.set(ITelemetryService, createReportingDescriptor());
-		return true;
-	}
-
+export function registerMainTelemetryService(services: ServiceCollection): void {
 	services.set(ITelemetryService, NullTelemetryService);
-	return false;
 }

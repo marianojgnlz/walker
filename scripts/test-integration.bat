@@ -77,7 +77,6 @@ if defined SHOW_HELP (
 )
 
 set VSCODEUSERDATADIR=%TEMP%\vscodeuserfolder-%RANDOM%-%TIME:~6,2%
-set VSCODECRASHDIR=%SCRIPT_DIR%\..\.build\crashes
 set VSCODELOGSDIR=%SCRIPT_DIR%\..\.build\logs\integration-tests
 
 :: Seed an empty user settings file for the test profile
@@ -100,7 +99,6 @@ if "%INTEGRATION_TEST_ELECTRON_PATH%"=="" (
 	echo Running integration tests with '%INTEGRATION_TEST_ELECTRON_PATH%' as build.
 )
 
-echo Storing crash reports into '%VSCODECRASHDIR%'.
 echo Storing log files into '%VSCODELOGSDIR%'.
 
 
@@ -148,7 +146,7 @@ if not defined SUITE_FILTER if defined HAS_FILTER (
 :: Forward grep pattern to extension test runners
 if defined GREP_PATTERN set "MOCHA_GREP=%GREP_PATTERN%"
 
-set API_TESTS_EXTRA_ARGS=--disable-telemetry --disable-experiments --skip-welcome --skip-release-notes --crash-reporter-directory=%VSCODECRASHDIR% --logsPath=%VSCODELOGSDIR% --no-cached-data --disable-updates --use-inmemory-secretstorage --disable-extensions --disable-workspace-trust --user-data-dir=%VSCODEUSERDATADIR%
+set API_TESTS_EXTRA_ARGS=--disable-telemetry --disable-experiments --skip-welcome --skip-release-notes --logsPath=%VSCODELOGSDIR% --no-cached-data --disable-updates --use-inmemory-secretstorage --disable-extensions --disable-workspace-trust --user-data-dir=%VSCODEUSERDATADIR%
 
 call :should_run_suite api-folder || goto skip_api_folder
 echo.

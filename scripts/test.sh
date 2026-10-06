@@ -19,7 +19,6 @@ else
 	CODE=".build/electron/$NAME"
 fi
 
-VSCODECRASHDIR=$ROOT/.build/crashes
 
 # Node modules
 test -d node_modules || npm i
@@ -39,10 +38,10 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 	cd $ROOT ; ulimit -n 4096 ; \
 		ELECTRON_ENABLE_LOGGING=1 \
 		"$CODE" \
-		test/unit/electron/index.js --crash-reporter-directory=$VSCODECRASHDIR "$@"
+		test/unit/electron/index.js "$@"
 else
 	cd $ROOT ; \
 		ELECTRON_ENABLE_LOGGING=1 \
 		"$CODE" \
-		test/unit/electron/index.js --crash-reporter-directory=$VSCODECRASHDIR "$@"
+		test/unit/electron/index.js "$@"
 fi

@@ -629,3 +629,8 @@ build/gulpfile.vscode.ts
 package.json
 package-lock.json
 Scope: remove the unreachable on-device-dictation consumer stack (zero injectors; its UI died with the voice/chat surfaces) + the inert `dictationRuntime`/`IDictationRuntimeProductConfig` member + the orphaned `foundry-local-sdk` dependency + its postinstall patch + `getFoundryLocalExcludeFilter`. Rationale: unprovisionable (producer removed) + unreachable; the change's compatibility rule reserves inert retention for public API only. Recoverable from git history if Walker ever wants dictation.
+
+### U10 grant additions (2026-10-07, approve-both-lists) + ratifications
+List A (B2–B8 reporter removal, reporters only): extensions/{typescript-language-features,html-language-features,json-language-features,markdown-language-features,merge-conflict,media-preview,simple-browser}/**
+List B (welcome telemetry notice): src/vs/workbench/contrib/welcomeGettingStarted/browser/{gettingStarted.ts,gettingStartedInput.ts,startupPage.ts}, src/vs/base/common/product.ts
+RATIFIED (retroactive, all I7-row-mandated or standing-grant-covered): scripts/test.sh, scripts/test-remote-integration.{sh,bat}, build/gulpfile.vscode.ts, build/next/index.ts, src/vs/workbench/contrib/debug/node/telemetryApp.ts (stub), workbench.common.main.ts-adjacent wiring.

@@ -5,25 +5,48 @@
 
 import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
-import { isValidCapiAssignmentContext } from '../../browser/mainThreadTelemetry.js';
+import { CommandsRegistry } from '../../../../platform/commands/common/commands.js';
+import { TelemetryLevel } from '../../../../platform/telemetry/common/telemetry.js';
+import { NullTelemetryService } from '../../../../platform/telemetry/common/telemetryUtils.js';
+import { IExtHostContext } from '../../../services/extensions/common/extHostCustomers.js';
+import { MainThreadTelemetry } from '../../browser/mainThreadTelemetry.js';
 
-suite('MainThreadTelemetry - CAPI assignment context', () => {
+interface InitializationCall {
+	level: TelemetryLevel;
+	supportsTelemetry: boolean;
+	productConfig: { usage: boolean; error: boolean } | undefined;
+}
+
+suite('MainThreadTelemetry disabled bridge', () => {
 
 	ensureNoDisposablesAreLeakedInTestSuite();
 
-	test('accepts well-formed assignment contexts', () => {
-		assert.strictEqual(isValidCapiAssignmentContext('e4hcf520:1109203'), true);
-		assert.strictEqual(isValidCapiAssignmentContext('e4hcf520:1109203;61623843:1255491'), true);
-		// a single trailing separator is tolerated (CAPI emits `a:b;c:d;`)
-		assert.strictEqual(isValidCapiAssignmentContext('e4hcf520:1109203;61623843:1255491;'), true);
-	});
+	test('initializes the extension host disabled and never raises the level', () => {
+		const initializationCalls: InitializationCall[] = [];
+		const levelChangeCalls: TelemetryLevel[] = [];
+		const context = {
+			getProxy: () => ({
+				$initializeTelemetryLevel: (level: TelemetryLevel, supportsTelemetry: boolean, productConfig?: { usage: boolean; error: boolean }) => initializationCalls.push({ level, supportsTelemetry, productConfig }),
+				$onDidChangeTelemetryLevel: (level: TelemetryLevel) => levelChangeCalls.push(level),
+			})
+		} as unknown as IExtHostContext;
 
-	test('rejects malformed, empty or oversized input', () => {
-		assert.strictEqual(isValidCapiAssignmentContext(''), false);
-		assert.strictEqual(isValidCapiAssignmentContext('noColonHere'), false);
-		assert.strictEqual(isValidCapiAssignmentContext('a:b;;c:d'), false); // empty inner entry
-		assert.strictEqual(isValidCapiAssignmentContext('a b:c'), false); // whitespace
-		assert.strictEqual(isValidCapiAssignmentContext('a:b\nc:d'), false); // control character
-		assert.strictEqual(isValidCapiAssignmentContext(`a:${'b'.repeat(9 * 1024)}`), false); // over 8KB
+		const bridge = new MainThreadTelemetry(context, NullTelemetryService);
+		try {
+			// Public log calls are accepted for callsite compatibility but reach only the no-op service.
+			bridge.$publicLog('fixture.event', {});
+
+			assert.deepStrictEqual({
+				initializationCalls,
+				levelChangeCalls,
+				capiCommandRegistered: !!CommandsRegistry.getCommand('_telemetry.setCapiAssignmentContext'),
+			}, {
+				initializationCalls: [{ level: TelemetryLevel.NONE, supportsTelemetry: false, productConfig: undefined }],
+				levelChangeCalls: [],
+				capiCommandRegistered: false,
+			});
+		} finally {
+			bridge.dispose();
+		}
 	});
 });
