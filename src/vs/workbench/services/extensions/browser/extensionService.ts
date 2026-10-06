@@ -19,7 +19,6 @@ import { IProductService } from '../../../../platform/product/common/productServ
 import { PersistentConnectionEventType } from '../../../../platform/remote/common/remoteAgentConnection.js';
 import { IRemoteAuthorityResolverService, RemoteAuthorityResolverError, ResolverResult } from '../../../../platform/remote/common/remoteAuthorityResolver.js';
 import { IRemoteExtensionsScannerService } from '../../../../platform/remote/common/remoteExtensionsScanner.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
 import { IWorkspaceTrustManagementService } from '../../../../platform/workspace/common/workspaceTrust.js';
 import { IBrowserWorkbenchEnvironmentService } from '../../environment/browser/environmentService.js';
@@ -49,7 +48,6 @@ export class ExtensionService extends AbstractExtensionService implements IExten
 		@IInstantiationService instantiationService: IInstantiationService,
 		@INotificationService notificationService: INotificationService,
 		@IBrowserWorkbenchEnvironmentService private readonly _browserEnvironmentService: IBrowserWorkbenchEnvironmentService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IWorkbenchExtensionEnablementService extensionEnablementService: IWorkbenchExtensionEnablementService,
 		@IFileService fileService: IFileService,
 		@IProductService productService: IProductService,
@@ -88,7 +86,6 @@ export class ExtensionService extends AbstractExtensionService implements IExten
 			instantiationService,
 			notificationService,
 			_browserEnvironmentService,
-			telemetryService,
 			extensionEnablementService,
 			fileService,
 			productService,

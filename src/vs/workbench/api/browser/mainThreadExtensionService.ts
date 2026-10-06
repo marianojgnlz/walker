@@ -82,8 +82,6 @@ export class MainThreadExtensionService implements MainThreadExtensionServiceSha
 	async $onExtensionActivationError(extensionId: ExtensionIdentifier, data: SerializedError, missingExtensionDependency: MissingExtensionDependency | null): Promise<void> {
 		const error = transformErrorFromSerialization(data);
 
-		this._internalExtensionService._onDidActivateExtensionError(extensionId, error);
-
 		if (missingExtensionDependency) {
 			const extension = await this._extensionService.getExtension(extensionId.value);
 			if (extension) {

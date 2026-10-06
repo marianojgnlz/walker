@@ -31,7 +31,6 @@ import { IProductService } from '../../../../platform/product/common/productServ
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IRemoteAuthorityResolverService, RemoteAuthorityResolverError, RemoteAuthorityResolverErrorCode, ResolverResult, getRemoteAuthorityPrefix } from '../../../../platform/remote/common/remoteAuthorityResolver.js';
 import { IRemoteExtensionsScannerService } from '../../../../platform/remote/common/remoteExtensionsScanner.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
 import { IExtensionFeaturesRegistry, Extensions as ExtensionFeaturesExtensions, IExtensionFeatureMarkdownRenderer, IRenderedData, } from '../../extensionManagement/common/extensionFeatures.js';
@@ -106,7 +105,6 @@ export abstract class AbstractExtensionService extends Disposable implements IEx
 		@IInstantiationService protected readonly _instantiationService: IInstantiationService,
 		@INotificationService protected readonly _notificationService: INotificationService,
 		@IWorkbenchEnvironmentService protected readonly _environmentService: IWorkbenchEnvironmentService,
-		@ITelemetryService protected readonly _telemetryService: ITelemetryService,
 		@IWorkbenchExtensionEnablementService protected readonly _extensionEnablementService: IWorkbenchExtensionEnablementService,
 		@IFileService protected readonly _fileService: IFileService,
 		@IProductService protected readonly _productService: IProductService,
@@ -1201,27 +1199,6 @@ export abstract class AbstractExtensionService extends Disposable implements IEx
 		} else {
 			this._logService.info(strMsg);
 		}
-
-		if (msg.extensionId && this._environmentService.isBuilt && !this._environmentService.isExtensionDevelopment) {
-			const { type, extensionId, extensionPointId, message } = msg;
-			type ExtensionsMessageClassification = {
-				owner: 'alexdima';
-				comment: 'A validation message for an extension';
-				type: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Severity of problem.' };
-				extensionId: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The identifier of the extension that has a problem.' };
-				extensionPointId: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The extension point that has a problem.' };
-				message: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The message of the problem.' };
-			};
-			type ExtensionsMessageEvent = {
-				type: Severity;
-				extensionId: string;
-				extensionPointId: string;
-				message: string;
-			};
-			this._telemetryService.publicLog2<ExtensionsMessageEvent, ExtensionsMessageClassification>('extensionsMessage', {
-				type, extensionId: extensionId.value, extensionPointId, message
-			});
-		}
 	}
 
 	private static _handleExtensionPoint<T extends IExtensionContributions[keyof IExtensionContributions]>(extensionPoint: ExtensionPoint<T>, availableExtensions: IExtensionDescription[], messageHandler: (msg: IMessage) => void): void {
@@ -1251,9 +1228,6 @@ export abstract class AbstractExtensionService extends Disposable implements IEx
 			_onDidActivateExtension: (extensionId: ExtensionIdentifier, codeLoadingTime: number, activateCallTime: number, activateResolvedTime: number, activationReason: ExtensionActivationReason): void => {
 				return this._onDidActivateExtension(extensionId, codeLoadingTime, activateCallTime, activateResolvedTime, activationReason);
 			},
-			_onDidActivateExtensionError: (extensionId: ExtensionIdentifier, error: Error): void => {
-				return this._onDidActivateExtensionError(extensionId, error);
-			},
 			_onExtensionRuntimeError: (extensionId: ExtensionIdentifier, err: Error): void => {
 				return this._onExtensionRuntimeError(extensionId, err);
 			}
@@ -1280,23 +1254,6 @@ export abstract class AbstractExtensionService extends Disposable implements IEx
 		const extensionStatus = this._getOrCreateExtensionStatus(extensionId);
 		extensionStatus.setActivationTimes(new ActivationTimes(codeLoadingTime, activateCallTime, activateResolvedTime, activationReason));
 		this._onDidChangeExtensionsStatus.fire([extensionId]);
-	}
-
-	private _onDidActivateExtensionError(extensionId: ExtensionIdentifier, error: Error): void {
-		type ExtensionActivationErrorClassification = {
-			owner: 'alexdima';
-			comment: 'An extension failed to activate';
-			extensionId: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The identifier of the extension.' };
-			error: { classification: 'CallstackOrException'; purpose: 'PerformanceAndHealth'; comment: 'The error message.' };
-		};
-		type ExtensionActivationErrorEvent = {
-			extensionId: string;
-			error: string;
-		};
-		this._telemetryService.publicLog2<ExtensionActivationErrorEvent, ExtensionActivationErrorClassification>('extensionActivationError', {
-			extensionId: extensionId.value,
-			error: error.message
-		});
 	}
 
 	private _onExtensionRuntimeError(extensionId: ExtensionIdentifier, err: Error): void {

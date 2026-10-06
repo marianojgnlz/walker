@@ -6,7 +6,6 @@
 import * as vscode from 'vscode';
 import { SyntaxServerConfiguration, TsServerLogLevel, TypeScriptServiceConfiguration } from '../configuration/configuration';
 import { Logger } from '../logging/logger';
-import { TelemetryReporter } from '../logging/telemetry';
 import Tracer from '../logging/tracer';
 import { OngoingRequestCancellerFactory } from '../tsServer/cancellation';
 import { ClientCapabilities, ClientCapability, ServerType } from '../typescriptService';
@@ -48,7 +47,6 @@ export class TypeScriptServerSpawner {
 		private readonly _logDirectoryProvider: ILogDirectoryProvider,
 		private readonly _pluginPathsProvider: TypeScriptPluginPathsProvider,
 		private readonly _logger: Logger,
-		private readonly _telemetryReporter: TelemetryReporter,
 		private readonly _tracer: Tracer,
 		private readonly _factory: TsServerProcessFactory,
 	) { }
@@ -168,7 +166,6 @@ export class TypeScriptServerSpawner {
 			tsServerLog,
 			canceller,
 			version,
-			this._telemetryReporter,
 			this._tracer);
 	}
 

@@ -33,7 +33,6 @@ suite('ExtensionsAutoProfiler', () => {
 			undefined!,
 			undefined!,
 			undefined!,
-			undefined!,
 			environmentService,
 			undefined!,
 			undefined!,

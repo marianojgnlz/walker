@@ -84,7 +84,6 @@ export function activate(
 			processFactory: new ElectronServiceProcessFactory(),
 			activeJsTsEditorTracker,
 			serviceConfigurationProvider: new ElectronServiceConfigurationProvider(),
-			experimentTelemetryReporter,
 			logger: new Logger(),
 		}, item => {
 			onCompletionAccepted.fire(item);

@@ -720,7 +720,6 @@ class ExtHostTreeView<T> extends Disposable {
 			}
 		}
 		this._logService.error(`[TreeView:${this._viewId}] Failed to resolve tree node for element ${handle}`);
-		this._proxy.$logResolveTreeNodeFailure(this._extension.identifier.value);
 		throw new Error(`Cannot resolve tree item for element ${handle} from extension ${this._extension.identifier.value}`);
 	}
 

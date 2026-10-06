@@ -695,3 +695,25 @@ The tree below has **zero importers** outside itself after `u11.f.004`: the shel
 * `extensions/git/src/repository.ts` — the `_aiEdits.*` command calls stay (protected Git behavior); the commands are now unregistered and behave exactly like the already-unregistered `_chat.editSessions.accept` call. Recorded in `compatibility.md`.
 * `build/lib/i18n.resources.json` still lists `vs/workbench/contrib/editTelemetry` — left in place because the same file still lists the already-deleted `vs/workbench/contrib/chat`; stale i18n roots are a T11/T12 residual.
 * `platform/dataChannel/common/dataChannel.ts` (generic data channel) and `platform/telemetry/common/{telemetry,telemetryUtils,gdprTypings,commonProperties}.ts` stay as in pass 2/4.
+
+### W45 — U11 pass-6 pruning, three whole-file deletion candidates ready for parent `git rm` (2026-10-06)
+
+Nothing was unlinked, staged or committed by the executor. Each path was verified with `git ls-files` before being recorded, and each is either emptied in the working tree or has provably zero remaining consumer.
+
+| ID | Path | Tracked lines | Plain text | Consumer-free evidence |
+| --- | --- | ---: | --- | --- |
+| W45.a | `src/vs/base/node/macAddress.ts` | 33 | Yes | Its only exported `getMac()` was imported by `src/vs/base/node/id.ts` (for `getMacMachineId`, removed in `u11.k.002`) and by the old `id.test.ts` (`getMac` test, replaced by a `virtualMachineHint` test). `git grep -n "getMac" -- src/` now matches only the module's own definition, and the retained `virtualMachineHint` does not use it (it reads `os.networkInterfaces()` directly). |
+| W45.b | `build/npm/mixin-telemetry-docs.ts` | 33 | Yes | The `mixin-telemetry-docs` npm script was removed in `u11.k.002`, so nothing invokes the module; `git grep -n "mixin-telemetry-docs"` matches no tracked file. It performed a `rmSync` + `git clone` of the external telemetry-docs repository and was deliberately never executed during this change. |
+| W45.c | `extensions/typescript-language-features/src/logging/telemetry.ts` | 61 (4 in the working tree) | Yes | Emptied in `u11.i.001`: the `TelemetryReporter` interface and `VSCodeTelemetryReporter` were the file's only content, and every importer (`typescriptServiceClient`, `languageProvider`, `tsServer/{server,spawner}`, `languageFeatures/{completions,diagnostics,inlayHints,organizeImports,quickFix,refactor,util/copilot}`, `ui/largeProjectStatus`, `test/unit/server.test`) dropped its import. `git grep -n "logging/telemetry"` matches no tracked file, and `npx tsc -p extensions/typescript-language-features/tsconfig.json --noEmit` plus `npm run gulp compile-extensions` are exit 0 with the empty module still on disk. |
+
+**Measured total:** 3 files / 127 tracked lines (33 + 33 + 61), all plain text.
+
+**Coupling edits (not manifest items):** `src/vs/base/node/id.ts` (identity resolvers removed, `virtualMachineHint` retained), `src/vs/base/test/node/id.test.ts` (rewritten to cover the retained `virtualMachineHint`), `src/vs/platform/storage/electron-main/storageMain.ts` + its test (current/last session-date rotation removed, first-session write retained), `extensions/typescript-language-features/src/**` (23 files, the reporter seam removal) and the shared guard file `src/vs/code/test/electron-main/productDebloat.test.ts` (+153 lines across the four pass-6 leaves).
+
+**Not manifest items (deliberately retained):**
+
+* `src/vs/base/node/id.ts#virtualMachineHint` — consumed by `platform/native/electron-main/nativeHostMainService.getOSVirtualMachineHint()` (→ `workbench/services/timer/electron-browser/timerService` → `isVMLikelihood` in `contrib/performance/browser/perfviewEditor`) and `platform/diagnostics/node/diagnosticsService.getMachineInfo()`. Recorded in `telemetry-inventory.md` as **retained-non-telemetry**; the `virtualMachineHint` consumer audit is closed.
+* `src/vs/platform/telemetry/common/telemetry.ts#firstSessionDateStorageKey` — written by `storageMain.ts` and read by `contrib/welcomeGettingStarted/browser/gettingStarted.ts` for first-session welcome content. **retained-non-telemetry.**
+* `src/vs/platform/telemetry/common/{telemetry,telemetryUtils}.ts` — the `ITelemetryService`/`TelemetryLevel`/`TelemetryTrustedValue` public contract, `TelemetryLevel` protocol/facade shape, the `env` payload-cleaning helpers, `NullTelemetryService(Shape)`/`NullEndpointTelemetryService`, the `ICommonProperties`/`ITelemetryAppender`/`URIDescriptor` types and `telemetryLogId`/`TelemetryLogGroup` stay for the I.ALL leaf.
+* `extensions/markdown-language-features/src/telemetryReporter.ts` — already an empty W39.e module; `extensions/typescript-language-features/src/experimentTelemetryReporter.ts` — the inert TAS adapter (see `compatibility.md`).
+* `src/vs/editor/common/textModelEditSource.ts#EditSuggestionId.newId` and `src/vs/platform/profiling/common/profilingTelemetrySpec.ts` — recorded T2/T12 residuals, untouched.

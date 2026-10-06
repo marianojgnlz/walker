@@ -634,3 +634,8 @@ Scope: remove the unreachable on-device-dictation consumer stack (zero injectors
 List A (B2–B8 reporter removal, reporters only): extensions/{typescript-language-features,html-language-features,json-language-features,markdown-language-features,merge-conflict,media-preview,simple-browser}/**
 List B (welcome telemetry notice): src/vs/workbench/contrib/welcomeGettingStarted/browser/{gettingStarted.ts,gettingStartedInput.ts,startupPage.ts}, src/vs/base/common/product.ts
 RATIFIED (retroactive, all I7-row-mandated or standing-grant-covered): scripts/test.sh, scripts/test-remote-integration.{sh,bat}, build/gulpfile.vscode.ts, build/next/index.ts, src/vs/workbench/contrib/debug/node/telemetryApp.ts (stub), workbench.common.main.ts-adjacent wiring.
+
+### U11 pass-6 dispositions (2026-10-07)
+- u11.i.001 (741 lines): ACCEPTED as a coupled deletion-review batch per its recorded analysis (`ITypeScriptServiceClient.telemetryReporter` threads 23 files; no compilable sub-seam) — the established c.035/U07.a.001 precedent, not a blanket size:exception.
+scripts/**
+Scope: the crash-reporter argv tail — remove `--crash-reporter-directory`/`--crash-reporter-id` from the test/CI runners + their `environmentService` getters, desktop help entry, `server.cli.ts` validation (all inert inputs after the crashReporter removal).

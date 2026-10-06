@@ -51,7 +51,6 @@ import { FileChangesEvent, FileChangeType, FileOperationResult, IFileService, IF
 import { IInstantiationService, refineServiceDecorator } from '../../instantiation/common/instantiation.js';
 import { ILogService } from '../../log/common/log.js';
 import { IProductService } from '../../product/common/productService.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { IUriIdentityService } from '../../uriIdentity/common/uriIdentity.js';
 import { IUserDataProfilesService } from '../../userDataProfile/common/userDataProfile.js';
 import { IConfigurationService } from '../../configuration/common/configuration.js';
@@ -514,19 +513,6 @@ export class ExtensionManagementService extends AbstractExtensionManagementServi
 	}
 }
 
-type UpdateMetadataErrorClassification = {
-	owner: 'sandy081';
-	comment: 'Update metadata error';
-	extensionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'extension identifier' };
-	code?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'error code' };
-	isProfile?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Is writing into profile' };
-};
-type UpdateMetadataErrorEvent = {
-	extensionId: string;
-	code?: string;
-	isProfile?: boolean;
-};
-
 export class ExtensionsScanner extends Disposable {
 
 	private readonly obsoletedResource: URI;
@@ -545,7 +531,6 @@ export class ExtensionsScanner extends Disposable {
 		@IExtensionsScannerService private readonly extensionsScannerService: IExtensionsScannerService,
 		@IExtensionsProfileScannerService private readonly extensionsProfileScannerService: IExtensionsProfileScannerService,
 		@IUriIdentityService private readonly uriIdentityService: IUriIdentityService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IProductService private readonly productService: IProductService,
 		@IUserDataProfilesService private readonly userDataProfilesService: IUserDataProfilesService,
 		@ILogService private readonly logService: ILogService,
@@ -659,7 +644,6 @@ export class ExtensionsScanner extends Disposable {
 			try {
 				await this.extensionsScannerService.updateManifestMetadata(tempLocation, metadata);
 			} catch (error) {
-				this.telemetryService.publicLog2<UpdateMetadataErrorEvent, UpdateMetadataErrorClassification>('extension:extract', { extensionId: extensionKey.id, code: `${toFileOperationResult(error)}` });
 				throw toExtensionManagementError(error, ExtensionManagementErrorCode.UpdateMetadata);
 			}
 
@@ -706,7 +690,6 @@ export class ExtensionsScanner extends Disposable {
 		try {
 			await this.extensionsProfileScannerService.updateMetadata([[local, metadata]], profileLocation);
 		} catch (error) {
-			this.telemetryService.publicLog2<UpdateMetadataErrorEvent, UpdateMetadataErrorClassification>('extension:extract', { extensionId: local.identifier.id, code: `${toFileOperationResult(error)}`, isProfile: !!profileLocation });
 			throw toExtensionManagementError(error, ExtensionManagementErrorCode.UpdateMetadata);
 		}
 		return this.scanLocalExtension(local.location, local.type, profileLocation);

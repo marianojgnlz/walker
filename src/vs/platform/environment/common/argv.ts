@@ -6,7 +6,6 @@
 export interface INativeCliOptions {
 	'cli-data-dir'?: string;
 	'disable-telemetry'?: boolean;
-	'telemetry-level'?: string;
 }
 
 /**
@@ -101,7 +100,6 @@ export interface NativeParsedArgs {
 	'skip-release-notes'?: boolean;
 	'skip-welcome'?: boolean;
 	'disable-telemetry'?: boolean;
-	'telemetry-level'?: string;
 	'export-default-configuration'?: string;
 	'export-policy-data'?: string;
 	'export-default-keybindings'?: string;
@@ -113,7 +111,6 @@ export interface NativeParsedArgs {
 	'use-inmemory-secretstorage'?: boolean;
 	'password-store'?: string;
 	'disable-workspace-trust'?: boolean;
-	'disable-crash-reporter'?: boolean;
 	'crash-reporter-directory'?: string;
 	'crash-reporter-id'?: string;
 	'skip-add-to-recently-opened'?: boolean;

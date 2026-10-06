@@ -72,7 +72,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
 		processFactory: new WorkerServerProcessFactory(context.extensionUri, logger),
 		activeJsTsEditorTracker,
 		serviceConfigurationProvider: new BrowserServiceConfigurationProvider(),
-		experimentTelemetryReporter: undefined,
 		logger,
 	}, item => {
 		onCompletionAccepted.fire(item);

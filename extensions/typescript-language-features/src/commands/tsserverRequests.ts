@@ -32,19 +32,9 @@ export class TSServerRequestCommand implements Command {
 		}
 		if (args && typeof args === 'object' && !Array.isArray(args)) {
 			const requestArgs = args as RequestArgs;
-			const hasFile = requestArgs.file instanceof vscode.Uri;
-			const hasTraceId = typeof requestArgs.$traceId === 'string';
-			if (hasFile || hasTraceId) {
-				const newArgs = { file: undefined as string | undefined, ...args };
-				if (hasFile) {
-					const client = this.lazyClientHost.value.serviceClient;
-					newArgs.file = client.toOpenTsFilePath(requestArgs.file);
-				}
-				if (hasTraceId) {
-					const telemetryReporter = this.lazyClientHost.value.serviceClient.telemetryReporter;
-					telemetryReporter.logTraceEvent('TSServerRequestCommand.execute', requestArgs.$traceId, JSON.stringify({ command }));
-				}
-				args = newArgs;
+			if (requestArgs.file instanceof vscode.Uri) {
+				const client = this.lazyClientHost.value.serviceClient;
+				args = { file: client.toOpenTsFilePath(requestArgs.file), ...args };
 			}
 		}
 

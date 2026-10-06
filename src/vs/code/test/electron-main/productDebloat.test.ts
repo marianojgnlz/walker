@@ -512,6 +512,159 @@ suite('Product debloat process startup', () => {
 		);
 	});
 
+	test('node extension management and the tree/webview view relays carry no telemetry emission', () => {
+		// T7 owners: the downloader retry, extraction-metadata, signature-verification,
+		// executable-recommendation and auto-profiler payloads are gone, and the tree-view
+		// resolve-failure relay is removed from the API protocol with them because its only
+		// caller reported the failure. Downloads, extraction, signature enforcement,
+		// recommendations, profiling and the ordinary error logs stay.
+		const prunedSites: [string, RegExp][] = [
+			['src/vs/platform/extensionManagement/node/extensionDownloader.ts', /publicLog|ITelemetryService|RetryDownload|downloadvsix:retry|downloadsigzip:retry/],
+			['src/vs/platform/extensionManagement/node/extensionManagementService.ts', /publicLog|ITelemetryService|UpdateMetadataError|extension:extract/],
+			['src/vs/platform/extensionManagement/node/extensionSignatureVerificationService.ts', /publicLog|ITelemetryService|extensionsignature:verification/],
+			['src/vs/platform/extensionManagement/common/extensionTipsService.ts', /publicLog|ITelemetryService|exeExtensionRecommendations/],
+			['src/vs/platform/extensionManagement/node/extensionTipsService.ts', /ITelemetryService|telemetryService/],
+			['src/vs/workbench/contrib/extensions/electron-browser/extensionsAutoProfiler.ts', /publicLog|ITelemetryService|exthostunresponsive/],
+			['src/vs/workbench/api/browser/mainThreadTreeViews.ts', /publicLog|ITelemetryService|treeView\.resolveFailure|logResolveTreeNodeFailure/],
+			['src/vs/workbench/api/browser/mainThreadWebviewViews.ts', /publicLog|ITelemetryService|webviews:createWebviewView/],
+			['src/vs/workbench/api/common/extHostTreeViews.ts', /logResolveTreeNodeFailure/],
+			['src/vs/workbench/api/common/extHost.protocol.ts', /logResolveTreeNodeFailure/],
+		];
+		for (const [relativePath, removal] of prunedSites) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+
+		// Retained: the tree-view resolve failure still logs its ordinary error and throws.
+		assert.match(readRepoFile('src/vs/workbench/api/common/extHostTreeViews.ts'), /Failed to resolve tree node for element/);
+		// Retained: the node extension tips service still wraps the shared abstract implementation.
+		assert.match(readRepoFile('src/vs/platform/extensionManagement/node/extensionTipsService.ts'), /super\(environmentService\.userHome, nativeHostService,/);
+	});
+
+	test('extension-host startup, crash and RPC-size reporting is gone', () => {
+		// T8 owners: the startup/success/failure, crash, crash-extension, activation-error and
+		// extensions-message payloads plus the sampled RPC-size logger are removed with the
+		// reporting-only internal-API callback that carried the activation error. Extension host
+		// startup, crash recovery/bisect, the ordinary console RPC logger and the retained
+		// telemetry-info init block for the `env.machineId` facade stay.
+		const prunedSites: [string, RegExp][] = [
+			['src/vs/workbench/services/extensions/common/extensionHostManager.ts', /publicLog|ITelemetryService|extensionHostStartup|TelemetryRPCLogger|RPCTelemetryData/],
+			['src/vs/workbench/services/extensions/common/abstractExtensionService.ts', /publicLog|ITelemetryService|extensionsMessage|extensionActivationError|_onDidActivateExtensionError/],
+			['src/vs/workbench/services/extensions/electron-browser/nativeExtensionService.ts', /publicLog|ITelemetryService|_sendExtensionHostCrashTelemetry/],
+			['src/vs/workbench/services/extensions/browser/extensionService.ts', /ITelemetryService|telemetryService/],
+			['src/vs/workbench/services/extensions/common/extensions.ts', /_onDidActivateExtensionError/],
+			['src/vs/workbench/api/browser/mainThreadExtensionService.ts', /_onDidActivateExtensionError/],
+		];
+		for (const [relativePath, removal] of prunedSites) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+
+		// Retained: the crash tracker still restarts the host, the ordinary crash log stays and
+		// the manual RPC logger is still available for `--logExtensionHostCommunication`.
+		const native = readRepoFile('src/vs/workbench/services/extensions/electron-browser/nativeExtensionService.ts');
+		assert.match(native, /_logExtensionHostCrash\(extensionHost\)/);
+		assert.match(native, /_localCrashTracker\.registerCrash\(\)/);
+		assert.match(readRepoFile('src/vs/workbench/services/extensions/common/extensionHostManager.ts'), /class RPCLogger implements IRPCProtocolLogger/);
+
+		// Retained: the extension-host init data still feeds the `env` identity facade.
+		assert.match(readRepoFile('src/vs/workbench/services/extensions/common/remoteExtensionHost.ts'), /telemetryInfo/);
+	});
+
+	test('telemetry argv, policy schema and platform readers are closed', () => {
+		// T1/T11 owners: the old `--telemetry-level` and `--disable-crash-reporter` switches and
+		// the consumer-less platform readers left over from the reporting cutoff are removed.
+		// `--disable-telemetry` stays as the documented inert invocation input and the retained
+		// `Env`/protocol shapes keep their parameters.
+		const argv = readRepoFile('src/vs/platform/environment/common/argv.ts');
+		assert.doesNotMatch(argv, /'telemetry-level'|'disable-crash-reporter'/);
+		assert.match(argv, /'disable-telemetry'\?: boolean;/);
+
+		const cliOptions = readRepoFile('src/vs/platform/environment/node/argv.ts');
+		assert.doesNotMatch(cliOptions, /'telemetry-level'|'disable-crash-reporter'/);
+		assert.match(cliOptions, /'disable-telemetry': \{ type: 'boolean' \}/);
+
+		assert.doesNotMatch(readRepoFile('src/vs/server/node/serverEnvironmentService.ts'), /telemetry-level/);
+
+		const relaunch = readRepoFile('src/vs/platform/update/electron-main/updateRelaunchArguments.ts');
+		assert.doesNotMatch(relaunch, /'disable-crash-reporter'/);
+		assert.match(relaunch, /'disable-telemetry'/);
+
+		const telemetryUtils = readRepoFile('src/vs/platform/telemetry/common/telemetryUtils.ts');
+		assert.doesNotMatch(telemetryUtils, /supportsTelemetry|isLoggingOnly|isInternalTelemetry|getTelemetryLevel|TELEMETRY_SETTING_ID/);
+		// Retained: the `env` API cleaning helpers and the no-op service shapes.
+		assert.match(telemetryUtils, /export function cleanData/);
+		assert.match(telemetryUtils, /export class NullTelemetryServiceShape/);
+
+		const telemetry = readRepoFile('src/vs/platform/telemetry/common/telemetry.ts');
+		assert.doesNotMatch(telemetry, /TELEMETRY_SETTING_ID|TELEMETRY_OLD_SETTING_ID|TELEMETRY_CRASH_REPORTER_SETTING_ID|telemetryLevelEnabled|escapeModelIdForTelemetry|TelemetryConfiguration/);
+		// Retained: the `TelemetryLevel` enum backs the extension API facade and the no-op shape.
+		assert.match(telemetry, /export const enum TelemetryLevel/);
+
+		const policyData = readRepoFile('build/lib/policies/policyData.jsonc');
+		assert.doesNotMatch(policyData, /telemetry\.telemetryLevel/);
+		assert.match(policyData, /telemetry\.feedback\.enabled/);
+
+		const rootManifest = readRepoFile('package.json');
+		assert.doesNotMatch(rootManifest, /@vscode\/telemetry-extractor|mixin-telemetry-docs/);
+		assert.doesNotMatch(readRepoFile('package-lock.json'), /@vscode\/telemetry-extractor/);
+
+		const storage = readRepoFile('src/vs/platform/storage/electron-main/storageMain.ts');
+		assert.doesNotMatch(storage, /currentSessionDateStorageKey|lastSessionDateStorageKey/);
+		// Retained: the first-session date drives the welcome-page personalization.
+		assert.match(storage, /firstSessionDateStorageKey/);
+		assert.match(readRepoFile('src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts'), /firstSessionDateStorageKey/);
+
+		// Retained: `virtualMachineHint` still feeds the diagnostics machine info and the
+		// extension-host perf view VM likelihood.
+		const baseId = readRepoFile('src/vs/base/node/id.ts');
+		assert.doesNotMatch(baseId, /getMachineId|getMacMachineId|getSqmMachineId|getDevDeviceId|SQMClient/);
+		assert.match(baseId, /export const virtualMachineHint/);
+		assert.match(readRepoFile('src/vs/platform/native/electron-main/nativeHostMainService.ts'), /getOSVirtualMachineHint/);
+
+		// W45.a deletion candidate: `src/vs/base/node/macAddress.ts` lost its last consumer
+		// with those resolvers; the base id module must not import it again.
+		assert.doesNotMatch(baseId, /macAddress/);
+	});
+
+	test('retained TypeScript extension carries no reporter, tracing or diagnostics-telemetry payload', () => {
+		// T9 owners: the extension-local `TelemetryReporter` adapter, every `logTelemetry`/
+		// `logTraceEvent` call, the tsserver payload forwarding and the
+		// `enableDiagnosticsTelemetry` switch are gone. TS language behaviour, the ordinary
+		// tsserver logs and the inert TAS experimentation adapter stay.
+		const prunedSites: [string, RegExp][] = [
+			['extensions/typescript-language-features/src/typescriptServiceClient.ts', /logTelemetry|logTraceEvent|TelemetryReporter|dispatchTelemetryEvent|typeScriptServerEnvCommonProperties|__GDPR__/],
+			['extensions/typescript-language-features/src/languageProvider.ts', /TelemetryReporter/],
+			['extensions/typescript-language-features/src/typescriptService.ts', /TelemetryReporter/],
+			['extensions/typescript-language-features/src/typeScriptServiceClientHost.ts', /IExperimentationTelemetryReporter/],
+			['extensions/typescript-language-features/src/lazyClientHost.ts', /IExperimentationTelemetryReporter/],
+			['extensions/typescript-language-features/src/configuration/configuration.ts', /enableDiagnosticsTelemetry/],
+			['extensions/typescript-language-features/src/tsServer/server.ts', /logTelemetry|logTraceEvent|TelemetryReporter/],
+			['extensions/typescript-language-features/src/tsServer/spawner.ts', /TelemetryReporter/],
+			['extensions/typescript-language-features/src/commands/tsserverRequests.ts', /logTraceEvent|TelemetryReporter/],
+			['extensions/typescript-language-features/src/languageFeatures/completions.ts', /logTelemetry|TelemetryReporter|logCompletionsTelemetry/],
+			['extensions/typescript-language-features/src/languageFeatures/diagnostics.ts', /logTelemetry|TelemetryReporter|DiagnosticsTelemetryManager|logDiagnosticsPerformanceTelemetry/],
+			['extensions/typescript-language-features/src/languageFeatures/inlayHints.ts', /logTelemetry|TelemetryReporter|hasReportedTelemetry/],
+			['extensions/typescript-language-features/src/languageFeatures/organizeImports.ts', /logTelemetry|TelemetryReporter|DidOrganizeImportsCommand/],
+			['extensions/typescript-language-features/src/languageFeatures/quickFix.ts', /logTelemetry|TelemetryReporter/],
+			['extensions/typescript-language-features/src/languageFeatures/refactor.ts', /logTelemetry|TelemetryReporter|DidApplyRefactoringCommand/],
+			['extensions/typescript-language-features/src/languageFeatures/util/copilot.ts', /logTelemetry|TelemetryReporter/],
+			['extensions/typescript-language-features/src/ui/largeProjectStatus.ts', /logTelemetry|TelemetryReporter|hintProjectExcludes/],
+			['extensions/typescript-language-features/src/tsServer/serverError.ts', /__GDPR__|get telemetry|sanitizedStack|badclient|TypeScriptRequestErrorProperties/],
+		];
+		for (const [relativePath, removal] of prunedSites) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+
+		// Retained: the ordinary tsserver error/exit diagnostics and the experimentation adapter.
+		assert.match(readRepoFile('extensions/typescript-language-features/src/typescriptServiceClient.ts'), /TSServer exited\. Code:/);
+		assert.match(readRepoFile('extensions/typescript-language-features/src/experimentTelemetryReporter.ts'), /class ExperimentationTelemetryReporter/);
+		assert.match(readRepoFile('extensions/typescript-language-features/src/extension.ts'), /new ExperimentationService\(/);
+
+		// W45.b deletion candidate: the emptied reporter module or its deletion.
+		if (repoFileExists('extensions/typescript-language-features/src/logging/telemetry.ts')) {
+			assert.doesNotMatch(readRepoFile('extensions/typescript-language-features/src/logging/telemetry.ts'), /export /, 'extensions/typescript-language-features/src/logging/telemetry.ts');
+		}
+	});
+
 	test('welcome surface no longer renders a telemetry consent notice', () => {
 		for (const relativePath of [
 			'src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts',

@@ -146,7 +146,6 @@ export interface TypeScriptServiceConfiguration {
 	readonly webProjectWideIntellisenseEnabled: boolean;
 	readonly webProjectWideIntellisenseSuppressSemanticErrors: boolean;
 	readonly webTypeAcquisitionEnabled: boolean;
-	readonly enableDiagnosticsTelemetry: boolean;
 	readonly enableProjectDiagnostics: boolean;
 	readonly maxTsServerMemory: number;
 	readonly diagnosticDir: string | undefined;
@@ -191,7 +190,6 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 			webProjectWideIntellisenseEnabled: this.readWebProjectWideIntellisenseEnable(),
 			webProjectWideIntellisenseSuppressSemanticErrors: this.readWebProjectWideIntellisenseSuppressSemanticErrors(),
 			webTypeAcquisitionEnabled: this.readWebTypeAcquisition(),
-			enableDiagnosticsTelemetry: this.readEnableDiagnosticsTelemetry(),
 			enableProjectDiagnostics: this.readEnableProjectDiagnostics(),
 			maxTsServerMemory: this.readMaxTsServerMemory(),
 			diagnosticDir: this.readDiagnosticDir(),
@@ -257,11 +255,6 @@ export abstract class BaseServiceConfigurationProvider implements ServiceConfigu
 			return SyntaxServerConfiguration.Auto;
 		}
 		return SyntaxServerConfiguration.Never;
-	}
-
-	protected readEnableDiagnosticsTelemetry(): boolean {
-		// This setting does not appear in the settings view, as it is not to be enabled by users outside the team
-		return readUnifiedConfig<boolean>('enableDiagnosticsTelemetry', false, { fallbackSection: 'typescript' });
 	}
 
 	protected readEnableProjectDiagnostics(): boolean {

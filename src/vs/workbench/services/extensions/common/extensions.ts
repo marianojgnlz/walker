@@ -551,7 +551,6 @@ export interface IInternalExtensionService {
 	_activateById(extensionId: ExtensionIdentifier, reason: ExtensionActivationReason): Promise<void>;
 	_onWillActivateExtension(extensionId: ExtensionIdentifier): void;
 	_onDidActivateExtension(extensionId: ExtensionIdentifier, codeLoadingTime: number, activateCallTime: number, activateResolvedTime: number, activationReason: ExtensionActivationReason): void;
-	_onDidActivateExtensionError(extensionId: ExtensionIdentifier, error: Error): void;
 	_onExtensionRuntimeError(extensionId: ExtensionIdentifier, err: Error): void;
 }
 

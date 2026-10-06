@@ -18,7 +18,6 @@ import { ExtensionIdentifier, IExtensionDescription } from '../../../../platform
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { RemoteAuthorityResolverErrorCode, getRemoteAuthorityPrefix } from '../../../../platform/remote/common/remoteAuthorityResolver.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IEditorService } from '../../editor/common/editorService.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
 import { ExtHostCustomersRegistry, IInternalExtHostContext } from './extHostCustomers.js';
@@ -34,26 +33,6 @@ import { IRPCProtocolLogger, RPCProtocol, RequestInitiator, ResponsiveState } fr
 // Enable to see detailed message communication between window and extension host
 const LOG_EXTENSION_HOST_COMMUNICATION = false;
 const LOG_USE_COLORS = true;
-
-type ExtensionHostStartupClassification = {
-	owner: 'alexdima';
-	comment: 'The startup state of the extension host';
-	time: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The time reported by Date.now().' };
-	action: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The action: starting, success or error.' };
-	kind: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The extension host kind: LocalProcess, LocalWebWorker or Remote.' };
-	errorName?: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The error name.' };
-	errorMessage?: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The error message.' };
-	errorStack?: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The error stack.' };
-};
-
-type ExtensionHostStartupEvent = {
-	time: number;
-	action: 'starting' | 'success' | 'error';
-	kind: string;
-	errorName?: string;
-	errorMessage?: string;
-	errorStack?: string;
-};
 
 export class ExtensionHostManager extends Disposable implements IExtensionHostManager {
 
@@ -95,7 +74,6 @@ export class ExtensionHostManager extends Disposable implements IExtensionHostMa
 		private readonly _internalExtensionService: IInternalExtensionService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
 		@IWorkbenchEnvironmentService private readonly _environmentService: IWorkbenchEnvironmentService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@ILogService private readonly _logService: ILogService,
 	) {
 		super();
@@ -107,47 +85,13 @@ export class ExtensionHostManager extends Disposable implements IExtensionHostMa
 		this._extensionHost = extensionHost;
 		this.onDidExit = this._extensionHost.onExit;
 
-		const startingTelemetryEvent: ExtensionHostStartupEvent = {
-			time: Date.now(),
-			action: 'starting',
-			kind: extensionHostKindToString(this.kind)
-		};
-		this._telemetryService.publicLog2<ExtensionHostStartupEvent, ExtensionHostStartupClassification>('extensionHostStartup', startingTelemetryEvent);
-
 		this._proxy = this._extensionHost.start().then(
 			(protocol) => {
-
-				// Track healthy extension host startup
-				const successTelemetryEvent: ExtensionHostStartupEvent = {
-					time: Date.now(),
-					action: 'success',
-					kind: extensionHostKindToString(this.kind)
-				};
-				this._telemetryService.publicLog2<ExtensionHostStartupEvent, ExtensionHostStartupClassification>('extensionHostStartup', successTelemetryEvent);
-
 				return this._createExtensionHostCustomers(this.kind, protocol);
 			},
 			(err) => {
 				this._logService.error(`Error received from starting extension host (kind: ${extensionHostKindToString(this.kind)})`);
 				this._logService.error(err);
-
-				// Track errors during extension host startup
-				const failureTelemetryEvent: ExtensionHostStartupEvent = {
-					time: Date.now(),
-					action: 'error',
-					kind: extensionHostKindToString(this.kind)
-				};
-
-				if (err && err.name) {
-					failureTelemetryEvent.errorName = err.name;
-				}
-				if (err && err.message) {
-					failureTelemetryEvent.errorMessage = err.message;
-				}
-				if (err && err.stack) {
-					failureTelemetryEvent.errorStack = err.stack;
-				}
-				this._telemetryService.publicLog2<ExtensionHostStartupEvent, ExtensionHostStartupClassification>('extensionHostStartup', failureTelemetryEvent);
 
 				return null;
 			}
@@ -251,8 +195,6 @@ export class ExtensionHostManager extends Disposable implements IExtensionHostMa
 		let logger: IRPCProtocolLogger | null = null;
 		if (LOG_EXTENSION_HOST_COMMUNICATION || this._environmentService.logExtensionHostCommunication) {
 			logger = new RPCLogger(kind);
-		} else if (TelemetryRPCLogger.isEnabled()) {
-			logger = new TelemetryRPCLogger(this._telemetryService);
 		}
 
 		this._rpcProtocol = new RPCProtocol(protocol, logger);
@@ -534,61 +476,6 @@ class RPCLogger implements IRPCProtocolLogger {
 	logOutgoing(msgLength: number, req: number, initiator: RequestInitiator, str: string, data?: any): void {
 		this._totalOutgoing += msgLength;
 		this._log('Win \u2192 Ext', this._totalOutgoing, msgLength, req, initiator, str, data);
-	}
-}
-
-interface RPCTelemetryData {
-	type: string;
-	length: number;
-}
-
-type RPCTelemetryDataClassification = {
-	owner: 'jrieken';
-	comment: 'Insights about RPC message sizes';
-	type: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The type of the RPC message' };
-	length: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The byte-length of the RPC message' };
-};
-
-class TelemetryRPCLogger implements IRPCProtocolLogger {
-
-	static isEnabled(): boolean {
-		return Math.random() < 0.0001; // 0.01% of users
-	}
-
-	private readonly _pendingRequests = new Map<number, string>();
-
-	constructor(@ITelemetryService private readonly _telemetryService: ITelemetryService) { }
-
-	logIncoming(msgLength: number, req: number, initiator: RequestInitiator, str: string): void {
-
-		if (initiator === RequestInitiator.LocalSide && /^receiveReply(Err)?:/.test(str)) {
-			// log the size of reply messages
-			const requestStr = this._pendingRequests.get(req) ?? 'unknown_reply';
-			this._pendingRequests.delete(req);
-			this._telemetryService.publicLog2<RPCTelemetryData, RPCTelemetryDataClassification>('extensionhost.incoming', {
-				type: `${str} ${requestStr}`,
-				length: msgLength
-			});
-		}
-
-		if (initiator === RequestInitiator.OtherSide && /^receiveRequest /.test(str)) {
-			// incoming request
-			this._telemetryService.publicLog2<RPCTelemetryData, RPCTelemetryDataClassification>('extensionhost.incoming', {
-				type: `${str}`,
-				length: msgLength
-			});
-		}
-	}
-
-	logOutgoing(msgLength: number, req: number, initiator: RequestInitiator, str: string): void {
-
-		if (initiator === RequestInitiator.LocalSide && str.startsWith('request: ')) {
-			this._pendingRequests.set(req, str);
-			this._telemetryService.publicLog2<RPCTelemetryData, RPCTelemetryDataClassification>('extensionhost.outgoing', {
-				type: str,
-				length: msgLength
-			});
-		}
 	}
 }
 

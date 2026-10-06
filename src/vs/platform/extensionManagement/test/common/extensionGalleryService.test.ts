@@ -22,7 +22,6 @@ import { NullLogService } from '../../../log/common/log.js';
 import product from '../../../product/common/product.js';
 import { IProductService } from '../../../product/common/productService.js';
 import { AuthInfo, Credentials, IRequestService } from '../../../request/common/request.js';
-import { TelemetryConfiguration, TELEMETRY_SETTING_ID } from '../../../telemetry/common/telemetry.js';
 import { AllowedExtensionsService } from '../../common/allowedExtensionsService.js';
 import { ExtensionGalleryManifestStatus, ExtensionGalleryResourceType, IExtensionGalleryManifest, IExtensionGalleryManifestService } from '../../common/extensionGalleryManifest.js';
 import { ExtensionGalleryError, ExtensionGalleryErrorCode, IGalleryExtension, InstallOperation } from '../../common/extensionManagement.js';
@@ -153,8 +152,7 @@ suite('Extension Gallery Service', () => {
 		const testResource = URI.file('tests').with({ scheme: 'vscode-tests' });
 		const fileSystemProvider = disposables.add(new InMemoryFileSystemProvider());
 		disposables.add(fileService.registerProvider(testResource.scheme, fileSystemProvider));
-		configurationService = new TestConfigurationService({ [TELEMETRY_SETTING_ID]: TelemetryConfiguration.ON });
-		configurationService.updateValue(TELEMETRY_SETTING_ID, TelemetryConfiguration.ON);
+		configurationService = new TestConfigurationService();
 		productService = { _serviceBrand: undefined, ...product, enableTelemetry: true };
 	});
 

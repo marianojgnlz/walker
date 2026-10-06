@@ -7,7 +7,6 @@ import { Cancellation } from '@vscode/sync-api-common/lib/common/messageCancella
 import * as vscode from 'vscode';
 import { RequestArgs } from '../commands/tsserverRequests';
 import { TypeScriptServiceConfiguration } from '../configuration/configuration';
-import { TelemetryReporter } from '../logging/telemetry';
 import Tracer from '../logging/tracer';
 import { CallbackMap, type CallbackItem } from '../tsServer/callbackMap';
 import { RequestItem, RequestQueue, RequestQueueingType } from '../tsServer/requestQueue';
@@ -99,7 +98,6 @@ export class SingleTsServer extends Disposable implements ITypeScriptServer {
 		private readonly _tsServerLog: TsServerLog | undefined,
 		private readonly _requestCanceller: OngoingRequestCanceller,
 		private readonly _version: TypeScriptVersion,
-		private readonly _telemetryReporter: TelemetryReporter,
 		private readonly _tracer: Tracer,
 	) {
 		super();
@@ -188,7 +186,7 @@ export class SingleTsServer extends Disposable implements ITypeScriptServer {
 		const seq = request.seq;
 		const callback = this._callbacks.peek(seq);
 		if (callback?.traceId !== undefined) {
-			this._telemetryReporter.logTraceEvent('TSServer.tryCancelRequest', callback.traceId, JSON.stringify({ command, cancelled: true }));
+
 		}
 		try {
 			if (this._requestQueue.tryDeletePendingRequest(seq)) {
@@ -212,7 +210,7 @@ export class SingleTsServer extends Disposable implements ITypeScriptServer {
 			return;
 		}
 		if (callback.traceId !== undefined) {
-			this._telemetryReporter.logTraceEvent('TSServerRequest.dispatchResponse', callback.traceId, JSON.stringify({ command: response.command, success: response.success, performanceData: response.performanceData }));
+
 		}
 		this._tracer.traceResponse(this._serverId, response, callback);
 		if (response.success) {
@@ -275,7 +273,7 @@ export class SingleTsServer extends Disposable implements ITypeScriptServer {
 								]
 							}
 						*/
-						this._telemetryReporter.logTelemetry('languageServiceErrorResponse', err.telemetry);
+
 					}
 				}
 
@@ -300,7 +298,7 @@ export class SingleTsServer extends Disposable implements ITypeScriptServer {
 				data.pendingCommands = this.getPendingCommands();
 			}
 
-			this._telemetryReporter.logTraceEvent('TSServer.enqueueRequest', traceId, JSON.stringify(data));
+
 		}
 		this.sendNextRequests();
 
@@ -342,7 +340,7 @@ export class SingleTsServer extends Disposable implements ITypeScriptServer {
 		try {
 			this.write(serverRequest);
 			if (typeof serverRequest.arguments?.$traceId === 'string') {
-				this._telemetryReporter.logTraceEvent('TSServer.sendRequest', serverRequest.arguments.$traceId, JSON.stringify({ command: serverRequest.command }));
+
 			}
 		} catch (err) {
 			const callback = this.fetchCallback(serverRequest.seq);

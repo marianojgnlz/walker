@@ -21,7 +21,7 @@ import { IBaseSerializableStorageRequest, ISerializableCompareAndSwapRequest, IS
 import { IStorageChangeEvent, IStorageMain, IStorageMainOptions } from '../../electron-main/storageMain.js';
 import { StorageDatabaseChannel } from '../../electron-main/storageIpc.js';
 import { StorageMainService } from '../../electron-main/storageMainService.js';
-import { currentSessionDateStorageKey, firstSessionDateStorageKey } from '../../../telemetry/common/telemetry.js';
+import { firstSessionDateStorageKey } from '../../../telemetry/common/telemetry.js';
 import { UriIdentityService } from '../../../uriIdentity/common/uriIdentityService.js';
 import { IUserDataProfile } from '../../../userDataProfile/common/userDataProfile.js';
 import { UserDataProfilesMainService } from '../../../userDataProfile/electron-main/userDataProfile.js';
@@ -66,12 +66,11 @@ suite('StorageMainService', function () {
 	async function testStorage(storage: IStorageMain, scope: StorageScope): Promise<void> {
 		strictEqual(storage.isInMemory(), true);
 
-		// Telemetry: added after init unless workspace/profile scoped
+		// First session date: added after init unless workspace/profile scoped
 		if (scope === StorageScope.APPLICATION) {
 			strictEqual(storage.items.size, 0);
 			await storage.init();
 			strictEqual(typeof storage.get(firstSessionDateStorageKey), 'string');
-			strictEqual(typeof storage.get(currentSessionDateStorageKey), 'string');
 		} else {
 			await storage.init();
 		}

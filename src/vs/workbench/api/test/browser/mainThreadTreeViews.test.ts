@@ -12,7 +12,6 @@ import { TestInstantiationService } from '../../../../platform/instantiation/tes
 import { NullLogService } from '../../../../platform/log/common/log.js';
 import { TestNotificationService } from '../../../../platform/notification/test/common/testNotificationService.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
-import { NullTelemetryService } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { MainThreadTreeViews } from '../../browser/mainThreadTreeViews.js';
 import { DataTransferDTO, ExtHostTreeViewsShape } from '../../common/extHost.protocol.js';
 import { CustomTreeView } from '../../../browser/parts/views/treeView.js';
@@ -85,7 +84,7 @@ suite('MainThreadHostTreeView', function () {
 					return extHostTreeViewsShape;
 				}
 				drain(): any { return null; }
-			}, new TestViewsService(), new TestNotificationService(), testExtensionService, new NullLogService(), NullTelemetryService));
+			}, new TestViewsService(), new TestNotificationService(), testExtensionService, new NullLogService()));
 		mainThreadTreeViews.$registerTreeViewDataProvider(testTreeViewId, { showCollapseAll: false, canSelectMany: false, dropMimeTypes: [], dragMimeTypes: [], hasHandleDrag: false, hasHandleDrop: false, manuallyManageCheckboxes: false });
 		await testExtensionService.whenInstalledExtensionsRegistered();
 	});
@@ -153,7 +152,7 @@ suite('MainThreadHostTreeView', function () {
 					return mockExtHostWithDrag;
 				}
 				drain(): any { return null; }
-			}, new TestViewsService(), new TestNotificationService(), dragTestExtensionService, new NullLogService(), NullTelemetryService));
+			}, new TestViewsService(), new TestNotificationService(), dragTestExtensionService, new NullLogService()));
 		dragTestMainThreadTreeViews.$registerTreeViewDataProvider(testTreeViewIdWithDrag, {
 			showCollapseAll: false,
 			canSelectMany: false,

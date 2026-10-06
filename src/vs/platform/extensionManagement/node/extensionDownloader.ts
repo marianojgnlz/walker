@@ -22,19 +22,7 @@ import { IExtensionSignatureVerificationService } from './extensionSignatureVeri
 import { TargetPlatform } from '../../extensions/common/extensions.js';
 import { FileOperationResult, IFileService, IFileStatWithMetadata, toFileOperationResult } from '../../files/common/files.js';
 import { ILogService } from '../../log/common/log.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { IUriIdentityService } from '../../uriIdentity/common/uriIdentity.js';
-
-type RetryDownloadClassification = {
-	owner: 'sandy081';
-	comment: 'Event reporting the retry of downloading';
-	extensionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Extension Id' };
-	attempts: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; isMeasurement: true; comment: 'Number of Attempts' };
-};
-type RetryDownloadEvent = {
-	extensionId: string;
-	attempts: number;
-};
 
 export class ExtensionsDownloader extends Disposable {
 
@@ -50,7 +38,6 @@ export class ExtensionsDownloader extends Disposable {
 		@IFileService private readonly fileService: IFileService,
 		@IExtensionGalleryService private readonly extensionGalleryService: IExtensionGalleryService,
 		@IExtensionSignatureVerificationService private readonly extensionSignatureVerificationService: IExtensionSignatureVerificationService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IUriIdentityService private readonly uriIdentityService: IUriIdentityService,
 		@ILogService private readonly logService: ILogService,
 	) {
@@ -111,7 +98,7 @@ export class ExtensionsDownloader extends Disposable {
 	private async downloadVSIX(extension: IGalleryExtension, operation: InstallOperation): Promise<URI> {
 		try {
 			const location = joinPath(this.extensionsDownloadDir, this.getName(extension));
-			const attempts = await this.doDownload(extension, 'vsix', async () => {
+			await this.doDownload(extension, 'vsix', async () => {
 				await this.downloadFile(extension, location, location => this.extensionGalleryService.download(extension, location, operation));
 				try {
 					await this.validate(location.fsPath, 'extension/package.json');
@@ -125,13 +112,6 @@ export class ExtensionsDownloader extends Disposable {
 				}
 			}, 2);
 
-			if (attempts > 1) {
-				this.telemetryService.publicLog2<RetryDownloadEvent, RetryDownloadClassification>('extensiongallery:downloadvsix:retry', {
-					extensionId: extension.identifier.id,
-					attempts
-				});
-			}
-
 			return location;
 		} catch (e) {
 			throw toExtensionManagementError(e, ExtensionManagementErrorCode.Download);
@@ -141,7 +121,7 @@ export class ExtensionsDownloader extends Disposable {
 	private async downloadSignatureArchive(extension: IGalleryExtension): Promise<URI> {
 		try {
 			const location = joinPath(this.extensionsDownloadDir, `${this.getName(extension)}${ExtensionsDownloader.SignatureArchiveExtension}`);
-			const attempts = await this.doDownload(extension, 'sigzip', async () => {
+			await this.doDownload(extension, 'sigzip', async () => {
 				await this.extensionGalleryService.downloadSignatureArchive(extension, location);
 				try {
 					await this.validate(location.fsPath, '.signature.p7s');
@@ -154,13 +134,6 @@ export class ExtensionsDownloader extends Disposable {
 					throw error;
 				}
 			}, 2);
-
-			if (attempts > 1) {
-				this.telemetryService.publicLog2<RetryDownloadEvent, RetryDownloadClassification>('extensiongallery:downloadsigzip:retry', {
-					extensionId: extension.identifier.id,
-					attempts
-				});
-			}
 
 			return location;
 		} catch (e) {
@@ -207,12 +180,12 @@ export class ExtensionsDownloader extends Disposable {
 		}
 	}
 
-	private async doDownload(extension: IGalleryExtension, name: string, downloadFn: () => Promise<void>, retries: number): Promise<number> {
+	private async doDownload(extension: IGalleryExtension, name: string, downloadFn: () => Promise<void>, retries: number): Promise<void> {
 		let attempts = 1;
 		while (true) {
 			try {
 				await downloadFn();
-				return attempts;
+				return;
 			} catch (e) {
 				if (attempts++ > retries) {
 					throw e;

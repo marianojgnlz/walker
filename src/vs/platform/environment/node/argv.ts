@@ -68,7 +68,6 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 		options: {
 			'cli-data-dir': { type: 'string', args: 'dir', description: localize('cliDataDir', "Directory where CLI metadata should be stored.") },
 			'disable-telemetry': { type: 'boolean' },
-			'telemetry-level': { type: 'string' },
 		}
 	},
 	'agent': {
@@ -77,7 +76,6 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 		options: {
 			'cli-data-dir': { type: 'string', args: 'dir', description: localize('cliDataDir', "Directory where CLI metadata should be stored.") },
 			'disable-telemetry': { type: 'boolean' },
-			'telemetry-level': { type: 'string' },
 		}
 	},
 	'diff': { type: 'boolean', cat: 'o', alias: 'd', args: ['file', 'file'], description: localize('diff', "Compare two files with each other.") },
@@ -161,14 +159,12 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 	'skip-release-notes': { type: 'boolean' },
 	'skip-welcome': { type: 'boolean' },
 	'disable-telemetry': { type: 'boolean' },
-	'telemetry-level': { type: 'string' },
 	'disable-updates': { type: 'boolean' },
 	'share-secrets-with-agents-app': { type: 'boolean' },
 	'transient': { type: 'boolean', cat: 't', description: localize('transient', "Run with temporary data and extension directories, as if launched for the first time.") },
 	'use-inmemory-secretstorage': { type: 'boolean', deprecates: ['disable-keytar'] },
 	'password-store': { type: 'string' },
 	'disable-workspace-trust': { type: 'boolean' },
-	'disable-crash-reporter': { type: 'boolean' },
 	'crash-reporter-directory': { type: 'string' },
 	'crash-reporter-id': { type: 'string' },
 	'skip-add-to-recently-opened': { type: 'boolean' },

@@ -29,7 +29,6 @@ import { IApplicationBadge, INativeHostOptions, INativeHostService, INativeSyste
 import { IProductService } from '../../../platform/product/common/productService.js';
 import { AuthInfo, Credentials } from '../../../platform/request/common/request.js';
 import { IStorageService } from '../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../platform/telemetry/common/telemetry.js';
 import { IPartsSplash } from '../../../platform/theme/common/themeService.js';
 import { UriIdentityService } from '../../../platform/uriIdentity/common/uriIdentityService.js';
 import { FileUserDataProvider } from '../../../platform/userData/common/fileUserDataProvider.js';
@@ -219,7 +218,6 @@ export class TestExtensionTipsService extends AbstractNativeExtensionTipsService
 
 	constructor(
 		@INativeEnvironmentService environmentService: INativeEnvironmentService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IExtensionManagementService extensionManagementService: IExtensionManagementService,
 		@IStorageService storageService: IStorageService,
 		@INativeHostService nativeHostService: INativeHostService,
@@ -227,7 +225,7 @@ export class TestExtensionTipsService extends AbstractNativeExtensionTipsService
 		@IFileService fileService: IFileService,
 		@IProductService productService: IProductService,
 	) {
-		super(environmentService.userHome, nativeHostService, telemetryService, extensionManagementService, storageService, extensionRecommendationNotificationService, fileService, productService);
+		super(environmentService.userHome, nativeHostService, extensionManagementService, storageService, extensionRecommendationNotificationService, fileService, productService);
 	}
 }
 

@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { TelemetryReporter } from '../logging/telemetry';
 import { isImplicitProjectConfigFile, openOrCreateConfig, ProjectType } from '../tsconfig';
 import { ITypeScriptServiceClient } from '../typescriptService';
 
@@ -18,9 +17,7 @@ class ExcludeHintItem {
 	private readonly _item: vscode.StatusBarItem;
 	private _currentHint?: Hint;
 
-	constructor(
-		private readonly telemetryReporter: TelemetryReporter
-	) {
+	constructor() {
 		this._item = vscode.window.createStatusBarItem('status.typescript.exclude', vscode.StatusBarAlignment.Right, 98 /* to the right of typescript version status (99) */);
 		this._item.name = vscode.l10n.t("TypeScript: Configure Excludes");
 		this._item.command = 'js.projectStatus.command';
@@ -45,15 +42,6 @@ class ExcludeHintItem {
 		this._item.tooltip = vscode.l10n.t("To enable project-wide JavaScript/TypeScript language features, exclude large folders with source files that you do not work on.");
 		this._item.color = '#A5DF3B';
 		this._item.show();
-		/* __GDPR__
-			"js.hintProjectExcludes" : {
-				"owner": "mjbvz",
-				"${include}": [
-					"${TypeScriptCommonProperties}"
-				]
-			}
-		*/
-		this.telemetryReporter.logTelemetry('js.hintProjectExcludes');
 	}
 }
 
@@ -110,7 +98,7 @@ export function create(
 ): vscode.Disposable {
 	const toDispose: vscode.Disposable[] = [];
 
-	const item = new ExcludeHintItem(client.telemetryReporter);
+	const item = new ExcludeHintItem();
 	toDispose.push(vscode.commands.registerCommand('js.projectStatus.command', () => {
 		if (item.configFileName) {
 			onConfigureExcludesSelected(client, item.configFileName);
