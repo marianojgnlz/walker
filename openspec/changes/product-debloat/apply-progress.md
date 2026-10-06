@@ -2502,3 +2502,219 @@ Re-verified after the cleanup: `npm run compile-client` **0 errors**; `accountFr
 3. `.vscode-test.js`: no unguarded read of a deleted path may remain; evaluating the config must not throw.
 4. MCP: no `agentHost` transport discriminator, no `AgentHostServerOptions`, no `connectionAuthority` residue may remain; generic MCP suites must stay green.
 5. Issue an independent round-4 verdict; this pass does not self-verify its own fixes.
+
+## C5/C6 build tails + U08/P1 neutral ripgrep extraction (2026-10-07)
+
+**Structured status consumed (parent-derived, authoritative):** `activeChange: product-debloat`, `artifactStore: openspec`, `applyState: ready`, `nextRecommended: sdd-apply`, `actionContext: {mode: implement, workspace: /home/marialez/Work/walker, cwd: /home/marialez/Work/walker, branch: product-debloat (never commit)}`, `delivery: feature-branch-chain; 400 max per authored leaf`, `taskAccounting: 108 total / 63 checked / 45 remaining` at entry. Engram carve-out did not apply. `parent-authorization.md`, `tasks.md` (C5/C6 + P1 rows), `design.md` (D-P1/D4 feature-neutral packaging extraction), `apply-progress.md`, `deletion-review.md` and `removal-inventory.md` were read before editing; `tasks.md` was re-read and its P1 rows marked after verification.
+
+**Allowed surfaces used:** `build/**`, `product.json`, `.eslint-allowed-bracket-notation-files`, `.eslint-allowed-javascript-files`, `src/vs/workbench/test/**` (U05 grant, for the component fixture), and the OpenSpec artifacts. No staging, unlink, commit, push, dependency mutation or destructive command was run; whole-file deletions are recorded for the parent in the manifest below. Two genuinely new paths are escalated (see "Interaction required") and were **not** edited.
+
+The pass is three leaves, each inside the 400-line authored budget.
+
+### Leaf 1 — U08/P1 neutral ripgrep extraction (238 authored lines, P1.RED/GREEN/TRIANGULATE→REFACTOR)
+
+- **RED:** new `build/lib/test/ripgrep.test.ts` imports `../ripgrep.ts`, which did not exist; `cd build && node --test lib/test/ripgrep.test.ts` → **exit 1**, `ERR_MODULE_NOT_FOUND: Cannot find module '.../build/lib/ripgrep.ts'`. Every helper consumer was inspected before the move: `getRipgrepExcludeFilter` had exactly two production consumers (`build/gulpfile.vscode.ts:256`, `build/gulpfile.reh.ts:368`), both inside the packaging dependency streams, and no test consumed it (`build/lib/test/copilot.test.ts` only uses the shim/package helpers with `@vscode/ripgrep-universal` fixture dirs).
+- **Pre-extraction baseline captured** for 12 build target/arch pairs (linux x64/arm64/ia32/armhf, alpine x64, legacy `{linux, alpine}`, darwin x64/arm64, win32 x64/arm64/ia32, unsupported freebsd x64) by importing the old module directly; the post-extraction output is identical for all of them.
+- **GREEN:** created `build/lib/ripgrep.ts` (65 lines) exporting `toNodePlatformArch` and `getRipgrepExcludeFilter`; repointed both gulp consumers to `./lib/ripgrep.ts`; removed the moved code from `build/lib/copilot.ts` (−52/+1) so the Copilot module now *imports* `toNodePlatformArch` from the neutral utility instead of owning it. The Copilot-specific shim/package/tgrep/mxc/foundry logic is untouched (its deletion is P2/C7).
+- **TRIANGULATE:** new suite **9/9 passing** — Linux x64/arm64/ia32/armhf, alpine (`platform: 'alpine'`) and legacy (`arch: 'alpine'`) → `linux-x64`, macOS x64/arm64, Windows x64/arm64/ia32, unsupported targets (`freebsd-x64`, `darwin-ia32`) → all 12 shipped dirs stripped, “only the ripgrep-universal bin root, never `@github/` or `@microsoft/`”, “the shipped target binary is never excluded and no pattern is duplicated”, and “covers exactly the platform dirs shipped by the installed `@vscode/ripgrep-universal@1.18.0` package” (guarded by `existsSync`). Verbatim-move parity proven mechanically: `toNodePlatformArch` (42 chars), `getRipgrepExcludeFilter` (339 chars) and `ripgrepUniversalPlatforms` (173 chars) are **byte-identical** between `HEAD:build/lib/copilot.ts` and `build/lib/ripgrep.ts`, and `copilot.ts` no longer defines any of the three. `build/lib/test/copilot.test.ts` **23/23** (shim untouched), `npm run typecheck --prefix build` **exit 0**, eslint on the five touched files **0 problems**.
+- **REFACTOR:** obsolete Copilot-filter coupling deleted; the neutral utility has no Copilot/product dependency and the Copilot module depends on it one-way, so P2 can delete `build/lib/copilot.ts` without touching ordinary Search payload selection.
+
+### Leaf 2 — C5/C6 build registration tails (341 authored lines)
+
+- `build/next/resources.ts` (−14): removed seven dead resource globs that pointed into trees the wave deleted and that can therefore never match — `vs/sessions/contrib/chat/browser/media/*.svg`, `vs/sessions/contrib/welcome/browser/media/themePreviews/*.svg`, `vs/workbench/contrib/chat/browser/widget/media/chatPet/**/*.{gif,png}`, `vs/sessions/electron-browser/sessions{,-dev}.html`, the “Sessions - built-in prompts and skills” comment + `vs/sessions/prompts/*.prompt.md` + `vs/sessions/skills/**/SKILL.md`, and the three `vs/workbench/contrib/agentsVoice/browser/media/*.mp3` entries (each tree verified absent: `src/vs/sessions`, `contrib/chat`, `contrib/agentsVoice`). Retained globs (e.g. the `accessibilitySignal` audio and every workbench/media glob) are unchanged; `build/next/test/resources.test.ts` and the rest of the build tests stay green.
+- `.eslint-allowed-bracket-notation-files` (−153/+4) and `.eslint-allowed-javascript-files` (−7): pruned **every** allow-list entry whose path no longer exists in the worktree (filesystem-existence check per entry), removed the sections that became empty and corrected the section counts. Bracket list: −143 stale entries (Agent Host 89, Workbench chat/agents 37, Agents Window 11, Terminal/tasks 2, Config/profiles 2, Remote/tunnels 1, default-account 1) with four headers removed/recounted and three renamed to their retained content (`# MCP (3 files)`, `# Configuration, profiles, and policy (12 files)`, `# Remote, tunnels, and networking (8 files)`); 302 entries kept. JavaScript list: −5 (4 × `src/vs/sessions/test/e2e/*` + `build/npm/stubs/sharp/index.js`, the latter a pre-existing upstream staleness from commit `eb62e28c3ca`, unrelated to this debloat). Entries for files that still exist were deliberately kept so `local/code-no-new-javascript-files` cannot start flagging a live file — including the five `build/next/devTunnels*` JS files pending the W22 deletion and all `extensions/copilot/**` entries (C7).
+- i18n registration tail (−168): `build/lib/i18n.ts` no longer declares `sessionsProject` or maps `vs/sessions/**` to a translation bundle; `build/lib/i18n.resources.json` loses the whole 35-entry `sessions` resource list and the dead `vs/workbench/services/agentHost` workbench entry (146 lines, JSON re-validated); `build/lib/test/i18n.test.ts` drops the sessions fixture expectations and adds an **enforcing negative test** that `getResource('vs/sessions/...')` throws `Could not identify the XLF bundle`. RED before the code change: 3 pass / 1 fail; GREEN: **4/4**.
+
+### Leaf 3 — round-3 informational residues + flagged product identity (100 authored lines)
+
+- **`product.json` `agentsTelemetryAppName` — disposed (removed), evidence-based:** the field is purely Agent Host identity. Its only reader is the `isSessionsWindow ? agentsTelemetryAppName : undefined` branch in `localProcessExtensionHost.ts`, and `isSessionsWindow` is now a constant `false` everywhere (sessions window unreachable after the wave), so the value can no longer reach any code path; telemetry is not a competing owner (U10/T-stage telemetry work does not read a product *name*). Removed the root product line and flipped the `walkerProduct.test.ts` expectation to `undefined` + renamed the test. RED: **16 pass / 1 fail** on the new assertion; GREEN: **17/17**. The optional `IProductConfiguration` type member and the inert dead reader are recorded as the remaining tail (needs one new path, escalated).
+- **`multiDiffEditorChatChanges.json` (315,177 bytes) — disconnected:** removed the `ChatInputChanges` screenshot variant, its zod schema/parse block, the JSON import and the two helper functions from `src/vs/workbench/test/browser/componentFixtures/editor/multiDiffEditorVariants.fixture.ts` (−95). The retained multi-diff fixture variants (`MultiFile`, narrow/long/sticky/long-unchanged-region, …) are untouched and the fixture carries no chat reference anymore; the now-unconsumed JSON (deleted chat source text as inert fixture data) is in the deletion manifest.
+- The stale “Default account service tests” entry (`.eslint-allowed-bracket-notation-files:486`) is covered by the Leaf 2 prune.
+
+### Pending physical deletion (parent `git rm` manifest) — new entries this pass
+
+| # | Path(s) | Ready? | Evidence |
+| --- | --- | --- | --- |
+| W22 (ready to execute) | `build/next/devTunnelsWeb.ts`, `build/next/devTunnelsWebEntry.js`, `build/next/test/devTunnelsWeb.test.ts`, `build/next/devTunnelsShims/{buffer.js,empty.cjs,process.js,vscodeJsonrpc.cjs}` | **Yes** | Zero production importers: `build/next/index.ts`’s import/call was removed in the 2026-10-06 C5 leaf, today only its own test imports the helper, its bundle output dir (`vs/sessions/contrib/providers/remoteAgentHost/browser`) is inside the deleted sessions tree, and the entry point bundles `@microsoft/dev-tunnels-*` for the removed account/remote-agent-host feature. `resources/win32/sessions.ico` (the binary part of W22) is **already absent** (`git ls-files resources/win32 | grep sessions` → empty). |
+| W22 follow-up | `.eslint-allowed-javascript-files`: `build/next/devTunnelsWebEntry.js`, `build/next/devTunnelsShims/{buffer.js,empty.cjs,process.js,vscodeJsonrpc.cjs}` | with W22 | These five entries must be removed **in the same commit** as the files; removing them earlier would make `local/code-no-new-javascript-files` flag the still-existing files. |
+| W27 | `build/lib/test/agentHostDependencies.test.ts` (196 lines) | **Yes** | Currently **fails**: `node --test lib/test/agentHostDependencies.test.ts` → `ENOENT ... src/vs/platform/agentHost/node/agentHostServerMain.ts`. Its only subjects are the two deleted Agent Host entry points; no file imports it. Deletion is the fix (wave-caused, pre-existing, not from this pass). |
+| W28 | `src/vs/server/node/agentHostChannel.ts` (412 lines) + `src/vs/server/test/node/agentHostChannel.test.ts` | **Yes** | `C6.RED → GREEN` names the channel for removal; repo-wide grep finds **zero** references (no `serverServices.ts` registration, no importer); the test exercises only that channel. |
+| W29 | `src/vs/workbench/test/browser/componentFixtures/editor/multiDiffEditorChatChanges.json` (315,177 bytes) | **Yes** | Zero importers after the Leaf 3 fixture edit; contains deleted `contrib/chat` source text as inert fixture data. |
+| W30 | `build/vite/mobile-multi-diff.html`, `build/vite/mobile-multi-diff.ts`, `build/vite/mobile-multi-diff-worker.ts` | **Yes** | The trio is the design playground for the deleted `src/vs/sessions/browser/parts/mobile/contributions/mobileMultiDiff*` view; both TS files import those deleted modules (`build/vite/**` is excluded from `build/tsconfig.json`, so no typecheck catches it), `vite.config.ts` only builds `workbench-vite.html`, and no script/HTML/config references the trio. |
+| C6 follow-up | `.eslint-allowed-bracket-notation-files`: `scripts/code-agent-host.js`, `scripts/code-sessions-web.js`, `scripts/sync-agent-host-protocol.ts`, `scripts/test-agent-host-e2e.ts` | with their files | Same rule as the W22 JS follow-up: remove the entries only when the script files go. |
+
+### Verification — this pass (Node 24.18.0 via the approved mise PATH)
+
+| Exact command | Observed result |
+| --- | --- |
+| `cd build && node --test lib/test/ripgrep.test.ts` | RED exit 1 (`ERR_MODULE_NOT_FOUND`), then **exit 0 — 9 tests, 9 pass** |
+| `cd build && node --test lib/test/ripgrep.test.ts lib/test/walkerProduct.test.ts lib/test/i18n.test.ts lib/test/copilot.test.ts lib/test/eslint.test.ts next/test/resources.test.ts` | **exit 0 — 79 tests, 79 pass, 0 fail** |
+| `cd build && node --test lib/test/checkCyclicDependencies.test.ts lib/test/layersChecker.test.ts lib/test/inlineMeta.test.ts` | **exit 0 — 26 tests, 26 pass** |
+| `npm run typecheck --prefix build` | **exit 0, 0 TS errors** (includes the new `lib/ripgrep.ts` and its test) |
+| `npm run typecheck-client` | **exit 0** (covers the edited component fixture) |
+| `npm run compile-client` | **exit 0** — compile-src 0 errors, monaco typecheck 0 errors |
+| `npm run gulp compile-extensions` | **exit 0** — every extension tsconfig 0 errors |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **exit 0 — 10 passing** (A1 facade unchanged and green) |
+| `node -e "import('./.vscode-test.js')…"` | **exit 0** — `vscode-test-config: evaluated OK; entries: 12` |
+| `node --max-old-space-size=8192 build/eslint.ts <5 P1 files>` | **exit 0, 0 problems** |
+| `node --max-old-space-size=8192 build/eslint.ts <7 changed files incl. the fixture>` | 16 problems, **all pre-existing in `build/lib/test/walkerProduct.test.ts`** — proven identical at HEAD with `git show HEAD:build/lib/test/walkerProduct.test.ts \| npx eslint --stdin --stdin-filename build/lib/test/walkerProduct.test.ts` → `✖ 16 problems (0 errors, 16 warnings)`; this pass adds none |
+
+`git diff --check` clean. No file was staged, unlinked, committed, pushed, published or dependency-mutated. `git status`: 12 modified tracked files + 2 new untracked source files (`build/lib/ripgrep.ts`, `build/lib/test/ripgrep.test.ts`) + the pre-existing untracked `.pi/`.
+
+### Measured workload / review boundary
+
+- **Leaf 1 (P1): 238 authored lines** — 65 + 114 new files, `copilot.ts` −52/+1, two gulp imports 2/1 each. Fully verified extraction, under budget.
+- **Leaf 2 (C5/C6 build registrations): 341 authored lines** — `resources.ts` 2/14, allow-lists 4/160, i18n 8/153. Deletion-dominated but strictly dead-reference removal, under budget.
+- **Leaf 3 (round-3 residues + product identity): 100 authored lines** — `product.json` 0/1, `walkerProduct.test.ts` 2/2, fixture 0/95. Under budget.
+- Whole-pass total 21 additions / 486 deletions. No `size:exception` claimed or needed; no comments, docs or tests were compressed or dropped to fit a budget.
+
+### Remaining C5/C6/P3 tails discovered (recorded, not executed)
+
+- **C6 script/workflow tail (needs `scripts/**`, `.github/**`, `package.json`, `.vscode/launch.json`):** `scripts/code-agent-host.js|.sh`, `scripts/code-sessions-web.js|.sh`, `scripts/sync-agent-host-protocol.ts`, `scripts/test-agent-host-e2e.ts`, `scripts/test-agent-host-e2e-child.ps1`, `scripts/agent-host-e2e-coverage.ts`, `scripts/chat-simulation/**`; referenced by `.vscode/launch.json`, `package.json` (`test-agent-host-e2e`), `scripts/test-integration.sh/.bat`, `.github/workflows/sessions-e2e.yml`, `.github/actions/detect-agent-host-e2e-changes/**`, `.github/instructions/sessions.instructions.md`, `.github/learnings/sessions.md`, `.github/skills/sessions/SKILL.md` and the agent-host skills/instructions. These are the C6 “exclusive agent-host scripts/protocol tails” and need their consumers cleaned in the same leaves.
+- **P3 producer tail:** `build/azure-pipelines/common/smokeTestAgentHost.ts` + its darwin/linux/win32 compile-step hooks, `build/codex/**` (generator + `check-protocol-sync.ts` + test) whose output dir is the deleted `platform/agentHost/node/codex/protocol/generated`, the `build/filters.ts` codex exclusions, `build/agent-sdk/**`, and the `build/lib/policies/policyData.jsonc` `chat.agentHost.*` policy keys.
+- **P2/P3 unchanged:** `build/lib/copilot.ts` + `build/lib/test/copilot.test.ts`, the shim calls in both gulpfiles, `build/darwin/verify-macho.ts` Copilot paths, `build/.moduleignore` Agent Host note, Copilot SDK/runtime versions and locks.
+- **Inert residuals kept by design:** `IProductConfiguration.agentsTelemetryAppName?: string` (`src/vs/base/common/product.ts`, grant-covered) and the dead reader branch in `src/vs/workbench/services/extensions/electron-browser/localProcessExtensionHost.ts` (new path, escalated).
+
+### Material findings for the verifier
+
+1. **The build-lib test suite is red before this pass:** `build/lib/test/agentHostDependencies.test.ts` fails with `ENOENT` on the deleted `src/vs/platform/agentHost/node/agentHostServerMain.ts`. Wave-caused and unrelated to this pass; the fix is deletion (W27). Do not attribute it to these leaves.
+2. **`src/vs/server/node/agentHostChannel.ts` (412 lines) + its test are still tracked** although `C6.RED → GREEN` names the channel and it has zero references — a wave gap, recorded as W28 rather than silently absorbed into a C5/C6 checkbox.
+3. **`build/lib/test/walkerProduct.test.ts` has 16 pre-existing eslint warnings (0 errors)**, identical at HEAD; the `eslint` target for that file was already failing before this pass.
+4. **Allow-list entries must be removed together with their files** (W22 JS entries and the four C6 script entries); removing them earlier would create new lint violations.
+5. **`build/vite/mobile-multi-diff*` is only visible by grep** because `vite/**` is excluded from `build/tsconfig.json`; a future re-introduction of a sessions-like entry point would not be caught by the client typecheck.
+
+### Persisted task state
+
+- `tasks.md` re-read after the pass: **66 checked / 42 unchecked / 108 rows**. Newly checked (scope complete and verified this pass): `P1.RED`, `P1.GREEN`, `P1.TRIANGULATE → REFACTOR`.
+- Deliberately still open (their full scope is not complete): `- [ ] C5.RED → GREEN: …` and `- [ ] C5.TRIANGULATE → REFACTOR: …` (the `build/vite/mobile-multi-diff*` trio, the W22 files and the W29 fixture are disconnected but not yet physically deleted — the parent-deletion protocol forbids checking a physical-removal row before the deletion is observed); `- [ ] C6.RED → GREEN: …` and `- [ ] C6.TRIANGULATE → REFACTOR: …` (W28 channel pair, the C6 script/protocol tails, the P2/P3 SDK/native producers); `- [ ] C7.*` and `- [ ] P2/P3.GREEN` (untouched by design).
+
+### Review focus for the verifier
+
+1. `build/lib/ripgrep.ts` must be a verbatim move of `toNodePlatformArch` + `getRipgrepExcludeFilter` + the platform list (byte-identical bodies proven in the progress notes), must not import anything Copilot/product-specific, and `build/lib/copilot.ts` must no longer define or export them while keeping every Copilot shim/package helper intact.
+2. Both gulpfiles must import `getRipgrepExcludeFilter` from `./lib/ripgrep.ts` and the packaging filter order must be unchanged (`… getCopilotExcludeFilter → getCopilotTgrepExcludeFilter → getRipgrepExcludeFilter → getMxcExcludeFilter …`), so ordinary Search payload selection is unaffected.
+3. `build/lib/test/ripgrep.test.ts` must stay independent of `copilot.ts` (it must still pass after P2 deletes the Copilot module) and its fixture list must match the installed package’s `bin/` dirs.
+4. Allow-list prune: no removed entry may name an existing file; the retained entries (incl. the W22/C6 follow-ups) must be exactly the live-file set; the three renamed section headers must describe their remaining content.
+5. i18n: `getResource('vs/sessions/...')` must throw, `build/lib/i18n.resources.json` must be valid JSON with no `vs/sessions`/`vs/workbench/services/agentHost` entry, and the retained editor/workbench resource lists must be otherwise untouched.
+6. `product.json` must have no `agentsTelemetryAppName` while every other Walker identity/gallery/built-in field is intact; the fixture must render every retained multi-diff variant without the chat data.
+7. Manifest check: W22/W27/W28/W29/W30 readiness evidence (zero importers, failing test, zero references) before executing `git rm`, and remove the W22/C6 allow-list entries in the same commit.
+
+### Interaction required
+
+Two genuinely new paths are needed to finish assigned items; they were not edited. Escalation payload returned to the parent with option ids `approve-telemetry-identity-reader`, `approve-mock-policy-server-deletion`, `approve-agent-host-script-tails`, `approve-none`.
+
+## Approved escalation executed — `approve-all-three` (2026-10-07)
+
+**Structured status consumed (parent-derived, authoritative):** `activeChange: product-debloat`, `artifactStore: openspec`, `applyState: ready`, `nextRecommended: sdd-apply`, `actionContext: {mode: implement, workspace/cwd: /home/marialez/Work/walker, branch: product-debloat (never commit)}`, `taskAccounting: 108 total / 66 checked / 42 remaining` at entry. The parent answered **`approve-all-three`** exactly as listed; surfaces for this pass additionally include `scripts/**`, `.vscode/**`, `package.json`, `.github/**` and the two named source paths. No path outside that grant was edited.
+
+The three approved groups became leaves 4–6 (all under the 400-line authored budget); a **material correction** to group 3 and a **lint regression** discovered while executing it are recorded below rather than hidden.
+
+### Leaf 4 — Group 1: finish the Agent Host product identity disposal (13 authored lines)
+
+- **RED:** `build/lib/test/walkerProduct.test.ts` now also asserts that the extension-host init data and the product contract contain no `agentsTelemetryAppName`; `node --test lib/test/walkerProduct.test.ts` → **16 pass / 1 fail**.
+- **GREEN:** `localProcessExtensionHost.ts`: `appHost: this._productService.embedderIdentifier || 'desktop'` (the dead `isSessionsWindow ? agentsTelemetryAppName : undefined` branch is gone); `src/vs/base/common/product.ts`: the optional `IProductConfiguration.agentsTelemetryAppName` member is gone. Suite **17/17**. The whole `agentsTelemetryAppName` family (product value, type member, reader) is now absent — `grep -rn agentsTelemetryAppName` finds only the test's absence assertions and the change artifacts.
+
+### Leaf 5 — Group 2: `scripts/mock-policy-server/**` disposal (6 files, zero consumers)
+
+- Reference audit: the only consumer anywhere was the root `package.json` script `mock-policy-server` (removed, 5 script lines total with the others below); `.github/skills/policy-and-managed-settings/local-testing.md` was the only doc describing it (its entire content is that server: npm command, state file, GUI, control API, presets, schema) → it joins the deletion manifest; its two inbound links were cleaned in `.github/skills/policy-and-managed-settings/SKILL.md` (bullet removed) and `github-managed-settings.md` (the “Manual/local testing” paragraph now points at the retained file-based `FileManagedSettingsService` channel instead of the removed mock server). No eslint allow-list entry names this tree, and `.github/CODEOWNERS` has no entry for it.
+- Manifest entry **W31** (below).
+
+### Leaf 6 — Group 3: C6 agent-host/sessions script tails (190 authored lines) — with one material correction
+
+**Material correction (evidence-based, deviates from the approved list):** `scripts/chat-simulation/common/mock-llm-server.ts` (2,174 lines) is a **live dependency of retained smoke infrastructure**, not dead chat content: `test/smoke/src/utils.ts:228` (`getMockLlmServerPath`) returns that path and it is `require`d at runtime by `test/smoke/src/areas/browserView/browserView.test.ts:23`, `areas/agentsWindow/agentsWindow.test.ts:732` and the chat smoke areas. `test/**` is outside this pass's surfaces, so the tree was **split instead of deleted wholesale**: the perf-only files (CI harness, scenario definitions, shared helpers, fixtures, config) go to the manifest as **W33**, while `common/mock-llm-server.ts` is **retained** because a retained harness resolves it. Its standalone-run branch (the only `require('./perf-scenarios')` call, `require.main === module`) was removed so the retained file has no reference to a deleted module; `module.exports` and every smoke-facing export are untouched. Follow-up recorded: `test/smoke/src/utils.ts` + `areas/{chat,agentsWindow}` and the browserView chat scenarios must be disconnected before the mock server itself can go (needs a `test/**` grant).
+- Reference cleanups executed (each verified by a repo-wide grep afterwards):
+  - `package.json`: removed `test-agent-host-e2e`, `test-agent-host-e2e-coverage` (with `mock-policy-server`, `perf:chat`, `perf:chat-leak` → 5 lines).
+  - `scripts/test-integration.sh` / `.bat`: removed the `AGENT_HOST_E2E_GLOB` variable, the Agent Host E2E runner call and `--excludeRunGlob` pattern, the `VSCODE_SKIP_AGENT_HOST_E2E` branch (the env var is produced nowhere now), the “Agent Host E2E entrypoints run in parallel…” help line, and the deleted-chat notification seed (`chat.notifyWindowOnConfirmation`/`…OnResponseReceived`) which now writes `{}` — the only non-agent-host item in this leaf, recorded as a deliberate design-D7 runner-tail cleanup (`bash -n` clean; the `.bat` was spliced byte-wise to preserve its CRLF endings, 330 CRLF / 0 bare LF).
+  - `.vscode/launch.json`: removed the “VS Code Agent Host” config (ran the deleted script), “Attach to Agent Host Process”, the sessions-window “Launch VS Code Agents Internal” config (`--agents`), the “VS Code Agents” compound, the “Renderer and Agent Host processes” compound, and the dangling compound references — all 100 deleted lines are agent-host/sessions-owned, and the remaining compounds resolve to existing configurations (verified).
+  - `.vscode/tasks.json`: removed the “Run Agents” task and its “Build Fast & Run Agents” wrapper (both launch the deleted Agents Window); the inert `inAgents` metadata flags on unrelated tasks were intentionally left (recorded). `.vscode/settings.json`: removed the two dead `src/vs/platform/agentHost/**` `files.exclude` entries and the commented `// "src/vs/sessions/**": true` line. `jsonc-parser` validation: 0 errors in all three files.
+  - `.github/workflows/pr-{linux,darwin,win32}-test.yml`: removed the “Detect Agent Host E2E changes” step (local action) and the `VSCODE_SKIP_AGENT_HOST_E2E` env line from the Electron integration-test step; all three files still parse as YAML with their job/step structure intact.
+  - Manifest entries **W32** (the eight agent-host/sessions scripts), **W33** (chat-simulation perf-only subset), **W34** (the agent-host/sessions/chat-perf `.github` workflows, action, instructions and skills, plus the mock-policy `local-testing.md`).
+
+### Lint regression found and resolved in-surface (important for the verifier)
+
+`npm run eslint` (via `build/eslint.ts`) **crashed** after the earlier i18n cleanup: `.eslint-plugin-local/code-translation-remind.ts` reads `build/lib/i18n.resources.json` and spreads `[...parsed.workbench, ...parsed.sessions]`, so removing the `sessions` key produced `TypeError: parsed.sessions is not iterable` for every nls-importing workbench file (the crash also aborted the run before it reported the known `walkerProduct.test.ts` warnings, which is why the previous pass's lint evidence looked like 16 problems only).
+- **In-surface resolution:** `build/lib/i18n.resources.json` keeps an **empty** `"sessions": []` container (1 insertion) — every one of the 35 resource entries stays deleted and the removed trees stay unlisted, but the container name remains solely because the fixed-shape lint rule requires it. Verified afterwards: the rule's live path is healthy (`extensionsActions.ts`, `textfiles.ts`, `searchActionsFind.ts` → exit 0, 0 problems, no crash) and `npx eslint --no-warn-ignored build/lib/i18n.resources.json` → exit 0 (`build/lib/test/i18n.test.ts` **4/4**, its negative assertions unchanged).
+- **Escalated (new path, not edited):** `approve-translation-remind-rule-fix` — make that rule project-agnostic (e.g. flatten every top-level project array) and drop its now-dead `matchSessionsPart` branch for `vs/sessions/contrib/...`; then the empty `sessions` container can be removed too.
+
+### Verification — this pass (Node 24.18.0 via the approved mise PATH)
+
+| Exact command | Observed result |
+| --- | --- |
+| `cd build && node --test lib/test/walkerProduct.test.ts` | RED **16 pass / 1 fail** → GREEN **17/17** |
+| `cd build && node --test lib/test/walkerProduct.test.ts lib/test/ripgrep.test.ts lib/test/i18n.test.ts lib/test/copilot.test.ts next/test/resources.test.ts` | **exit 0 — 76 tests, 76 pass, 0 fail** |
+| `npm run typecheck-client` | **exit 0** (product-contract member removal + reader + fixture) |
+| `npm run typecheck --prefix build` | **exit 0, 0 TS errors** |
+| `npm run compile-client` | **exit 0** — compile-src 0 errors, monaco typecheck 0 errors |
+| `npm run gulp compile-extensions` | **exit 0** |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **exit 0 — 10 passing** |
+| `node build/eslint.ts src/vs/base/common/product.ts src/vs/workbench/services/extensions/electron-browser/localProcessExtensionHost.ts scripts/chat-simulation/common/mock-llm-server.ts` | **exit 0, 0 problems** |
+| `node build/eslint.ts <3 nls-importing workbench files>` | **exit 0, 0 problems** — translation-remind rule back to a working state |
+| `npx eslint --no-warn-ignored build/lib/i18n.resources.json` | **exit 0** (a direct JSON target only ever yields the “no matching configuration” warning, `build/eslint.ts` counts that as a problem — not a defect) |
+| `jsonc-parser` parse of `.vscode/{launch,tasks,settings}.json` | **0 errors** in all three |
+| `bash -n scripts/test-integration.sh` | clean; residual `agent-host`/`chat.notify` grep → none |
+| `.bat` byte audit | 330 CRLF / 0 bare LF / 0 stray CR — endings preserved |
+| YAML parse of the three `pr-*-test.yml` | jobs `linux-test`/`macOS-test`/`windows-test` intact; residual agent-host grep → none |
+
+`git diff --check` clean. No staging, unlink, commit, push, dependency mutation or destructive command.
+
+### Measured workload / review boundary (this pass)
+
+- **Leaf 4:** 13 authored lines (`walkerProduct.test.ts` 8/2, `product.ts` 0/1, `localProcessExtensionHost.ts` 1/1).
+- **Leaf 5:** 11 authored lines (`package.json` script + `SKILL.md` 0/1 + `github-managed-settings.md` 1/1) plus manifest/docs; the tree deletion itself is parent-owned.
+- **Leaf 6:** 190 authored lines (`package.json` 0/4, integration scripts 6/26, `.vscode` 1/128, workflows 0/24, `mock-llm-server.ts` 0/11).
+- Whole `product-debloat` pass to date: **+165 / −687** across six leaves (238 / 342 / 113 / 13 / 11 / 190), each inside the 400-line budget; no `size:exception` requested.
+
+### Pending physical deletion (parent `git rm`) — added this pass
+
+| # | Path(s) | Ready? | Evidence |
+| --- | --- | --- | --- |
+| W31 | `scripts/mock-policy-server/{README.md,endpoints.ts,server.ts,public/{app.ts,index.html,style.css}}` | **Yes** | Only consumer was the now-removed root `package.json` script; the account/Copilot policy endpoints it served (`DefaultAccountService`, `defaultChatAgent`) no longer exist; its only doc (`local-testing.md`) is also manifest-bound (W34) and its inbound links are cleaned. |
+| W32 | `scripts/code-agent-host.js`, `scripts/code-agent-host.sh`, `scripts/code-sessions-web.js`, `scripts/code-sessions-web.sh`, `scripts/sync-agent-host-protocol.ts`, `scripts/test-agent-host-e2e.ts`, `scripts/test-agent-host-e2e-child.ps1`, `scripts/agent-host-e2e-coverage.ts` | **Yes** | Every consumer was cleaned in this leaf (npm scripts, both `test-integration` runners, `launch.json`, the three PR workflows); the remaining mentions are inside the files themselves or their coupled eslint allow-list entries. `code-agent-host.js` serves the deleted agent-host process, `code-sessions-web.js` serves the deleted Agents Window web entry (including its `sessions-e2e-mock` extension path), `sync-agent-host-protocol.ts` generates protocol code into the deleted `platform/agentHost` tree, and the two E2E runners drive deleted suites. |
+| W33 | `scripts/chat-simulation/{config.jsonc,jsconfig.json,merge-ci-summary.js,test-chat-perf-regression.js,test-chat-mem-leaks.js,common/perf-scenarios.js,common/utils.js,fixtures/_chatperf_{arrays,async,errors,event,lifecycle,strings,types,uri}.ts}` (15 files) | **Yes** | Chat-perf CI harness: consumers were the removed `perf:chat`/`perf:chat-leak` npm scripts, `.github/workflows/chat-perf.yml` (W34) and the removed standalone branch of the retained mock server; `fixtures/_chatperf_*` are referenced only by `common/perf-scenarios.js`. |
+| W33-retained | `scripts/chat-simulation/common/mock-llm-server.ts` | **KEEP** | Live dependency of retained smoke code (`test/smoke/src/utils.ts:228` → `browserView.test.ts`, `agentsWindow.test.ts`, chat smoke areas). Deletion requires the `test/**` follow-up (see risks). |
+| W34 | `.github/workflows/sessions-e2e.yml`, `.github/workflows/chat-perf.yml`, `.github/actions/detect-agent-host-e2e-changes/{action.yml,detect.ts}`, `.github/instructions/{sessions,agentHostTesting}.instructions.md`, `.github/learnings/sessions.md`, `.github/skills/sessions/SKILL.md`, `.github/skills/chat-perf/SKILL.md`, `.github/skills/agent-host-chat-contributions/SKILL.md`, `.github/skills/agent-host-e2e-tests/SKILL.md`, `.github/skills/agent-host-logs/**`, `.github/skills/customizations-in-the-agent-host/SKILL.md`, `.github/skills/policy-and-managed-settings/local-testing.md` | **Yes** | The two workflows and the action are fully owned by the deleted sessions/agent-host E2E and chat-perf harnesses (the action is now referenced by no workflow); every skill/instruction file is entirely about the deleted agents window, agent host, chat perf or the deleted mock policy server. Nothing imports them. |
+
+**Coupled eslint allow-list entries the parent must remove in the same commit** (files still exist until then, so removing them earlier would make `local/code-no-new-javascript-files` / the bracket rule flag live files): `.eslint-allowed-javascript-files` → `build/next/devTunnelsWebEntry.js`, `build/next/devTunnelsShims/{buffer.js,empty.cjs,process.js,vscodeJsonrpc.cjs}`, `scripts/code-agent-host.js`, `scripts/code-sessions-web.js`, `scripts/chat-simulation/{common/perf-scenarios.js,common/utils.js,merge-ci-summary.js,test-chat-mem-leaks.js,test-chat-perf-regression.js}`; `.eslint-allowed-bracket-notation-files` → `scripts/{code-agent-host.js,code-sessions-web.js,sync-agent-host-protocol.ts,test-agent-host-e2e.ts}`. **16 entries total.**
+
+### Remaining tails after this pass (recorded, not executed)
+
+- `test/**` follow-up (needs a grant): `test/smoke/src/utils.ts` (`getMockLlmServerPath`/`preseedChatExtensionEnablement`), `test/smoke/src/areas/chat/**`, `test/smoke/src/areas/agentsWindow/**`, and the browserView chat scenarios still reference the retained mock LLM server and the removed chat feature; they must be disconnected before `W33-retained` can be deleted.
+- Other chat/Copilot-owned `.github` content that no longer has an owner but is outside this pass's script references: `.github/workflows/chat-lib-package.yml`, `.github/skills/{chat-customizations-editor,chat-pet-sprite-creation}/SKILL.md`, `.github/skills/auto-perf-optimize/scripts/{chat-memory-smoke,chat-session-switch-smoke}.mts`, `.github/CODEOWNERS` has no entries for the deleted paths (nothing to clean).
+- P2/P3 unchanged: `build/lib/copilot.ts` + test (now safe to delete after the P1 extraction), the shim calls in both gulpfiles, `build/darwin/verify-macho.ts` Copilot paths, `build/.moduleignore` Agent Host note, Copilot SDK/runtime versions and locks, `build/codex/**`, `build/agent-sdk/**`, `build/azure-pipelines/common/smokeTestAgentHost.ts` + hooks, `build/filters.ts` codex exclusions, the `chat.agentHost.*` policy keys, and the C4/C7 chat smoke/CI remnants listed above.
+- Doc reference to a pending-deletion path: `.github/skills/policy-and-managed-settings/github-managed-settings.md:231` still lists `src/vs/workbench/services/accounts/test/browser/managedSettings.test.ts`, which is on the parent's earlier deletion manifest; it will need the same treatment once that file is gone.
+
+### Persisted task state
+
+- `tasks.md` re-read after this pass: **66 checked / 42 unchecked / 108 rows — unchanged.** No unchecked row became complete: the C5/C6 rows still require the parent's physical deletions (W22/W27–W34) and the P2/P3 tails, so no checkbox was flipped and no completed work is hidden behind an unchecked row.
+
+### Review focus for the verifier
+
+1. Group 1: `agentsTelemetryAppName` must be absent from `product.json`, `IProductConfiguration`, and `localProcessExtensionHost.ts`; `appHost` must still resolve `embedderIdentifier || 'desktop'`; `walkerProduct.test.ts` must be 17/17 including the physical-absence assertions.
+2. Group 2/3: no live file may reference the W31–W34 paths — re-run the repo-wide grep for `mock-policy-server`, `code-agent-host`, `code-sessions-web`, `sync-agent-host-protocol`, `test-agent-host-e2e`, `agent-host-e2e-coverage`, `detect-agent-host-e2e-changes`, `chat.notify`, `VSCODE_SKIP_AGENT_HOST_E2E`.
+3. The chat-simulation split is the key judgement call: `common/mock-llm-server.ts` must remain, must keep every smoke-facing export, and must contain no `require('./perf-scenarios')`; the perf-only files must be the manifest-bound W33 set.
+4. Lint: the `sessions: []` container is a deliberate, recorded concession to `.eslint-plugin-local/code-translation-remind.ts`; confirm no resource entries name `vs/sessions`/`vs/workbench/services/agentHost`, that the rule no longer crashes, and do not treat the empty container as incomplete cleanup while `approve-translation-remind-rule-fix` is pending.
+5. `.vscode` + workflow edits must be reference-only: no unrelated launch config, task, setting or CI step may be missing; compounds must resolve; the three workflows must still parse and keep their Electron integration-test steps (minus the agent-host env/step).
+6. Manifest check before `git rm`: W31/W32/W33/W34 readiness, the retained W33 file, and the 16 coupled allow-list entries removed in the same commit.
+
+## Approved escalation executed — `approve-translation-remind-rule-fix` (2026-10-07)
+
+**Structured status consumed (parent-derived, authoritative):** `activeChange: product-debloat`, `artifactStore: openspec`, `applyState: ready`, `nextRecommended: sdd-apply`, `taskAccounting: 108 / 66 checked / 42 remaining`, `actionContext.mode: implement`, workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat` (never commit). The parent approved the single new path `.eslint-plugin-local/code-translation-remind.ts` and asked for the empty `"sessions": []` container to be dropped afterwards. No other path was touched.
+
+### Leaf 7 — lint rule made project-agnostic, empty container removed (13 authored lines)
+
+- **RED (fresh for this leaf):** the empty `"sessions": []` container was removed first, leaving the unfixed rule in place; `node build/eslint.ts src/vs/workbench/contrib/extensions/browser/extensionsActions.ts` → **exit 1** with `TypeError: parsed.sessions is not iterable` / `Rule: "local/code-translation-remind"`. `build/lib/i18n.resources.json` is now back to exactly two project keys (`editor` 4 entries, `workbench` 159) with **zero** `vs/sessions`/`vs/workbench/services/agentHost` entries.
+- **GREEN:** the rule no longer hardcodes project keys — `const resources = Object.values(parsed).flatMap(project => Array.isArray(project) ? project : []);` (typed `Record<string, readonly { name: string }[] | undefined>`, tolerant of a missing/mis-shaped project), and the dead `matchSessionsPart` branch for `vs/sessions/contrib/...` is gone. eslint on five nls-importing workbench files (contrib + services, plus a later run over editor/notebook/keybinding/terminal files and the rule file itself) → **exit 0, 0 problems**.
+- **TRIANGULATE:**
+  - Rule semantics exercised directly through the ESLint `Linter` API against the real `build/lib/i18n.resources.json` (no repo file added): listed `vs/workbench/contrib/extensions` **no report**, listed `vs/workbench/services/textfile` **no report**, unlisted `contrib` path → **`missing`**, unlisted `services` path → **`missing`**, `vs/sessions/contrib/...` → no report (branch removed; tree deleted), non-nls import → no report. `RULE SEMANTICS OK` (exit 0) — the positive *and* enforcing-negative behaviour survived the rewrite.
+  - Plugin typecheck: `npx tsc --project .eslint-plugin-local/tsconfig.json` is **red at HEAD independent of this change** (errors spread over untouched files — `code-no-unexternalized-strings.ts` 7, `utils.ts` 2, `code-no-untyped-meta-access.ts` 2, six other rules — and compiling an untouched rule reproduces the same `utils.ts` visitor-type errors). **Zero errors point at `code-translation-remind.ts`**, so the fixed rule is type-clean; this pre-existing plugin-toolchain drift is recorded, not caused or hidden by this pass.
+  - `npm run typecheck --prefix build` **exit 0**; build tests `i18n` + `ripgrep` + `walkerProduct` **30/30**; `git diff --check` clean.
+- **Workload/PR boundary:** **13 authored lines** (rule 7/6, JSON 0/1 container removal; relative to HEAD the JSON shows −146 for the whole i18n prune). Single-purpose review leaf, far inside the budget.
+
+### Persisted task state
+
+- `tasks.md` re-read after this pass: **66 checked / 42 unchecked / 108 rows — unchanged.** No unchecked row became complete: the C5/C6 rows still require the parent's physical deletions (W22/W27–W34 + the 16 coupled allow-list entries) and the P2/P3 tails, so no checkbox was flipped.
+
+### Review focus for the verifier
+
+1. `.eslint-plugin-local/code-translation-remind.ts`: no project key may be hardcoded, no `vs/sessions` branch may remain, and the rule must still report `missing` for an unlisted `contrib`/`services` nls consumer (re-runnable with the `Linter`-API simulation recorded above).
+2. `build/lib/i18n.resources.json`: exactly the `editor` and `workbench` keys, valid JSON, no entry naming `vs/sessions` or `vs/workbench/services/agentHost`.
+3. Lint gate: `node build/eslint.ts <nls-importing workbench files>` must be exit 0; the pre-existing `.eslint-plugin-local/tsconfig.json` failures must not be attributed to this leaf (0 errors reference the edited rule).

@@ -311,12 +311,18 @@ suite('Walker packaged product composition', () => {
 
 	});
 
-	test('Walker product removes Chat auth, voice, and Copilot auto-update grants', () => {
+	test('Walker product removes Chat auth, voice, Copilot auto-update grants, and the Agent Host identity', () => {
 		const walkerProduct = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../../product.json'), 'utf8'));
 		assert.equal(walkerProduct.trustedExtensionAuthAccess, undefined, 'Copilot Chat retains a product-level authentication grant');
 		assert.deepStrictEqual(walkerProduct.builtInExtensionsEnabledWithAutoUpdates, [], 'Copilot Chat remains in the product auto-update list');
 		assert.equal(walkerProduct.voiceWsUrl, undefined, 'the Walker product still configures the Chat voice endpoint');
-		assert.equal(walkerProduct.agentsTelemetryAppName, 'agents', 'U07 Agent Host product identity remains protected');
+		assert.equal(walkerProduct.agentsTelemetryAppName, undefined, 'Agent Host telemetry identity remains in the Walker product');
+
+		const extensionHostInitData = readFileSync(resolve(import.meta.dirname, '../../../src/vs/workbench/services/extensions/electron-browser/localProcessExtensionHost.ts'), 'utf8');
+		assert.ok(!extensionHostInitData.includes('agentsTelemetryAppName'), 'Agent Host telemetry identity is still read for extension-host init data');
+
+		const productConfiguration = readFileSync(resolve(import.meta.dirname, '../../../src/vs/base/common/product.ts'), 'utf8');
+		assert.ok(!productConfiguration.includes('agentsTelemetryAppName'), 'Agent Host telemetry identity type member remains in the product contract');
 
 		const webClientServer = readFileSync(resolve(import.meta.dirname, '../../../src/vs/server/node/webClientServer.ts'), 'utf8');
 		assert.ok(!webClientServer.includes('voiceWsUrl: this._productService.voiceWsUrl'), 'server web product still exports the Chat voice endpoint');

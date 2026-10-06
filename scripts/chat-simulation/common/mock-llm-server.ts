@@ -2161,14 +2161,3 @@ export declare const registerScenario: typeof _registerScenario;
 export declare const getScenarioIds: typeof _getScenarioIds;
 export declare const getUserTurns: typeof _getUserTurns;
 export declare const getModelTurnCount: typeof _getModelTurnCount;
-
-// Allow running standalone for testing: node scripts/chat-simulation/common/mock-llm-server.ts
-if (require.main === module) {
-	const { registerPerfScenarios } = require('./perf-scenarios') as { registerPerfScenarios: () => void };
-	registerPerfScenarios();
-	const port = parseInt(process.argv[2] || '0', 10);
-	_startServer(port).then((handle: MockLlmServerHandle) => {
-		_log(`Mock LLM server listening at ${handle.url}`);
-		_log(`Scenarios: ${Object.keys(SCENARIOS).join(', ')}`);
-	});
-}

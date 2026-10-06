@@ -33,12 +33,11 @@ export default new class TranslationRemind implements eslint.Rule.RuleModule {
 		const currentFile = context.filename;
 		const matchService = currentFile.match(/vs\/workbench\/services\/\w+/);
 		const matchPart = currentFile.match(/vs\/workbench\/contrib\/\w+/);
-		const matchSessionsPart = currentFile.match(/vs\/sessions\/contrib\/\w+/);
-		if (!matchService && !matchPart && !matchSessionsPart) {
+		if (!matchService && !matchPart) {
 			return;
 		}
 
-		const resource = matchService ? matchService[0] : matchPart ? matchPart[0] : matchSessionsPart![0];
+		const resource = matchService ? matchService[0] : matchPart![0];
 		let resourceDefined = false;
 
 		let json;
@@ -48,10 +47,12 @@ export default new class TranslationRemind implements eslint.Rule.RuleModule {
 			console.error('[translation-remind rule]: File with resources to pull from Transifex was not found. Aborting translation resource check for newly defined workbench part/service.');
 			return;
 		}
-		const parsed = JSON.parse(json);
-		const resources = [...parsed.workbench, ...parsed.sessions];
+		const parsed = JSON.parse(json) as Record<string, readonly { name: string }[] | undefined>;
+		// Resource lists are grouped by Transifex project. Flatten every project so
+		// adding or removing a project never changes the shape this rule expects.
+		const resources = Object.values(parsed).flatMap(project => Array.isArray(project) ? project : []);
 
-		resources.forEach((existingResource: any) => {
+		resources.forEach((existingResource: { name: string }) => {
 			if (existingResource.name === resource) {
 				resourceDefined = true;
 				return;

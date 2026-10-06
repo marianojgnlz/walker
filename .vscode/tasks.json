@@ -555,35 +555,10 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Run Agents",
-			"type": "shell",
-			"command": "./scripts/code.sh",
-			"windows": {
-				"command": ".\\scripts\\code.bat"
-			},
-			"args": [
-				"--agents",
-				"--user-data-dir=${userHome}/.vscode-oss-dev",
-				"--extensions-dir=${userHome}/.vscode-oss-dev/extensions"
-			],
-			"inAgents": true,
-			"problemMatcher": []
-		},
-		{
 			"label": "Build Fast & Run Code",
 			"dependsOn": [
 				"Build Fast",
 				"Run Code"
-			],
-			"dependsOrder": "sequence",
-			"problemMatcher": [],
-			"inAgents": true
-		},
-		{
-			"label": "Build Fast & Run Agents",
-			"dependsOn": [
-				"Build Fast",
-				"Run Agents"
 			],
 			"dependsOrder": "sequence",
 			"problemMatcher": [],

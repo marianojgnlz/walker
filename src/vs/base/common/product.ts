@@ -115,7 +115,6 @@ export interface IProductConfiguration {
 	readonly applicationName: string;
 	readonly linuxDesktopName?: string;
 	readonly embedderIdentifier?: string;
-	readonly agentsTelemetryAppName?: string;
 
 	readonly urlProtocol: string;
 	readonly dataFolderName: string; // location for extensions (e.g. ~/.vscode-insiders)

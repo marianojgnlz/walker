@@ -1,6 +1,5 @@
 # Allowlist of pre-existing JavaScript files (.js, .cjs, .mjs).
 #
-# This file is consumed by eslint.config.js and gates the
 # `local/code-no-new-javascript-files` lint rule.
 #
 # DO NOT ADD NEW ENTRIES. Write new files in TypeScript instead.
@@ -9,21 +8,16 @@
 # Lines starting with `#` are comments. Blank lines are ignored.
 
 .github/skills/heap-snapshot-analysis/helpers/streamSnapshot.mjs
-.vscode-test.js
 build/azure-pipelines/common/installPlaywright.js
 build/azure-pipelines/github-check-run.js
 build/builtin/browser-main.js
 build/builtin/main.js
-build/npm/stubs/sharp/index.js
 build/codex/generate-protocol.mjs
 build/next/devTunnelsWebEntry.js
 build/next/devTunnelsShims/buffer.js
-build/next/devTunnelsShims/bufferutil.cjs
 build/next/devTunnelsShims/empty.cjs
 build/next/devTunnelsShims/process.js
-build/next/devTunnelsShims/utf8Validate.cjs
 build/next/devTunnelsShims/vscodeJsonrpc.cjs
-eslint.config.js
 extensions/copilot/.mocha-multi-reporters.js
 extensions/copilot/.mocharc.js
 extensions/copilot/.vscode-test.mjs
@@ -122,10 +116,6 @@ src/vs/platform/files/test/node/fixtures/service/deep/company.js
 src/vs/platform/files/test/node/fixtures/service/deep/conway.js
 src/vs/platform/files/test/node/fixtures/service/deep/employee.js
 src/vs/platform/files/test/node/fixtures/service/deep/small.js
-src/vs/sessions/test/e2e/common.cjs
-src/vs/sessions/test/e2e/extensions/sessions-e2e-mock/extension.js
-src/vs/sessions/test/e2e/generate.cjs
-src/vs/sessions/test/e2e/test.cjs
 src/vs/workbench/contrib/webview/browser/pre/service-worker.js
 src/vs/workbench/services/keybinding/test/node/linux_de_ch.js
 src/vs/workbench/services/keybinding/test/node/linux_en_uk.js

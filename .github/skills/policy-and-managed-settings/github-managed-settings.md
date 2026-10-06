@@ -231,7 +231,7 @@ Reference tests:
 - `src/vs/workbench/services/accounts/test/browser/managedSettings.test.ts` (includes an end-to-end equivalence test: a server JSON string and a native MDM JSON string resolve to the **identical** typed object).
 - `src/vs/platform/policy/test/common/fileManagedSettingsService.test.ts` (covers `normalizeManagedSettings` and the file-based channel reader).
 
-**Manual/local testing:** use the mock policy server to serve arbitrary `managed_settings` (and entitlement/token) responses and apply them via **Developer: Sync Account Policy** — see [local-testing.md](./local-testing.md).
+**Manual/local testing:** the account-policy mock server was removed together with the account feature. Apply a local policy JSON through the retained file-based managed-settings channel (`FileManagedSettingsService`, `src/vs/platform/policy/common/fileManagedSettingsService.ts`) when you need to exercise policy behavior by hand.
 
 ## Related: one policy governing many settings (`policyReference`)
 

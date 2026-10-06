@@ -49,7 +49,6 @@ When another channel is deprecated, record the boundary here and keep implementa
 Supporting references:
 
 - [GitHub Copilot managed settings](./github-managed-settings.md)
-- [Local policy testing](./local-testing.md)
 
 Keep these guides contract-focused. Document contributor decisions and behavioral invariants; point to source rather than copying implementation that will drift.
 

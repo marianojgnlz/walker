@@ -354,9 +354,9 @@ Per leaf: `./scripts/test.sh --run <file>` for new API/process boundaries and af
 
 ### P1 — Preserve ordinary ripgrep before deleting its Copilot-owned module
 
-- [ ] P1.RED: Add independent build platform fixtures for `getRipgrepExcludeFilter`, including Linux/armhf/alpine/macOS/Windows mappings and retained Search payloads; inspect every helper consumer. <!-- sdd-owner: implementation -->
-- [ ] P1.GREEN: Extract only the feature-neutral `@vscode/ripgrep-universal` filtering from `build/lib/copilot.ts` to the neutral utility `build/lib/ripgrep.ts`; update desktop/REH imports and independent test file. Keep ordinary Search/ripgrep and unrelated npm/proxy/native utilities, not Copilot package selection. <!-- sdd-owner: implementation -->
-- [ ] P1.TRIANGULATE → REFACTOR: Run focused platform filter tests and build-tooling typecheck; compare retained target payload selection and delete obsolete Copilot-filter coupling. If measured source+test diff exceeds 400, split helper tests/import migration, not coverage. <!-- sdd-owner: implementation -->
+- [x] P1.RED: Add independent build platform fixtures for `getRipgrepExcludeFilter`, including Linux/armhf/alpine/macOS/Windows mappings and retained Search payloads; inspect every helper consumer. <!-- sdd-owner: implementation -->
+- [x] P1.GREEN: Extract only the feature-neutral `@vscode/ripgrep-universal` filtering from `build/lib/copilot.ts` to the neutral utility `build/lib/ripgrep.ts`; update desktop/REH imports and independent test file. Keep ordinary Search/ripgrep and unrelated npm/proxy/native utilities, not Copilot package selection. <!-- sdd-owner: implementation -->
+- [x] P1.TRIANGULATE → REFACTOR: Run focused platform filter tests and build-tooling typecheck; compare retained target payload selection and delete obsolete Copilot-filter coupling. If measured source+test diff exceeds 400, split helper tests/import migration, not coverage. <!-- sdd-owner: implementation -->
 
 ### P2/P3 — Remove SDK/shim and exclusive agent producers
 
