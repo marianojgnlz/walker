@@ -34,8 +34,6 @@ import { IExtensionsWorkbenchService, LIST_WORKSPACE_UNSUPPORTED_EXTENSIONS_COMM
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IMarkdownString, MarkdownString } from '../../../../base/common/htmlContent.js';
 import { IsSessionsWindowContext, RemoteNameContext, VirtualWorkspaceContext } from '../../../common/contextkeys.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../base/common/actions.js';
 import { KeybindingWeight } from '../../../../platform/keybinding/common/keybindingsRegistry.js';
 import { KeyCode, KeyMod } from '../../../../base/common/keyCodes.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
@@ -96,7 +94,6 @@ export class RemoteStatusIndicator extends Disposable implements IWorkbenchContr
 	private virtualWorkspaceLocation: { scheme: string; authority: string } | undefined = undefined;
 
 	private connectionState: 'initializing' | 'connected' | 'reconnecting' | 'disconnected' | undefined = undefined;
-	private connectionToken: string | undefined = undefined;
 	private readonly connectionStateContextKey: IContextKey<'' | 'initializing' | 'disconnected' | 'connected'>;
 
 	private networkState: 'online' | 'offline' | 'high-latency' | undefined = undefined;
@@ -152,7 +149,6 @@ export class RemoteStatusIndicator extends Disposable implements IWorkbenchContr
 		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
 		@ILogService private readonly logService: ILogService,
 		@IExtensionGalleryService private readonly extensionGalleryService: IExtensionGalleryService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IProductService private readonly productService: IProductService,
 		@IExtensionManagementService private readonly extensionManagementService: IExtensionManagementService,
 		@IExtensionsWorkbenchService private readonly extensionsWorkbenchService: IExtensionsWorkbenchService,
@@ -363,8 +359,7 @@ export class RemoteStatusIndicator extends Disposable implements IWorkbenchContr
 			// Try to resolve the authority to figure out connection state
 			(async () => {
 				try {
-					const { authority } = await this.remoteAuthorityResolverService.resolveAuthority(remoteAuthority);
-					this.connectionToken = authority.connectionToken;
+					await this.remoteAuthorityResolverService.resolveAuthority(remoteAuthority);
 
 					this.setConnectionState('connected');
 				} catch (error) {
@@ -432,44 +427,15 @@ export class RemoteStatusIndicator extends Disposable implements IWorkbenchContr
 
 	private setNetworkState(newState: 'online' | 'offline' | 'high-latency'): void {
 		if (this.networkState !== newState) {
-			const oldState = this.networkState;
 			this.networkState = newState;
 
 			if (newState === 'high-latency') {
 				this.logService.warn(`Remote network connection appears to have high latency (${remoteConnectionLatencyMeasurer.latency?.current?.toFixed(2)}ms last, ${remoteConnectionLatencyMeasurer.latency?.average?.toFixed(2)}ms average)`);
 			}
 
-			if (this.connectionToken) {
-				if (newState === 'online' && oldState === 'high-latency') {
-					this.logNetworkConnectionHealthTelemetry(this.connectionToken, 'good');
-				} else if (newState === 'high-latency' && oldState === 'online') {
-					this.logNetworkConnectionHealthTelemetry(this.connectionToken, 'poor');
-				}
-			}
-
 			// update status
 			this.updateRemoteStatusIndicator();
 		}
-	}
-
-	private logNetworkConnectionHealthTelemetry(connectionToken: string, connectionHealth: 'good' | 'poor'): void {
-		type RemoteConnectionHealthClassification = {
-			owner: 'alexdima';
-			comment: 'The remote connection health has changed (round trip time)';
-			remoteName: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The name of the resolver.' };
-			reconnectionToken: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The identifier of the connection.' };
-			connectionHealth: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The health of the connection: good or poor.' };
-		};
-		type RemoteConnectionHealthEvent = {
-			remoteName: string | undefined;
-			reconnectionToken: string;
-			connectionHealth: 'good' | 'poor';
-		};
-		this.telemetryService.publicLog2<RemoteConnectionHealthEvent, RemoteConnectionHealthClassification>('remoteConnectionHealth', {
-			remoteName: getRemoteName(this.remoteAuthority),
-			reconnectionToken: connectionToken,
-			connectionHealth
-		});
 	}
 
 	private validatedGroup(group: string) {
@@ -669,11 +635,6 @@ export class RemoteStatusIndicator extends Disposable implements IWorkbenchContr
 		}, 300, 10);
 
 		this.commandService.executeCommand(startCommand);
-		this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', {
-			id: 'remoteInstallAndRun',
-			detail: extensionId,
-			from: 'remote indicator'
-		});
 	}
 
 	private showRemoteMenu() {
@@ -826,10 +787,6 @@ export class RemoteStatusIndicator extends Disposable implements IWorkbenchContr
 					await this.runRemoteStartCommand(remoteExtension.id, remoteExtension.startCommand);
 				}
 				else {
-					this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', {
-						id: commandId,
-						from: 'remote indicator'
-					});
 					this.commandService.executeCommand(commandId);
 					quickPick.hide();
 				}

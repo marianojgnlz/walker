@@ -35,7 +35,6 @@ import * as typeh from '../../contrib/typeHierarchy/common/typeHierarchy.js';
 import { extHostNamedCustomer, IExtHostContext } from '../../services/extensions/common/extHostCustomers.js';
 import { ExtHostContext, ExtHostLanguageFeaturesShape, HoverWithId, ICallHierarchyItemDto, ICodeActionDto, ICodeActionProviderMetadataDto, IdentifiableInlineCompletion, IdentifiableInlineCompletions, IDocumentDropEditDto, IDocumentDropEditProviderMetadata, IDocumentFilterDto, IIndentationRuleDto, IInlayHintDto, IInlineCompletionChangeHintDto, IInlineCompletionModelInfoDto, IInlineCompletionProviderOptionDto, ILanguageConfigurationDto, ILanguageWordDefinitionDto, ILinkDto, ILocationDto, ILocationLinkDto, IOnEnterRuleDto, IPasteEditDto, IPasteEditProviderMetadataDto, IRegExpDto, ISignatureHelpProviderMetadataDto, ISuggestDataDto, ISuggestDataDtoField, ISuggestResultDtoField, ITypeHierarchyItemDto, IWorkspaceSymbolDto, MainContext, MainThreadLanguageFeaturesShape } from '../common/extHost.protocol.js';
 import { IInstantiationService } from '../../../platform/instantiation/common/instantiation.js';
-import { IAiEditTelemetryService } from '../../contrib/editTelemetry/browser/telemetry/aiEditTelemetry/aiEditTelemetryService.js';
 import { EditDeltaInfo } from '../../../editor/common/textModelEditSource.js';
 import { IInlineCompletionsUnificationService } from '../../services/inlineCompletions/common/inlineCompletionsUnification.js';
 
@@ -1332,7 +1331,6 @@ class ExtensionBackedInlineCompletionsProvider extends Disposable implements lan
 		private readonly _selector: IDocumentFilterDto[],
 		private readonly _proxy: ExtHostLanguageFeaturesShape,
 		@ILanguageFeaturesService private readonly _languageFeaturesService: ILanguageFeaturesService,
-		@IAiEditTelemetryService private readonly _aiEditTelemetryService: IAiEditTelemetryService,
 	) {
 		super();
 
@@ -1376,21 +1374,7 @@ class ExtensionBackedInlineCompletionsProvider extends Disposable implements lan
 		return result;
 	}
 
-	public async handleItemDidShow(completions: IdentifiableInlineCompletions, item: IdentifiableInlineCompletion, updatedInsertText: string, editDeltaInfo: EditDeltaInfo): Promise<void> {
-		if (item.suggestionId === undefined) {
-			item.suggestionId = this._aiEditTelemetryService.createSuggestionId({
-				applyCodeBlockSuggestionId: undefined,
-				feature: 'inlineSuggestion',
-				source: this.providerId,
-				languageId: completions.languageId,
-				editDeltaInfo: editDeltaInfo,
-				modeId: undefined,
-				modelId: undefined,
-				presentation: item.isInlineEdit ? 'nextEditSuggestion' : 'inlineCompletion',
-				sourceRequestId: undefined,
-			});
-		}
-
+	public async handleItemDidShow(completions: IdentifiableInlineCompletions, item: IdentifiableInlineCompletion, updatedInsertText: string, _editDeltaInfo: EditDeltaInfo): Promise<void> {
 		if (this._supportsHandleEvents) {
 			await this._proxy.$handleInlineCompletionDidShow(this.handle, completions.pid, item.idx, updatedInsertText);
 		}
@@ -1402,7 +1386,7 @@ class ExtensionBackedInlineCompletionsProvider extends Disposable implements lan
 		}
 	}
 
-	public async handleEndOfLifetime(completions: IdentifiableInlineCompletions, item: IdentifiableInlineCompletion, reason: languages.InlineCompletionEndOfLifeReason<IdentifiableInlineCompletion>, lifetimeSummary: languages.LifetimeSummary): Promise<void> {
+	public async handleEndOfLifetime(completions: IdentifiableInlineCompletions, item: IdentifiableInlineCompletion, reason: languages.InlineCompletionEndOfLifeReason<IdentifiableInlineCompletion>, _lifetimeSummary: languages.LifetimeSummary): Promise<void> {
 		function mapReason<T1, T2>(reason: languages.InlineCompletionEndOfLifeReason<T1>, f: (reason: T1) => T2): languages.InlineCompletionEndOfLifeReason<T2> {
 			if (reason.kind === languages.InlineCompletionEndOfLifeReasonKind.Ignored) {
 				return {
@@ -1415,50 +1399,6 @@ class ExtensionBackedInlineCompletionsProvider extends Disposable implements lan
 
 		if (this._supportsHandleEvents) {
 			await this._proxy.$handleInlineCompletionEndOfLifetime(this.handle, completions.pid, item.idx, mapReason(reason, i => ({ pid: i.pid, idx: i.idx })));
-		}
-
-		if (reason.kind === languages.InlineCompletionEndOfLifeReasonKind.Accepted) {
-			if (item.suggestionId !== undefined) {
-				this._aiEditTelemetryService.handleCodeAccepted({
-					suggestionId: item.suggestionId,
-					feature: 'inlineSuggestion',
-					source: this.providerId,
-					languageId: completions.languageId,
-					editDeltaInfo: EditDeltaInfo.tryCreate(
-						lifetimeSummary.lineCountModified,
-						lifetimeSummary.lineCountOriginal,
-						lifetimeSummary.characterCountModified,
-						lifetimeSummary.characterCountOriginal,
-					),
-					modeId: undefined,
-					modelId: undefined,
-					presentation: item.isInlineEdit ? 'nextEditSuggestion' : 'inlineCompletion',
-					acceptanceMethod: 'accept',
-					applyCodeBlockSuggestionId: undefined,
-					sourceRequestId: undefined,
-				});
-			}
-		} else if (reason.kind === languages.InlineCompletionEndOfLifeReasonKind.Rejected) {
-			if (item.suggestionId !== undefined) {
-				this._aiEditTelemetryService.handleCodeRejected({
-					suggestionId: item.suggestionId,
-					feature: 'inlineSuggestion',
-					source: this.providerId,
-					languageId: completions.languageId,
-					editDeltaInfo: EditDeltaInfo.tryCreate(
-						lifetimeSummary.lineCountModified,
-						lifetimeSummary.lineCountOriginal,
-						lifetimeSummary.characterCountModified,
-						lifetimeSummary.characterCountOriginal,
-					),
-					modeId: undefined,
-					modelId: undefined,
-					presentation: item.isInlineEdit ? 'nextEditSuggestion' : 'inlineCompletion',
-					rejectionMethod: 'reject',
-					applyCodeBlockSuggestionId: undefined,
-					sourceRequestId: undefined,
-				});
-			}
 		}
 	}
 

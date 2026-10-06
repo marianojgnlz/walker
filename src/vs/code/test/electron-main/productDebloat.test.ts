@@ -217,6 +217,87 @@ suite('Product debloat process startup', () => {
 		);
 	});
 
+	test('the stripped edit telemetry subsystem carries no shell wiring', () => {
+		// T6 closure: the `contrib/editTelemetry` tree, its platform event shape and the
+		// data-channel forwarding service exist only for the AI edit-telemetry pipeline. The
+		// shell and the extension-backed inline-completion provider must stay disconnected;
+		// the whole-file deletion is queued as W44.
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/workbench.common.main.ts'), /editTelemetry/);
+
+		const languageFeatures = readRepoFile('src/vs/workbench/api/browser/mainThreadLanguageFeatures.ts');
+		assert.doesNotMatch(languageFeatures, /AiEditTelemetry|aiEditTelemetry|createSuggestionId|handleCodeAccepted|handleCodeRejected/);
+
+		// The suggestion id existed only so the AI edit service could correlate accepted
+		// inline completions; nothing else in the API layer reads it.
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/api/common/extHost.protocol.ts'), /EditSuggestionId|suggestionId/);
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/api/common/extHostLanguageFeatures.ts'), /suggestionId/);
+
+		// W44 whole-file deletion candidates: while they exist, no retained shell module may
+		// import them, because the stripped tree was their only consumer family.
+		for (const relativePath of [
+			'src/vs/platform/telemetry/common/editTelemetry.ts',
+			'src/vs/platform/telemetry/common/editArcTelemetry.ts',
+			'src/vs/platform/dataChannel/browser/forwardingTelemetryService.ts',
+		]) {
+			if (!repoFileExists(relativePath)) {
+				continue;
+			}
+			const importName = relativePath.split('/').pop()!.replace('.ts', '');
+			for (const consumer of [
+				'src/vs/workbench/workbench.common.main.ts',
+				'src/vs/workbench/workbench.desktop.main.ts',
+				'src/vs/workbench/api/browser/mainThreadLanguageFeatures.ts',
+				'src/vs/workbench/api/common/extHost.protocol.ts',
+			]) {
+				assert.doesNotMatch(readRepoFile(consumer), new RegExp(importName), `${consumer} must not import ${relativePath}`);
+			}
+		}
+	});
+
+	test('gallery acquisition carries no query, download or usage-statistics reporting', () => {
+		// T7 owners: the gallery query/download events with their `StopWatch` durations, the
+		// telemetry-trusted correlation headers and the `reportStatistic` usage-statistics POST are
+		// the reporting half of extension acquisition. Anonymous query, metadata reads,
+		// install/update, dependency resolution and VSIX downloads stay functional.
+		const gallery = readRepoFile('src/vs/platform/extensionManagement/common/extensionGalleryService.ts');
+		assert.doesNotMatch(gallery, /publicLog|StopWatch|TelemetryTrustedValue|ITelemetryService|telemetryService|__GDPR__|setTelemetry|getGalleryExtensionTelemetryData|reportStatistic/);
+
+		for (const relativePath of [
+			'src/vs/platform/extensionManagement/common/extensionManagement.ts',
+			'src/vs/platform/extensionManagement/common/abstractExtensionManagementService.ts',
+		]) {
+			assert.doesNotMatch(readRepoFile(relativePath), /reportStatistic|StatisticType/, relativePath);
+		}
+
+		for (const relativePath of [
+			'src/vs/platform/extensionManagement/common/extensionGalleryManifest.ts',
+			'src/vs/platform/extensionManagement/common/extensionGalleryManifestService.ts',
+		]) {
+			assert.doesNotMatch(readRepoFile(relativePath), /ExtensionStatisticsUri/, relativePath);
+		}
+
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/services/extensionManagement/common/extensionGalleryService.ts'), /ITelemetryService|telemetryService/);
+
+		// Workbench-side payloads: the extension editor, install/runtime actions, recommendation
+		// surfaces and the extensions workbench service no longer build telemetry payloads or read
+		// the removed `telemetryData` carrier.
+		const prunedPayloads: [string, RegExp][] = [
+			['src/vs/workbench/contrib/extensions/browser/extensionEditor.ts', /ITelemetryService|telemetryService|publicLog|__GDPR__/],
+			['src/vs/workbench/contrib/extensions/browser/extensionsActions.ts', /ITelemetryService|telemetryService|publicLog|__GDPR__/],
+			['src/vs/workbench/contrib/extensions/browser/extensionsWorkbenchService.ts', /ITelemetryService|telemetryService|publicLog|__GDPR__|TelemetryTrustedValue/],
+			['src/vs/workbench/contrib/extensions/browser/extensionRecommendationsService.ts', /ITelemetryService|telemetryService|publicLog|__GDPR__/],
+			['src/vs/workbench/contrib/extensions/browser/extensionRecommendationNotificationService.ts', /ITelemetryService|telemetryService|publicLog/],
+			['src/vs/workbench/contrib/extensions/browser/extensionsViews.ts', /ITelemetryService|telemetryService|publicLog|reportSearchFinished/],
+			['src/vs/platform/extensionManagement/common/abstractExtensionManagementService.ts', /ITelemetryService|telemetryService|publicLog|__GDPR__|reportTelemetry/],
+			['src/vs/platform/extensionManagement/common/extensionManagementUtil.ts', /Telemetry|telemetry/],
+			['src/vs/platform/extensionManagement/common/extensionManagement.ts', /telemetryData/],
+			['src/vs/workbench/contrib/extensions/common/extensions.ts', /telemetryData/],
+		];
+		for (const [relativePath, removal] of prunedPayloads) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+	});
+
 	test('editor and view container bases no longer thread a telemetry service', () => {
 		// T3.001: the composite/editor-pane/view-pane-container constructor threading was the last
 		// reason these panes resolved ITelemetryService without emitting anything themselves.
@@ -247,7 +328,6 @@ suite('Product debloat process startup', () => {
 		// Producers inside the hierarchy keep their own injection; none of them may receive it from a base class.
 		for (const relativePath of [
 			'src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts',
-			'src/vs/workbench/contrib/extensions/browser/extensionEditor.ts',
 			'src/vs/workbench/contrib/preferences/browser/settingsEditor2.ts',
 			'src/vs/workbench/contrib/surveys/browser/surveyEditorPane.ts',
 		]) {
@@ -392,6 +472,44 @@ suite('Product debloat process startup', () => {
 				assert.doesNotMatch(readRepoFile(relativePath), /publicLog|ITelemetryService|export (class|function|const)|TelemetryContribution/, relativePath);
 			}
 		}
+	});
+
+	test('remote connection health, latency and reconnection carry no telemetry emission', () => {
+		// T8 owners: the initial-connection, latency and reconnection events are gone. The
+		// latency *measurement* stays because the remote indicator tooltip and the diagnostic
+		// info surface read it.
+		const prunedSites: [string, RegExp][] = [
+			['src/vs/workbench/contrib/remote/browser/remoteConnectionHealth.ts', /publicLog|ITelemetryService|remoteConnectionSuccess|remoteConnectionFailure|remoteConnectionLatency/],
+			['src/vs/workbench/contrib/remote/browser/remoteIndicator.ts', /publicLog|ITelemetryService|remoteConnectionHealth|workbenchActionExecuted/],
+			['src/vs/workbench/contrib/remote/browser/remote.ts', /publicLog|ITelemetryService|remoteReconnectionReload|remoteConnectionLost|remoteReconnectionRunning|remoteReconnectionPermanentFailure|remoteConnectionGain/],
+			['src/vs/workbench/contrib/remote/browser/remoteStartEntry.ts', /publicLog|ITelemetryService|workbenchActionExecuted/],
+		];
+		for (const [relativePath, removal] of prunedSites) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+
+		// Retained: the latency measurer still feeds the indicator tooltip and diagnostic info.
+		assert.match(readRepoFile('src/vs/workbench/contrib/remote/browser/remoteIndicator.ts'), /remoteConnectionLatencyMeasurer/);
+		assert.match(readRepoFile('src/vs/workbench/contrib/remote/electron-browser/remote.contribution.ts'), /remoteConnectionLatencyMeasurer/);
+	});
+
+	test('extension-host init and extension-management trust carry no telemetry payload', () => {
+		// T8 owners: the extension-host init data no longer carries a logging-only telemetry flag,
+		// and the publisher-trust/workspace-extension management events are gone.
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/services/extensions/common/extensionHostProtocol.ts'), /isExtensionTelemetryLoggingOnly/);
+
+		for (const relativePath of [
+			'src/vs/workbench/services/extensions/browser/webWorkerExtensionHost.ts',
+			'src/vs/workbench/services/extensions/common/remoteExtensionHost.ts',
+			'src/vs/workbench/services/extensions/electron-browser/localProcessExtensionHost.ts',
+		]) {
+			assert.doesNotMatch(readRepoFile(relativePath), /isExtensionTelemetryLoggingOnly|isLoggingOnly/, relativePath);
+		}
+
+		assert.doesNotMatch(
+			readRepoFile('src/vs/workbench/services/extensionManagement/common/extensionManagementService.ts'),
+			/publicLog|ITelemetryService|telemetryService|extensions:trustPublisher|workspaceextension:/
+		);
 	});
 
 	test('welcome surface no longer renders a telemetry consent notice', () => {

@@ -4,12 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IWorkbenchContribution } from '../../../common/contributions.js';
-import { IRemoteAgentService, remoteConnectionLatencyMeasurer } from '../../../services/remote/common/remoteAgentService.js';
+import { IRemoteAgentService } from '../../../services/remote/common/remoteAgentService.js';
 import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
 import { localize } from '../../../../nls.js';
-import { isWeb, OperatingSystem } from '../../../../base/common/platform.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { getRemoteName, getRemoteServerRootPath } from '../../../../platform/remote/common/remoteHosts.js';
+import { OperatingSystem } from '../../../../base/common/platform.js';
 import { IBannerService } from '../../../services/banner/browser/bannerService.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IHostService } from '../../../services/host/browser/host.js';
@@ -30,7 +28,6 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 	constructor(
 		@IRemoteAgentService private readonly _remoteAgentService: IRemoteAgentService,
 		@IWorkbenchEnvironmentService private readonly _environmentService: IWorkbenchEnvironmentService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@IBannerService private readonly bannerService: IBannerService,
 		@IDialogService private readonly dialogService: IDialogService,
 		@IOpenerService private readonly openerService: IOpenerService,
@@ -125,53 +122,7 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 				);
 			}
 
-			type RemoteConnectionSuccessClassification = {
-				owner: 'alexdima';
-				comment: 'The initial connection succeeded';
-				web: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Is web ui.' };
-				connectionTimeMs: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Time, in ms, until connected' };
-				remoteName: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The name of the resolver.' };
-				tunnelName?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The name of the tunnel for tunnel connections.' };
-			};
-			type RemoteConnectionSuccessEvent = {
-				web: boolean;
-				connectionTimeMs: number | undefined;
-				remoteName: string | undefined;
-				tunnelName?: string;
-			};
-			this._telemetryService.publicLog2<RemoteConnectionSuccessEvent, RemoteConnectionSuccessClassification>('remoteConnectionSuccess', {
-				web: isWeb,
-				connectionTimeMs: await this._remoteAgentService.getConnection()?.getInitialConnectionTimeMs(),
-				remoteName: getRemoteName(this._environmentService.remoteAuthority),
-				tunnelName: getRemoteServerRootPath(this._environmentService.remoteAuthority)
-			});
-
-			await this._measureExtHostLatency();
-
-		} catch (err) {
-
-			type RemoteConnectionFailureClassification = {
-				owner: 'alexdima';
-				comment: 'The initial connection failed';
-				web: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Is web ui.' };
-				remoteName: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The name of the resolver.' };
-				connectionTimeMs: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Time, in ms, until connection failure' };
-				message: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Error message' };
-			};
-			type RemoteConnectionFailureEvent = {
-				web: boolean;
-				remoteName: string | undefined;
-				connectionTimeMs: number | undefined;
-				message: string;
-			};
-			this._telemetryService.publicLog2<RemoteConnectionFailureEvent, RemoteConnectionFailureClassification>('remoteConnectionFailure', {
-				web: isWeb,
-				connectionTimeMs: await this._remoteAgentService.getConnection()?.getInitialConnectionTimeMs(),
-				remoteName: getRemoteName(this._environmentService.remoteAuthority),
-				message: err ? err.message : ''
-			});
-
-		}
+		} catch { /* the initial connection health check is best-effort */ }
 	}
 
 	private _showVersionedBanner(id: string, storageKey: string, message: string, actions?: ReadonlyArray<ILinkDescriptor>): void {
@@ -194,29 +145,4 @@ export class InitialRemoteConnectionHealthContribution implements IWorkbenchCont
 		});
 	}
 
-	private async _measureExtHostLatency() {
-		const measurement = await remoteConnectionLatencyMeasurer.measure(this._remoteAgentService);
-		if (measurement === undefined) {
-			return;
-		}
-
-		type RemoteConnectionLatencyClassification = {
-			owner: 'connor4312';
-			comment: 'The latency to the remote extension host';
-			web: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Whether this is running on web' };
-			remoteName: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Anonymized remote name' };
-			latencyMs: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Latency to the remote, in milliseconds' };
-		};
-		type RemoteConnectionLatencyEvent = {
-			web: boolean;
-			remoteName: string | undefined;
-			latencyMs: number;
-		};
-
-		this._telemetryService.publicLog2<RemoteConnectionLatencyEvent, RemoteConnectionLatencyClassification>('remoteConnectionLatency', {
-			web: isWeb,
-			remoteName: getRemoteName(this._environmentService.remoteAuthority),
-			latencyMs: measurement.current
-		});
-	}
 }

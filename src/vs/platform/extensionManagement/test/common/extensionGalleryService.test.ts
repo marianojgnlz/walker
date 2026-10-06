@@ -23,7 +23,6 @@ import product from '../../../product/common/product.js';
 import { IProductService } from '../../../product/common/productService.js';
 import { AuthInfo, Credentials, IRequestService } from '../../../request/common/request.js';
 import { TelemetryConfiguration, TELEMETRY_SETTING_ID } from '../../../telemetry/common/telemetry.js';
-import { NullTelemetryService } from '../../../telemetry/common/telemetryUtils.js';
 import { AllowedExtensionsService } from '../../common/allowedExtensionsService.js';
 import { ExtensionGalleryManifestStatus, ExtensionGalleryResourceType, IExtensionGalleryManifest, IExtensionGalleryManifestService } from '../../common/extensionGalleryManifest.js';
 import { ExtensionGalleryError, ExtensionGalleryErrorCode, IGalleryExtension, InstallOperation } from '../../common/extensionManagement.js';
@@ -123,8 +122,7 @@ function galleryExtensionWithDownloadAssets(): IGalleryExtension {
 				fallbackUri: 'https://marketplace.test/fallback/publisher/extension/1.0.0'
 			}
 		},
-		properties: { dependencies: [] },
-		telemetryData: {}
+		properties: { dependencies: [] }
 	});
 }
 
@@ -162,7 +160,7 @@ suite('Extension Gallery Service', () => {
 
 	function createExtensionGalleryService(requestService: IRequestService, logService = new NullLogService()): ExtensionGalleryServiceWithNoStorageService {
 		const allowedExtensionsService = disposables.add(new AllowedExtensionsService(productService, configurationService));
-		return new ExtensionGalleryServiceWithNoStorageService(requestService, logService, NullTelemetryService, fileService, productService, configurationService, allowedExtensionsService, createExtensionGalleryManifestService());
+		return new ExtensionGalleryServiceWithNoStorageService(requestService, logService, fileService, productService, configurationService, allowedExtensionsService, createExtensionGalleryManifestService());
 	}
 
 	test('marketplace headers stay functional and anonymous', async () => {
@@ -257,6 +255,26 @@ suite('Extension Gallery Service', () => {
 			],
 			authorizationHeaders: [undefined, undefined],
 			content: JSON.stringify({ payload: 'vsix' })
+		});
+	});
+
+	test('gallery operations never post usage statistics', async () => {
+		const requestService = new RecordingRequestService(() => requestContext(200, { payload: 'vsix' }));
+		const galleryService = createExtensionGalleryService(requestService);
+
+		// The service no longer exposes the usage-statistics API…
+		assert.strictEqual((galleryService as unknown as Record<string, unknown>)['reportStatistic'], undefined);
+
+		// …and a real acquisition path stays a plain asset download with no statistics request.
+		const location = joinPath(URI.file('tests').with({ scheme: 'vscode-tests' }), 'extension.vsix');
+		await galleryService.download(galleryExtensionWithDownloadAssets(), location, InstallOperation.Install);
+
+		assert.deepStrictEqual({
+			requests: requestService.requests,
+			statisticRequests: requestService.requests.filter(request => request.url?.includes('stats')),
+		}, {
+			requests: [{ type: 'GET', url: 'https://marketplace.test/assets/publisher/extension/1.0.0?install=true' }],
+			statisticRequests: [],
 		});
 	});
 

@@ -50,10 +50,6 @@ export class ExtensionGalleryManifestService extends Disposable implements IExte
 				id: `${extensionsGallery.serviceUrl}/vscode/{publisher}/{name}/latest`,
 				type: ExtensionGalleryResourceType.ExtensionLatestVersionUri
 			},
-			{
-				id: `${extensionsGallery.serviceUrl}/publishers/{publisher}/extensions/{name}/{version}/stats?statType={statTypeName}`,
-				type: ExtensionGalleryResourceType.ExtensionStatisticsUri
-			},
 		];
 
 		if (extensionsGallery.publisherUrl) {

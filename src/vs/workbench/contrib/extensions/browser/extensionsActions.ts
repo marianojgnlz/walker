@@ -65,7 +65,6 @@ import { getLocale } from '../../../../platform/languagePacks/common/languagePac
 import { ILocaleService } from '../../../services/localization/common/locale.js';
 import { isString } from '../../../../base/common/types.js';
 import { showWindowLogActionId } from '../../../services/log/common/logConstants.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { Extensions, IExtensionFeaturesManagementService, IExtensionFeaturesRegistry } from '../../../services/extensionManagement/common/extensionFeatures.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IUpdateService } from '../../../../platform/update/common/update.js';
@@ -446,7 +445,6 @@ export class InstallAction extends ExtensionAction {
 		@ILabelService private readonly labelService: ILabelService,
 		@IDialogService private readonly dialogService: IDialogService,
 		@IPreferencesService private readonly preferencesService: IPreferencesService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IWorkspaceContextService private readonly contextService: IWorkspaceContextService,
 		@IAllowedExtensionsService private readonly allowedExtensionsService: IAllowedExtensionsService,
 		@IExtensionGalleryManifestService private readonly extensionGalleryManifestService: IExtensionGalleryManifestService,
@@ -587,17 +585,6 @@ export class InstallAction extends ExtensionAction {
 		this.extensionsWorkbenchService.open(this.extension, { showPreReleaseVersion: this.options.installPreReleaseVersion });
 
 		alert(localize('installExtensionStart', "Installing extension {0} started. An editor is now open with more details on this extension", this.extension.displayName));
-
-		/* __GDPR__
-			"extensions:action:install" : {
-				"owner": "sandy081",
-				"actionId" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
-				"${include}": [
-					"${GalleryExtensionTelemetryData}"
-				]
-			}
-		*/
-		this.telemetryService.publicLog('extensions:action:install', { ...this.extension.telemetryData, actionId: this.id });
 
 		const extension = await this.install(this.extension);
 
@@ -2006,7 +1993,6 @@ export class ExtensionRuntimeStateAction extends ExtensionAction {
 		@IUpdateService private readonly updateService: IUpdateService,
 		@IExtensionService private readonly extensionService: IExtensionService,
 		@IProductService private readonly productService: IProductService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super('extensions.runtimeState', '', ExtensionRuntimeStateAction.DisabledClass, false);
 		this._register(this.extensionService.onDidChangeExtensions(() => this.update()));
@@ -2050,18 +2036,6 @@ export class ExtensionRuntimeStateAction extends ExtensionAction {
 		if (!runtimeState?.action) {
 			return;
 		}
-
-		type ExtensionRuntimeStateActionClassification = {
-			owner: 'sandy081';
-			comment: 'Extension runtime state action event';
-			action: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Executed action' };
-		};
-		type ExtensionRuntimeStateActionEvent = {
-			action: string;
-		};
-		this.telemetryService.publicLog2<ExtensionRuntimeStateActionEvent, ExtensionRuntimeStateActionClassification>('extensions:runtimestate:action', {
-			action: runtimeState.action
-		});
 
 		if (runtimeState?.action === ExtensionRuntimeActionType.ReloadWindow) {
 			return this.hostService.reload();

@@ -9,7 +9,6 @@ import { createDecorator } from '../../instantiation/common/instantiation.js';
 export const enum ExtensionGalleryResourceType {
 	ExtensionQueryService = 'ExtensionQueryService',
 	ExtensionLatestVersionUri = 'ExtensionLatestVersionUriTemplate',
-	ExtensionStatisticsUri = 'ExtensionStatisticsUriTemplate',
 	PublisherViewUri = 'PublisherViewUriTemplate',
 	ExtensionDetailsViewUri = 'ExtensionDetailsViewUriTemplate',
 	ExtensionRatingViewUri = 'ExtensionRatingViewUriTemplate',

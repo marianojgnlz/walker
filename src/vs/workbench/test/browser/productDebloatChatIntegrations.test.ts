@@ -404,22 +404,21 @@ suite('Product chat integration boundaries', () => {
 		assert.match(terminalMenus, /TabsShowActiveTerminal/);
 	});
 
-	test('edit telemetry retains generic source tracking without Agent Host attribution', () => {
-		const feature = readWorkbenchSource('contrib/editTelemetry/browser/telemetry/editSourceTrackingFeature.ts');
-		assert.doesNotMatch(feature, /agentHostEditMarkerService|AgentHostEditMarkerService|markerService/);
-		assert.match(feature, /createInstance\(EditSourceTrackingImpl, shouldSendDetails, this\._annotatedDocuments\)/);
+	test('edit telemetry is deleted or disconnected from the workbench shell', () => {
+		// T6 closure: the whole `contrib/editTelemetry` tree is a feature strip whose
+		// deletion is queued as W44. While the directory still exists it must not be
+		// wired into the shell, and no Agent Host attribution may come back with it.
+		const shell = readWorkbenchSource('workbench.common.main.ts');
+		assert.doesNotMatch(shell, /editTelemetry/);
 
-		const impl = readWorkbenchSource('contrib/editTelemetry/browser/telemetry/editSourceTrackingImpl.ts');
-		assert.doesNotMatch(impl, /agentHostEditMarkerService|AgentHostEditMarkerService|preparedAgentFlush|deferSuppressedExternal|includeSuppressedExternal|coverageGap|externalEditCorrelation/);
-		assert.doesNotMatch(impl, /platform\/agentHost/);
-		assert.match(impl, /new DocumentEditSourceTracker\(docWithJustReason, undefined\)/);
-		assert.match(impl, /const agentModifiedCount = data\.agentHostModifiedCount;/);
-		assert.match(impl, /const totalModifiedCount = data\.totalModifiedCharactersInFinalState;/);
+		const languageFeatures = readWorkbenchSource('api/browser/mainThreadLanguageFeatures.ts');
+		assert.doesNotMatch(languageFeatures, /AiEditTelemetry|aiEditTelemetry|createSuggestionId|handleCodeAccepted|handleCodeRejected|editTelemetry/);
 
-		const tracker = readWorkbenchSource('contrib/editTelemetry/browser/telemetry/editTracker.ts');
-		assert.doesNotMatch(tracker, /agentHostEditMarkerService/);
-		assert.match(tracker, /export interface IExternalEditCorrelation \{/);
-		assert.match(tracker, /export interface IExternalEditCorrelationResolution \{/);
+		const protocol = readWorkbenchSource('api/common/extHost.protocol.ts');
+		assert.doesNotMatch(protocol, /EditSuggestionId|suggestionId/);
+
+		const extHostFeatures = readWorkbenchSource('api/common/extHostLanguageFeatures.ts');
+		assert.doesNotMatch(extHostFeatures, /suggestionId/);
 
 		// The Agent Host marker service died with the Agent Host tree, so assert its
 		// absence instead of reading a file that no longer exists.

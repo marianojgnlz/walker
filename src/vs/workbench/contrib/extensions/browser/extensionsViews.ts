@@ -21,7 +21,6 @@ import { Query } from '../common/extensionQuery.js';
 import { IExtensionService, toExtension } from '../../../services/extensions/common/extensions.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { IViewletViewOptions } from '../../../browser/parts/views/viewsViewlet.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { CountBadge } from '../../../../base/browser/ui/countBadge/countBadge.js';
 import { WorkbenchPagedList } from '../../../../platform/list/browser/listService.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
@@ -33,7 +32,7 @@ import { alert } from '../../../../base/browser/ui/aria/aria.js';
 import { CancellationToken, CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { ActionRunner } from '../../../../base/common/actions.js';
 import { ExtensionIdentifier, ExtensionIdentifierMap, ExtensionUntrustedWorkspaceSupportType, ExtensionVirtualWorkspaceSupportType, IExtensionDescription, IExtensionIdentifier, isLanguagePackExtension } from '../../../../platform/extensions/common/extensions.js';
-import { CancelablePromise, createCancelablePromise, ThrottledDelayer } from '../../../../base/common/async.js';
+import { CancelablePromise, createCancelablePromise } from '../../../../base/common/async.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { SeverityIcon } from '../../../../base/browser/ui/severityIcon/severityIcon.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
@@ -142,7 +141,6 @@ export class ExtensionsListView extends AbstractExtensionsListView<IExtension> {
 		@IExtensionService private readonly extensionService: IExtensionService,
 		@IExtensionsWorkbenchService protected extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@IExtensionRecommendationsService protected extensionRecommendationsService: IExtensionRecommendationsService,
-		@ITelemetryService protected readonly telemetryService: ITelemetryService,
 		@IHoverService hoverService: IHoverService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IWorkspaceContextService protected contextService: IWorkspaceContextService,
@@ -1378,7 +1376,6 @@ export class StaticQueryExtensionsView extends ExtensionsListView {
 		@IExtensionService extensionService: IExtensionService,
 		@IExtensionsWorkbenchService extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@IExtensionRecommendationsService extensionRecommendationsService: IExtensionRecommendationsService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IHoverService hoverService: IHoverService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IWorkspaceContextService contextService: IWorkspaceContextService,
@@ -1398,7 +1395,7 @@ export class StaticQueryExtensionsView extends ExtensionsListView {
 		@ILogService logService: ILogService
 	) {
 		super(options, viewletViewOptions, notificationService, keybindingService, contextMenuService, instantiationService, themeService, extensionService,
-			extensionsWorkbenchService, extensionRecommendationsService, telemetryService, hoverService, configurationService, contextService, extensionManagementServerService,
+			extensionsWorkbenchService, extensionRecommendationsService, hoverService, configurationService, contextService, extensionManagementServerService,
 			extensionManifestPropertiesService, extensionManagementService, workspaceService, productService, contextKeyService, viewDescriptorService, openerService,
 			storageService, workspaceTrustManagementService, extensionEnablementService, extensionFeaturesManagementService,
 			uriIdentityService, logService);
@@ -1460,19 +1457,8 @@ export class DeprecatedExtensionsView extends ExtensionsListView {
 
 export class SearchMarketplaceExtensionsView extends ExtensionsListView {
 
-	private readonly reportSearchFinishedDelayer = this._register(new ThrottledDelayer(2000));
-	private searchWaitPromise: Promise<void> = Promise.resolve();
-
 	override async show(query: string): Promise<IPagedModel<IExtension>> {
-		const queryPromise = super.show(query);
-		this.reportSearchFinishedDelayer.trigger(() => this.reportSearchFinished());
-		this.searchWaitPromise = queryPromise.then(null, null);
-		return queryPromise;
-	}
-
-	private async reportSearchFinished(): Promise<void> {
-		await this.searchWaitPromise;
-		this.telemetryService.publicLog2('extensionsView:MarketplaceSearchFinished');
+		return super.show(query);
 	}
 }
 

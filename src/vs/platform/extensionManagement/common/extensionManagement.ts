@@ -247,7 +247,6 @@ export interface IGalleryExtension {
 	detailsLink?: string;
 	ratingLink?: string;
 	supportLink?: string;
-	telemetryData?: IStringDictionary<unknown>;
 	queryContext?: IStringDictionary<unknown>;
 }
 
@@ -328,11 +327,6 @@ export interface IQueryOptions {
 	source?: string;
 	includePreRelease?: boolean;
 	productVersion?: IProductVersion;
-}
-
-export const enum StatisticType {
-	Install = 'install',
-	Uninstall = 'uninstall'
 }
 
 export interface IDeprecationInfo {
@@ -419,7 +413,6 @@ export interface IExtensionGalleryService {
 	getAllVersions(extensionIdentifier: IExtensionIdentifier): Promise<IGalleryExtensionVersion[]>;
 	download(extension: IGalleryExtension, location: URI, operation: InstallOperation): Promise<void>;
 	downloadSignatureArchive(extension: IGalleryExtension, location: URI): Promise<void>;
-	reportStatistic(publisher: string, name: string, version: string, type: StatisticType): Promise<void>;
 	getReadme(extension: IGalleryExtension, token: CancellationToken): Promise<string>;
 	getManifest(extension: IGalleryExtension, token: CancellationToken): Promise<IExtensionManifest | null>;
 	getChangelog(extension: IGalleryExtension, token: CancellationToken): Promise<string>;

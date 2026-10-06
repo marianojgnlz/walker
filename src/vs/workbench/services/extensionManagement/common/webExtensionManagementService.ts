@@ -12,7 +12,6 @@ import { IProfileAwareExtensionManagementService, IScannedExtension, IWebExtensi
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { AbstractExtensionManagementService, AbstractExtensionTask, IInstallExtensionTask, InstallExtensionTaskOptions, IUninstallExtensionTask, toExtensionManagementError, UninstallExtensionTaskOptions } from '../../../../platform/extensionManagement/common/abstractExtensionManagementService.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IExtensionManifestPropertiesService } from '../../extensions/common/extensionManifestPropertiesService.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { isBoolean, isUndefined } from '../../../../base/common/types.js';
@@ -52,7 +51,6 @@ export class WebExtensionManagementService extends AbstractExtensionManagementSe
 
 	constructor(
 		@IExtensionGalleryService extensionGalleryService: IExtensionGalleryService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@ILogService logService: ILogService,
 		@IWebExtensionsScannerService private readonly webExtensionsScannerService: IWebExtensionsScannerService,
 		@IExtensionManifestPropertiesService private readonly extensionManifestPropertiesService: IExtensionManifestPropertiesService,
@@ -62,7 +60,7 @@ export class WebExtensionManagementService extends AbstractExtensionManagementSe
 		@IUserDataProfilesService userDataProfilesService: IUserDataProfilesService,
 		@IUriIdentityService uriIdentityService: IUriIdentityService,
 	) {
-		super(extensionGalleryService, telemetryService, uriIdentityService, logService, productService, allowedExtensionsService, userDataProfilesService);
+		super(extensionGalleryService, uriIdentityService, logService, productService, allowedExtensionsService, userDataProfilesService);
 		this._register(userDataProfileService.onDidChangeCurrentProfile(e => {
 			if (!this.uriIdentityService.extUri.isEqual(e.previous.extensionsResource, e.profile.extensionsResource)) {
 				e.join(this.whenProfileChanged(e));

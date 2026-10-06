@@ -10,11 +10,9 @@ import { ICommandService } from '../../../../platform/commands/common/commands.j
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { IExtensionManagementService } from '../../../../platform/extensionManagement/common/extensionManagement.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { ExtensionIdentifier } from '../../../../platform/extensions/common/extensions.js';
 import { IWorkbenchExtensionEnablementService } from '../../../services/extensionManagement/common/extensionManagement.js';
 import { IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
-import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../base/common/actions.js';
 
 export const showStartEntryInWeb = new RawContextKey<boolean>('showRemoteStartEntryInWeb', false);
 export class RemoteStartEntry extends Disposable implements IWorkbenchContribution {
@@ -29,7 +27,6 @@ export class RemoteStartEntry extends Disposable implements IWorkbenchContributi
 		@IProductService private readonly productService: IProductService,
 		@IExtensionManagementService private readonly extensionManagementService: IExtensionManagementService,
 		@IWorkbenchExtensionEnablementService private readonly extensionEnablementService: IWorkbenchExtensionEnablementService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService) {
 
 		super();
@@ -92,9 +89,5 @@ export class RemoteStartEntry extends Disposable implements IWorkbenchContributi
 
 	private async showWebRemoteStartActions() {
 		this.commandService.executeCommand(this.startCommand);
-		this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', {
-			id: this.startCommand,
-			from: 'remote start entry'
-		});
 	}
 }

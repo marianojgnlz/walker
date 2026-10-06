@@ -8,7 +8,6 @@ import { IConfigurationService } from '../../../../platform/configuration/common
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { IFileService } from '../../../../platform/files/common/files.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IRequestService } from '../../../../platform/request/common/request.js';
 import { AbstractExtensionGalleryService } from '../../../../platform/extensionManagement/common/extensionGalleryService.js';
 import { InstantiationType, registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
@@ -18,14 +17,13 @@ export class WorkbenchExtensionGalleryService extends AbstractExtensionGallerySe
 	constructor(
 		@IRequestService requestService: IRequestService,
 		@ILogService logService: ILogService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IFileService fileService: IFileService,
 		@IProductService productService: IProductService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IAllowedExtensionsService allowedExtensionsService: IAllowedExtensionsService,
 		@IExtensionGalleryManifestService extensionGalleryManifestService: IExtensionGalleryManifestService,
 	) {
-		super(requestService, logService, telemetryService, fileService, productService, configurationService, allowedExtensionsService, extensionGalleryManifestService);
+		super(requestService, logService, fileService, productService, configurationService, allowedExtensionsService, extensionGalleryManifestService);
 	}
 }
 

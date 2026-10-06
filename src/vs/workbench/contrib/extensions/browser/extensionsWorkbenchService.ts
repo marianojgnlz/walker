@@ -11,7 +11,6 @@ import { CancelablePromise, Promises, ThrottledDelayer, createCancelablePromise,
 import { CancellationError, getErrorMessage, isCancellationError } from '../../../../base/common/errors.js';
 import { Disposable, MutableDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
 import { IPager, singlePagePager } from '../../../../base/common/paging.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import {
 	IExtensionGalleryService, ILocalExtension, IGalleryExtension, IQueryOptions,
 	InstallExtensionEvent, DidUninstallExtensionEvent, InstallOperation, WEB_EXTENSION_TAG, InstallExtensionResult,
@@ -29,7 +28,7 @@ import {
 	IGalleryExtensionVersion
 } from '../../../../platform/extensionManagement/common/extensionManagement.js';
 import { IWorkbenchExtensionEnablementService, EnablementState, IExtensionManagementServerService, IExtensionManagementServer, IWorkbenchExtensionManagementService, IResourceExtension } from '../../../services/extensionManagement/common/extensionManagement.js';
-import { getGalleryExtensionTelemetryData, getLocalExtensionTelemetryData, areSameExtensions, groupByExtension, getGalleryExtensionId, findMatchingMaliciousEntry } from '../../../../platform/extensionManagement/common/extensionManagementUtil.js';
+import { areSameExtensions, groupByExtension, getGalleryExtensionId, findMatchingMaliciousEntry } from '../../../../platform/extensionManagement/common/extensionManagementUtil.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IHostService } from '../../../services/host/browser/host.js';
@@ -56,7 +55,6 @@ import { IExtensionService, IExtensionsStatus as IExtensionRuntimeStatus, toExte
 import { isWeb, language } from '../../../../base/common/platform.js';
 import { getLocale } from '../../../../platform/languagePacks/common/languagePacks.js';
 import { ILocaleService } from '../../../services/localization/common/locale.js';
-import { TelemetryTrustedValue } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { ILifecycleService, LifecyclePhase } from '../../../services/lifecycle/common/lifecycle.js';
 import { IUserDataProfileService } from '../../../services/userDataProfile/common/userDataProfile.js';
 import { mainWindow } from '../../../../base/browser/window.js';
@@ -79,17 +77,6 @@ interface IExtensionStateProvider<T> {
 	(extension: Extension): T;
 }
 
-interface InstalledExtensionsEvent {
-	readonly extensionIds: TelemetryTrustedValue<string>;
-	readonly count: number;
-}
-type ExtensionsLoadClassification = {
-	owner: 'digitarald';
-	comment: 'Helps to understand which extensions are the most actively used.';
-	readonly extensionIds: { classification: 'PublicNonPersonalData'; purpose: 'FeatureInsight'; comment: 'The list of extension ids that are installed.' };
-	readonly count: { classification: 'PublicNonPersonalData'; purpose: 'FeatureInsight'; comment: 'The number of extensions that are installed.' };
-};
-
 export class Extension implements IExtension {
 
 	public enablementState: EnablementState = EnablementState.EnabledGlobally;
@@ -106,7 +93,6 @@ export class Extension implements IExtension {
 		private _gallery: IGalleryExtension | undefined,
 		private readonly resourceExtensionInfo: { resourceExtension: IResourceExtension; isWorkspaceScoped: boolean } | undefined,
 		@IExtensionGalleryService private readonly galleryService: IExtensionGalleryService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@ILogService private readonly logService: ILogService,
 		@IFileService private readonly fileService: IFileService,
 		@IProductService private readonly productService: IProductService
@@ -364,18 +350,6 @@ export class Extension implements IExtension {
 		return this.runtimeStateProvider(this);
 	}
 
-	get telemetryData(): any {
-		const { local, gallery } = this;
-
-		if (gallery) {
-			return getGalleryExtensionTelemetryData(gallery);
-		} else if (local) {
-			return getLocalExtensionTelemetryData(local);
-		} else {
-			return {};
-		}
-	}
-
 	get preview(): boolean {
 		return this.local?.manifest.preview ?? this.gallery?.preview ?? false;
 	}
@@ -466,7 +440,6 @@ export class Extension implements IExtension {
 			if (this.gallery.assets.readme) {
 				return this.galleryService.getReadme(this.gallery, token);
 			}
-			this.telemetryService.publicLog('extensions:NotFoundReadMe', this.telemetryData);
 		}
 
 		if (this.type === ExtensionType.System) {
@@ -605,7 +578,6 @@ class Extensions extends Disposable {
 		@IExtensionGalleryService private readonly galleryService: IExtensionGalleryService,
 		@IWorkbenchExtensionEnablementService private readonly extensionEnablementService: IWorkbenchExtensionEnablementService,
 		@IWorkbenchExtensionManagementService private readonly workbenchExtensionManagementService: IWorkbenchExtensionManagementService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService
 	) {
 		super();
@@ -700,33 +672,15 @@ class Extensions extends Disposable {
 			}
 			if (extensionsToQuery.length) {
 				const queryResult = await this.galleryService.getExtensions(extensionsToQuery.map(e => ({ ...e.identifier, version: e.version })), CancellationToken.None);
-				const queriedIds: string[] = [];
-				const missingIds: string[] = [];
 				for (const extension of extensionsToQuery) {
-					queriedIds.push(extension.identifier.id);
 					const gallery = queryResult.find(g => areSameExtensions(g.identifier, extension.identifier));
 					if (gallery) {
 						extension.gallery = gallery;
 					} else {
 						extension.missingFromGallery = true;
-						missingIds.push(extension.identifier.id);
 					}
 					this._onChange.fire({ extension });
 				}
-				type MissingFromGalleryClassification = {
-					owner: 'joshspicer';
-					comment: 'Report when installed extensions are no longer available in the gallery';
-					queriedIds: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Extensions queried as potentially missing from gallery' };
-					missingIds: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Extensions determined missing from gallery' };
-				};
-				type MissingFromGalleryEvent = {
-					readonly queriedIds: TelemetryTrustedValue<string>;
-					readonly missingIds: TelemetryTrustedValue<string>;
-				};
-				this.telemetryService.publicLog2<MissingFromGalleryEvent, MissingFromGalleryClassification>('extensions:missingFromGallery', {
-					queriedIds: new TelemetryTrustedValue(queriedIds.join(';')),
-					missingIds: new TelemetryTrustedValue(missingIds.join(';'))
-				});
 			}
 		}
 	}
@@ -780,11 +734,6 @@ class Extensions extends Disposable {
 	private async updateMetadata(localExtension: ILocalExtension, gallery: IGalleryExtension): Promise<ILocalExtension> {
 		let isPreReleaseVersion = false;
 		if (localExtension.manifest.version !== gallery.version) {
-			type GalleryServiceMatchInstalledExtensionClassification = {
-				owner: 'sandy081';
-				comment: 'Report when a request is made to update metadata of an installed extension';
-			};
-			this.telemetryService.publicLog2<{}, GalleryServiceMatchInstalledExtensionClassification>('galleryService:updateMetadata');
 			const galleryWithLocalVersion: IGalleryExtension | undefined = (await this.galleryService.getExtensions([{ ...localExtension.identifier, version: localExtension.manifest.version }], CancellationToken.None))[0];
 			isPreReleaseVersion = !!galleryWithLocalVersion?.properties?.isPreReleaseVersion;
 		}
@@ -1004,7 +953,6 @@ export class ExtensionsWorkbenchService extends Disposable implements IExtension
 		@IExtensionGalleryService private readonly galleryService: IExtensionGalleryService,
 		@IExtensionGalleryManifestService private readonly extensionGalleryManifestService: IExtensionGalleryManifestService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@INotificationService private readonly notificationService: INotificationService,
 		@IURLService urlService: IURLService,
 		@IWorkbenchExtensionEnablementService private readonly extensionEnablementService: IWorkbenchExtensionEnablementService,
@@ -1107,7 +1055,6 @@ export class ExtensionsWorkbenchService extends Disposable implements IExtension
 			})
 			.catch(e => this.logService.error('Error while fetching extension gallery manifest', e));
 		this.updateExtensionsNotificaiton();
-		this.reportInstalledExtensionsTelemetry();
 		this._register(this.storageService.onDidChangeValue(StorageScope.PROFILE, EXTENSIONS_DISMISSED_NOTIFICATIONS_KEY, this._store)(e => this.onDidDismissedNotificationsValueChange()));
 		this._register(this.storageService.onDidChangeValue(StorageScope.APPLICATION, EXTENSIONS_AUTO_UPDATE_KEY, this._store)(e => this.onDidSelectedExtensionToAutoUpdateValueChange()));
 		this._register(this.storageService.onDidChangeValue(StorageScope.APPLICATION, EXTENSIONS_DONOT_AUTO_UPDATE_KEY, this._store)(e => this.onDidSelectedExtensionToAutoUpdateValueChange()));
@@ -1159,10 +1106,6 @@ export class ExtensionsWorkbenchService extends Disposable implements IExtension
 		this._register(Event.debounce(this.onChange, () => undefined, 100)(() => this.hasOutdatedExtensionsContextKey.set(this.outdated.length > 0)));
 		this._register(this.updateService.onStateChange(e => {
 			if ((e.type === StateType.CheckingForUpdates && e.explicit) || e.type === StateType.AvailableForDownload || e.type === StateType.Downloaded) {
-				this.telemetryService.publicLog2<{}, {
-					owner: 'sandy081';
-					comment: 'Report when update check is triggered on product update';
-				}>('extensions:updatecheckonproductupdate');
 				if (this.isAutoCheckUpdatesEnabled()) {
 					this.checkForUpdates('Product update');
 				}
@@ -1307,15 +1250,6 @@ export class ExtensionsWorkbenchService extends Disposable implements IExtension
 				}
 			});
 		}
-	}
-
-	private reportInstalledExtensionsTelemetry() {
-		const extensionIds = this.installed.filter(extension =>
-			!extension.isBuiltin &&
-			(extension.enablementState === EnablementState.EnabledWorkspace ||
-				extension.enablementState === EnablementState.EnabledGlobally))
-			.map(extension => ExtensionIdentifier.toKey(extension.identifier.id));
-		this.telemetryService.publicLog2<InstalledExtensionsEvent, ExtensionsLoadClassification>('installedExtensions', { extensionIds: new TelemetryTrustedValue(extensionIds.join(';')), count: extensionIds.length });
 	}
 
 	private async onDidChangeRunningExtensions(added: ReadonlyArray<IExtensionDescription>, removed: ReadonlyArray<IExtensionDescription>): Promise<void> {
@@ -1771,17 +1705,6 @@ export class ExtensionsWorkbenchService extends Disposable implements IExtension
 						priority: NotificationPriority.SILENT
 					});
 				}
-				type ExtensionsAutoRestartClassification = {
-					owner: 'sandy081';
-					comment: 'Report when extensions are auto restarted';
-					count: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Number of extensions auto restarted' };
-					auto: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Whether the restart was triggered automatically' };
-				};
-				type ExtensionsAutoRestartEvent = {
-					count: number;
-					auto: boolean;
-				};
-				this.telemetryService.publicLog2<ExtensionsAutoRestartEvent, ExtensionsAutoRestartClassification>('extensions:autorestart', { count: toAdd.length + toRemove.length, auto });
 			}
 		}
 	}
@@ -2062,17 +1985,6 @@ export class ExtensionsWorkbenchService extends Disposable implements IExtension
 		}
 		if (infos.length) {
 			const targetPlatform = await extensions[0].server.extensionManagementService.getTargetPlatform();
-			type GalleryServiceUpdatesCheckClassification = {
-				owner: 'sandy081';
-				comment: 'Report when a request is made to check for updates of extensions';
-				count: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Number of extensions to check update' };
-			};
-			type GalleryServiceUpdatesCheckEvent = {
-				count: number;
-			};
-			this.telemetryService.publicLog2<GalleryServiceUpdatesCheckEvent, GalleryServiceUpdatesCheckClassification>('galleryService:checkingForUpdates', {
-				count: infos.length,
-			});
 			this.logService.trace(`Checking updates for extensions`, infos.map(e => e.id).join(', '));
 			const galleryExtensions = await this.galleryService.getExtensions(infos, { targetPlatform, compatible: true, productVersion: this.getProductVersion() }, CancellationToken.None);
 			if (galleryExtensions.length) {

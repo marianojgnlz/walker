@@ -4,10 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable, toDisposable } from '../../../../base/common/lifecycle.js';
-import { IExtensionManagementService, IExtensionGalleryService, InstallOperation, InstallExtensionResult } from '../../../../platform/extensionManagement/common/extensionManagement.js';
+import { IExtensionGalleryService } from '../../../../platform/extensionManagement/common/extensionManagement.js';
 import { IExtensionRecommendationsService, ExtensionRecommendationReason, IExtensionIgnoredRecommendationsService } from '../../../services/extensionRecommendations/common/extensionRecommendations.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { shuffle } from '../../../../base/common/arrays.js';
 import { Emitter, Event } from '../../../../base/common/event.js';
 import { IEnvironmentService } from '../../../../platform/environment/common/environment.js';
@@ -54,9 +53,7 @@ export class ExtensionRecommendationsService extends Disposable implements IExte
 		@IInstantiationService instantiationService: IInstantiationService,
 		@ILifecycleService private readonly lifecycleService: ILifecycleService,
 		@IExtensionGalleryService private readonly galleryService: IExtensionGalleryService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IEnvironmentService private readonly environmentService: IEnvironmentService,
-		@IExtensionManagementService private readonly extensionManagementService: IExtensionManagementService,
 		@IExtensionIgnoredRecommendationsService private readonly extensionRecommendationsManagementService: IExtensionIgnoredRecommendationsService,
 		@IExtensionRecommendationNotificationService private readonly extensionRecommendationNotificationService: IExtensionRecommendationNotificationService,
 		@IExtensionsWorkbenchService private readonly extensionsWorkbenchService: IExtensionsWorkbenchService,
@@ -84,8 +81,6 @@ export class ExtensionRecommendationsService extends Disposable implements IExte
 
 		// Activation
 		this.activationPromise = this.activate();
-
-		this._register(this.extensionManagementService.onDidInstallExtensions(e => this.onDidInstallExtensions(e)));
 	}
 
 	private async activate(): Promise<void> {
@@ -221,27 +216,6 @@ export class ExtensionRecommendationsService extends Disposable implements IExte
 
 	getFileBasedRecommendations(): string[] {
 		return this.toExtensionIds(this.fileBasedRecommendations.recommendations);
-	}
-
-	private onDidInstallExtensions(results: readonly InstallExtensionResult[]): void {
-		for (const e of results) {
-			if (e.source && !URI.isUri(e.source) && e.operation === InstallOperation.Install) {
-				const extRecommendations = this.getAllRecommendationsWithReason() || {};
-				const recommendationReason = extRecommendations[e.source.identifier.id.toLowerCase()];
-				if (recommendationReason) {
-					/* __GDPR__
-						"extensionGallery:install:recommendations" : {
-							"owner": "sandy081",
-							"recommendationReason": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
-							"${include}": [
-								"${GalleryExtensionTelemetryData}"
-							]
-						}
-					*/
-					this.telemetryService.publicLog('extensionGallery:install:recommendations', { ...e.source.telemetryData, recommendationReason: recommendationReason.reasonId });
-				}
-			}
-		}
 	}
 
 	private toExtensionIds(recommendations: ReadonlyArray<ExtensionRecommendation>): string[] {

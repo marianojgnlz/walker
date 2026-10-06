@@ -38,7 +38,6 @@ import { KeybindingWeight } from '../../../../platform/keybinding/common/keybind
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { defaultCheckboxStyles } from '../../../../platform/theme/browser/defaultStyles.js';
 import { buttonForeground, buttonHoverBackground, editorBackground, textLinkActiveForeground, textLinkForeground } from '../../../../platform/theme/common/colorRegistry.js';
 import { IColorTheme, ICssStyleCollector, IThemeService, registerThemingParticipant } from '../../../../platform/theme/common/themeService.js';
@@ -79,7 +78,6 @@ import { DEFAULT_MARKDOWN_STYLES, renderMarkdownDocument } from '../../markdown/
 import { IWebview, IWebviewService, KEYBINDING_CONTEXT_WEBVIEW_FIND_WIDGET_FOCUSED } from '../../webview/browser/webview.js';
 import { IEditorGroup } from '../../../services/editor/common/editorGroupsService.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
-import { IExtensionRecommendationsService } from '../../../services/extensionRecommendations/common/extensionRecommendations.js';
 import { IExtensionService } from '../../../services/extensions/common/extensions.js';
 import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
 import { IHoverService } from '../../../../platform/hover/browser/hover.js';
@@ -238,14 +236,12 @@ export class ExtensionEditor extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IExtensionsWorkbenchService private readonly extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@IExtensionGalleryService private readonly extensionGalleryService: IExtensionGalleryService,
 		@IThemeService themeService: IThemeService,
 		@INotificationService private readonly notificationService: INotificationService,
 		@IOpenerService private readonly openerService: IOpenerService,
-		@IExtensionRecommendationsService private readonly extensionRecommendationsService: IExtensionRecommendationsService,
 		@IStorageService storageService: IStorageService,
 		@IExtensionService private readonly extensionService: IExtensionService,
 		@IWebviewService private readonly webviewService: IWebviewService,
@@ -569,24 +565,6 @@ export class ExtensionEditor extends EditorPane {
 		}
 
 		this.renderNavbar(extension, manifest, template, preserveFocus);
-
-		// report telemetry
-		const extRecommendations = this.extensionRecommendationsService.getAllRecommendationsWithReason();
-		let recommendationsData = {};
-		if (extRecommendations[extension.identifier.id.toLowerCase()]) {
-			recommendationsData = { recommendationReason: extRecommendations[extension.identifier.id.toLowerCase()].reasonId };
-		}
-		/* __GDPR__
-		"extensionGallery:openExtension" : {
-			"owner": "sandy081",
-			"recommendationReason": { "classification": "SystemMetaData", "purpose": "FeatureInsight", "isMeasurement": true },
-			"${include}": [
-				"${GalleryExtensionTelemetryData}"
-			]
-		}
-		*/
-		this.telemetryService.publicLog('extensionGallery:openExtension', { ...extension.telemetryData, ...recommendationsData });
-
 	}
 
 	private renderNavbar(extension: IExtension, manifest: IExtensionManifest | null, template: IExtensionEditorTemplate, preserveFocus: boolean): void {

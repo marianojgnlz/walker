@@ -1494,7 +1494,6 @@ class InlineCompletionAdapter {
 						icon: item.warning.icon ? typeConvert.IconPath.fromThemeIcon(item.warning.icon) : undefined,
 					} : undefined,
 					correlationId: this._isAdditionsProposedApiEnabled ? item.correlationId : undefined,
-					suggestionId: undefined,
 					uri: (this._isAdditionsProposedApiEnabled && item.uri) ? item.uri : undefined,
 					supportsRename: this._isAdditionsProposedApiEnabled ? item.supportsRename : false,
 					jumpToPosition: (this._isAdditionsProposedApiEnabled && item.jumpToPosition) ? typeConvert.Position.from(item.jumpToPosition) : undefined,
