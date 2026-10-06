@@ -617,3 +617,15 @@ eslint.config.js
 .eslint-allowed-bracket-notation-files
 .agents/skills/launch/scripts/**
 Scope: (1) the lint/ignore coupling for the W37 deletion — remove the copilot eslint plugin import, `extensions/copilot/**` patterns, copilot-allowed lists and every allow-list/ignore entry naming W37 files (must land with the tree deletion in the same commit); (2) the launcher-script residues (agent-host port allocation, `--inspect-agenthost`, `agentHostPort` emission); (3) `src/vs/base/common/product.ts` comment citing the deleted agent-host roadmap. (otel log prefixes stay T9/T10-owned; ignoredExtensions test / smoke utils / dotnet-toolchain README stay recorded follow-ups.)
+
+### Dictation disposition (2026-10-07, O1 `delete-orphaned-dictation-tree`)
+src/vs/platform/localTranscription/**
+src/vs/workbench/services/localTranscription/**
+src/vs/workbench/workbench.desktop.main.ts
+src/vs/workbench/workbench.web.main.ts
+src/vs/base/common/product.ts
+build/npm/postinstall.ts
+build/gulpfile.vscode.ts
+package.json
+package-lock.json
+Scope: remove the unreachable on-device-dictation consumer stack (zero injectors; its UI died with the voice/chat surfaces) + the inert `dictationRuntime`/`IDictationRuntimeProductConfig` member + the orphaned `foundry-local-sdk` dependency + its postinstall patch + `getFoundryLocalExcludeFilter`. Rationale: unprovisionable (producer removed) + unreachable; the change's compatibility rule reserves inert retention for public API only. Recoverable from git history if Walker ever wants dictation.

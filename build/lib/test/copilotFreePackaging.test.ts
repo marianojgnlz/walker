@@ -67,9 +67,11 @@ suite('Copilot-free packaging pipeline', () => {
 
 		// Physical deletion of the helper and its test is parent-owned. Until that
 		// deletion lands the module may still be on disk, but it must be unreachable;
-		// once it is gone, loading it must fail rather than silently resolve.
+		// once it is gone, loading it must fail rather than silently resolve. The
+		// specifier is computed so TypeScript does not try to resolve a deleted file.
 		if (!existsSync(path.join(repoRoot, 'build/lib/copilot.ts'))) {
-			await assert.rejects(() => import('../copilot.ts'), 'the removed Copilot packaging helper must not be loadable');
+			const deletedHelperSpecifier = ['..', 'copilot.ts'].join('/');
+			await assert.rejects(() => import(deletedHelperSpecifier), 'the removed Copilot packaging helper must not be loadable');
 		}
 	});
 

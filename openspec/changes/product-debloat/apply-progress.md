@@ -3080,3 +3080,161 @@ Also recorded as C7/P3 follow-ups outside every grant so far: `eslint.config.js`
 2. The three lint/ignore files contain zero entries naming `extensions/copilot`, `build/lib/copilot.ts`, the azure-pipelines copilot files or any other W37 path; the restored `.vscode-test.js`/`eslint.config.js` entries are live-file repairs, not W37 regressions — verify with `git show d50e03b4e77 -- .eslint-allowed-javascript-files`.
 3. Both launcher scripts are agent-host-port-free and their port counts are internally consistent (Bash 3 listeners/3 reads/3 args; PowerShell 3 ports/3 consumers).
 4. The product comment cites no deleted roadmap; the pre-existing `copilotVersions` deletion is untouched.
+
+## P2.GREEN remote manifests + P3.GREEN producers (2026-10-07, `p2.green-remote` + `p3.green-producers`)
+
+### Structured status consumed and scope
+
+- Parent-derived status consumed verbatim: `activeChange=product-debloat`, `artifactStore=openspec`, `applyState=ready`, `nextRecommended=sdd-apply`, `actionContext: {mode: implement, workspace: /home/marialez/Work/walker, cwd: /home/marialez/Work/walker, branch: product-debloat (never commit)}`, `taskAccounting` at input `{total: 109, remaining: 40, checked: 69, parent: 0, errors: 0}`, `delivery: feature-branch-chain`, 400 authored lines per review unit, coupled batches via recorded analysis. No status field was missing and no `actionContext` root was unsafe or outside the workspace. Strict TDD is off per `openspec/config.yaml`; the task-named RED→GREEN order was still followed. Node 24.18.0 via the authorized mise PATH. W37 is recorded EXECUTED by the parent in `1e73ad98ebd`.
+- Assigned work: (1) P2.GREEN — regenerate/clean `remote/package.json` + `remote/package-lock.json` so the REH package graph is Copilot-free; (2) P3.GREEN — remove the `build/agent-sdk`, `build/codex` and `build/dictation-runtime` producers, their CI templates/installers, the `agentSdks`/`dictationRuntime` product stamping, and the exclusively agent-owned dependency inventory; (3) the completed-row accounting for P2.GREEN, P3.GREEN, P2/P3.TRIANGULATE and C6.TRIANGULATE.
+- Entry worktree: only the pre-existing untracked `.pi/` plus the OpenSpec change tree were untracked; every pre-existing tracked change was preserved. No stage, commit, publish, installer, migration or network-changing command was run; nothing outside the granted surfaces was edited.
+
+### RED — new packaging contract (`p3.red`, 227 new lines)
+
+- New `build/lib/test/agentProducerFreePackaging.test.ts` (7 tests) pins the deprovisioning contract: no retained build module imports a producer; the build test glob schedules no producer tests; no pipeline stages/produces/installs a removed agent payload; the product configuration declares no `agentSdks` stamp; the exclusively agent-owned runtime packages are not declared dependencies while `@microsoft/mxc-sdk`/`@vscode/sandbox-runtime`/`foundry-local-sdk` stay; the REH/server graph resolves no Copilot runtime or Koffi; and REH still composes its server graph from `remote/`. The W38 paths are declared as `pendingParentDeletion`, so the assertions keep holding after the parent's `git rm`.
+- **RED evidence:** `cd build && node --test lib/test/agentProducerFreePackaging.test.ts` on the pre-edit tree → **6 of 7 tests failing** (`no retained build module loads an agent producer`, `the build test suite no longer schedules producer tests`, `no pipeline references a removed agent producer or its installers`, `the product configuration declares no agent SDK or dictation runtime stamps`, `the exclusively agent-owned runtime packages are not declared dependencies`, `the REH/server package graph declares no Copilot runtime`); only the retention assertion passed.
+
+### Leaf `p2.green-remote` — REH/server manifests (491 changed lines: `remote/package.json` 7, `remote/package-lock.json` 484 generated)
+
+- `remote/package.json`: removed `@github/copilot-sdk` and `@vscode/copilot-api` from `dependencies`, the `koffi` override, the `koffi@3.2.1` allow-scripts entry and the `copilotRuntimeVersion` field. 48 dependencies remain (all retained: mxc-sdk, sandbox-runtime, ripgrep-universal, zod, devcontainers, xterm, …).
+- `remote/package-lock.json` (generated, `lockfileVersion: 3`): removed the 31 package entries that die with those two dependencies — `@github/copilot-sdk` + its 8 platform packages, the nested `@github/copilot-sdk/node_modules/**` tree (koffi, 17 `@koromix/koffi-*`, `zod`), `@vscode/copilot-api`, and the `node_modules/vscode-jsonrpc` copy whose only dependent in this graph was the Copilot SDK — plus the two root `dependencies` ranges. 179 → 148 resolved packages.
+- **Consistency evidence (read-only, no installs):** the file round-trips byte-for-byte through `JSON.parse` → `JSON.stringify(json, null, 2) + '\n'` (proved before editing, so the removal is format-faithful); a hoisting-aware resolver over every `dependencies`/`optionalDependencies` edge in the retained graph reports **0 unresolved internal references**; and replicating `build/gulpfile.hygiene.ts` `checkPackageJSON` over `remote/package.json` + `remote/web/package.json` reports **0 version mismatches** against the root manifest. Zero `copilot`/`koffi`/`koromix` matches remain, while `node_modules/zod`, `node_modules/@vscode/sandbox-runtime/node_modules/zod`, `@microsoft/mxc-sdk`, `@vscode/sandbox-runtime` and `@vscode/ripgrep-universal` are retained.
+- This closes the open finding recorded under W37 in `deletion-review.md`: `remote/` is a live packaging input (`build/npm/dirs.ts:51`, `build/gulpfile.reh.ts:322` streams its manifest, `:357-359` copies `getProductionDependencies(REMOTE_FOLDER)` into the server package), so the W37 `git rm` alone had left the Copilot runtime inside the server graph.
+
+### Leaf `p3.green-build-tooling` (~35 changed lines, 6 files)
+
+- `package.json`: removed the `codex:gen-protocol` and `codex:check-protocol` scripts. `build/package.json`: the test glob is now `node --test '{lib,next}/**/*.test.ts'` (the `agent-sdk`/`codex` trees no longer contribute tests — `build/agent-sdk/test/versionSync.test.ts` asserts root `devDependency` pins that no longer exist, so it is deletion-bound rather than repairable).
+- `eslint.config.js`: dropped the two now-dangling `@anthropic-ai/sdk` / `@anthropic-ai/claude-agent-sdk` entries from the `src/vs/platform/agentHost/~` import restrictions (that tree is already physically deleted).
+- `.github/workflows/pr.yml`: removed the "Check Codex protocol client is in sync" step (and its `CODEX_SYNC_BASE` fetch). `.github/workflows/pr-linux-test.yml`: removed the 16-line "Remove musl Claude binary on glibc Linux" workaround, which existed only for the deleted `@anthropic-ai/claude-agent-sdk` devDependency.
+- `build/azure-pipelines/oss/scan-licenses.ts`: the shipped-platform source-of-truth comment no longer cites the deleted `build/agent-sdk/common.ts`.
+
+### Leaf `p3.green-ci-wiring` (245 changed lines across 18 pipeline files)
+
+- Removed every `agent-sdk-produce.yml` / `dictation-runtime-produce.yml` template include and their `.build/agent-sdk/tarballs` `pipelineArtifact` uploads (alpine, darwin, linux, win32 product builds + the three per-OS compile steps).
+- Removed the whole Foundry Local install family from CI: all 26 `foundry-local.yml` includes, the three `disableFoundryLocalInstall.ts` steps in the compile steps, the now-unused `VSCODE_SKIP_FOUNDRY_LOCAL_INSTALL` parameter (declared in the three compile steps, passed by the three `product-smoke-flaky-*.yml`), and all 13 `checkNativeOptionalDeps` call sites.
+- **Structural evidence:** all 21 touched YAML files parse cleanly with `js-yaml`; a final sweep finds zero `agent-sdk-produce`/`dictation-runtime-produce`/`foundry-local.yml`/`foundryLocalInstall`/`disableFoundryLocalInstall`/`checkNativeOptionalDeps`/`VSCODE_SKIP_FOUNDRY_LOCAL_INSTALL`/`.build/agent-sdk`/`AGENT_SDK_TARBALLS_PRODUCED` references outside the W38 files themselves.
+
+### Leaf `p3.green-stamping` (62 changed lines, 4 files)
+
+- `build/gulpfile.vscode.ts` and `build/gulpfile.reh.ts`: removed the `readAgentSdkResults`/`readDictationRuntimeResults` imports and the `agentSdks`/`dictationRuntime` product-stamping blocks; both package tasks now stamp only commit/date/version/checksums/NLS hash and compose the Walker gallery product. `build/lib/walkerProduct.ts` needed no change — it never touched `agentSdks` (the parent's brief named it; its test carried the only reference).
+- `src/vs/base/common/product.ts`: removed `IAgentSdkProductConfig` and the `agentSdks` member.
+- `build/lib/test/walkerProduct.test.ts`: the REH bootstrap retention test now uses the retained `nlsCoreBaseUrl` stamp instead of the removed `agentSdks`.
+
+### Leaf `p3.green-deps` (306 changed lines: `package.json` 5, `package-lock.json` 301 generated)
+
+- Removed `@anthropic-ai/sdk` (dependency), `@anthropic-ai/claude-agent-sdk` and `@openai/codex` (devDependencies) plus their 17 lockfile entries (the three base packages + 8 `@anthropic-ai/claude-agent-sdk-*` and 6 `@openai/codex-*` platform packages). Hoisting-aware validation reports **0 unresolved internal references**; `vscode-jsonrpc`, `zod`, `@microsoft/mxc-sdk`, `@vscode/sandbox-runtime` and `foundry-local-sdk` remain resolved.
+- **Dependency-inventory audit with consumer evidence (the parent's "inspect before deletion" requirement):**
+  - removed — `@anthropic-ai/sdk` (only consumer was the deleted agent host; the residual `workspaceTagsService.ts` entry is a workspace-package *telemetry classification* name, not an import), `@anthropic-ai/claude-agent-sdk` (only the deleted `build/agent-sdk` Claude producer + the removed `pr-linux-test.yml` workaround), `@openai/codex` (only the deleted `build/agent-sdk` Codex producer, the removed `codex:*` scripts and the removed protocol-sync step).
+  - **retained** — `@microsoft/mxc-sdk` (terminal sandbox, `build/lib/mxc.ts` + `src/vs/platform/sandbox/node/sandboxHelper.ts`), `@vscode/sandbox-runtime` (its consumer is the same retained terminal sandbox: `src/vs/platform/sandbox/common/terminalSandboxEngine.ts:645` resolves `node_modules/@vscode/sandbox-runtime/dist/cli.js`; only a doc comment mentions the package name), `foundry-local-sdk` (`src/vs/platform/localTranscription/node/localTranscriptionService.ts:545` performs a runtime `await import('foundry-local-sdk')`, and `build/npm/postinstall.ts:341-384` patches its `coreInterop.js`). The last one is therefore **not** agent-only by consumer evidence, so it stays — see the deviation below.
+
+### Leaf `w37-typecheck-coupling` (6 changed lines)
+
+- `npm run typecheck --prefix build` was red **before** this pass's build edits because the parent's W37 `git rm` deleted `build/lib/copilot.ts` while `build/lib/test/copilotFreePackaging.test.ts` still contained a statically resolved `import('../copilot.ts')` (`TS2307`). The assertion now uses a computed specifier (`['..', 'copilot.ts'].join('/')`) so the "the removed helper must not be loadable" contract survives without referencing a deleted file. No other build error existed.
+
+### Documented deviation from the assigned design (needs a parent decision)
+
+- **`dictationRuntime` cannot be deleted from `src/vs/base/common/product.ts` inside this pass's surfaces.** `IProductService extends Readonly<IProductConfiguration>` (`src/vs/platform/product/common/productService.ts:11`) and the retained reader `src/vs/workbench/services/localTranscription/electron-browser/localTranscriptionService.ts:88` reads `this.productService.dictationRuntime`. Deleting the member produced exactly one compile error — `TS2339: Property 'dictationRuntime' does not exist on type 'IProductService'` — in that file, which is outside the granted edit surfaces. The member was therefore restored as an inert contract, documented in-tree as *never stamped by any build*, and no gulpfile reads or writes it any more; `src/vs/base/common/product.ts` is 8 additions / 23 deletions.
+- Consumer evidence for that tree: `grep -rn "ILocalTranscriptionService" src/` shows the interface, the utility-process implementation, the two `registerSingleton(..., InstantiationType.Delayed)` registrations (`workbench.desktop.main.ts:61`, `workbench.web.main.ts:73`) and **no injector anywhere** — the on-device dictation service is unreachable after U05 removed the Chat-owned editor-dictation session, but it is retained source outside this pass's surfaces. The `product.dictationRuntime` read now always yields `undefined`, which is the SDK-payload fallback the code documents for dev builds.
+
+### Verification evidence (this pass, Node 24.18.0)
+
+| Command | Result |
+| --- | --- |
+| `npm run compile-client` | **exit 0**, 0 compile errors |
+| `npm run typecheck-client` | **exit 0** (after restoring the inert member; before that, exactly the one `TS2339` above) |
+| `npm run typecheck --prefix build` | **exit 0** (after the W37 typecheck-coupling fix; the pre-fix error was `TS2307` in `copilotFreePackaging.test.ts`) |
+| `npm run gulp compile-extensions` | **exit 0**, every retained extension 0 errors |
+| `npm run test --prefix build` | **493 passing / 0 failing** (62 suites, `{lib,next}` glob) |
+| `cd build && node --test lib/test/{walkerProduct,ripgrep,mxc,copilotFreePackaging,agentProducerFreePackaging}.test.ts` | **41/41 pass** |
+| `cd build && node --test lib/test/agentProducerFreePackaging.test.ts` | RED **6/7 failing** → GREEN **7/7 passing** |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing** |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` | **30 passing** |
+| `cargo check --manifest-path cli/Cargo.toml` | **exit 0** (the two pre-existing W35 dead-code warnings only) |
+| `git diff --check` | clean |
+| `js-yaml` parse of all 21 touched pipeline files | all OK |
+| Remote-manifest consistency (hygiene `checkPackageJSON` replica + hoisting-aware resolver) | 0 mismatches, 0 unresolved references |
+
+- Not run, by design: `vscode-linux-x64`/REH packaging runs and `npm run build-fast` (packaging stage, V1-owned), and any `git rm` (parent-owned).
+
+### Persisted task state
+
+- `tasks.md` re-read after the flips: **109 rows / 71 checked / 38 unchecked**. Newly checked: **P2.GREEN** (its whole-file deletions are observed: `build/lib/copilot.ts`, `build/lib/test/copilot.test.ts`, the Copilot pipelines and `extensions/copilot/**` tracked files are gone from `HEAD`; the remote lock/manifest regeneration landed here) and **C6.TRIANGULATE → REFACTOR** (the agent-only SDK dependencies are removed with consumer evidence, the process-info/URL-restoration tails went in the previous leaf, and the parent observed W36/W37). The W38 open tail (`build/azure-pipelines/common/smokeTestAgentHost.ts`, 129 lines) is disclosed in the deletion-review manifest so the same `git rm` closes it.
+- Deliberately left unchecked, with exact remaining scope:
+  - [ ] P3.GREEN: Remove exclusively agent-owned `build/agent-sdk` producers/stamping/CI templates, Codex protocol tooling and dictation/voice runtime production whose only consumers disappear; inspect agent-only Anthropic/Codex/Copilot/MXC/foundry/sandbox dependencies before deletion. Clean `build/lib/extensions.ts`, `build/npm/dirs.ts`, `build/filters.ts`, package scripts, platform pipeline Copilot jobs/cache/artifact hooks and native/license fixtures; keep generic scanners/signing/npm utilities and non-agent consumers. — every disconnection and dependency step above is done; the row closes when the parent observes the W38 `git rm` **and** decides the `dictationRuntime` deviation.
+  - [ ] P2/P3.TRIANGULATE → REFACTOR: Regenerate only affected dependency graphs/locks; inspect top-level/task imports and shipped native paths, then package desktop and retained REH without the Copilot shim or runtime-copy feature. Validate Linux build completion (not merely reaching package-linux); record macOS/Windows fixture/native checks and actual gaps. Remove stale owned output only through the established clean-build recipe, not user data. — the lock regeneration and import/native-path inspection are done; the packaging runs are **V1-owned** and are not authorized in this pass.
+  - C7.RED → GREEN and C7.TRIANGULATE were not in this pass's assigned row list; their precondition (the W37 `extensions/copilot/**` + machinery deletion) is observed, so the parent/V1 can close them on the packaging evidence.
+- No physical file was deleted, moved or renamed by this agent; W38 is a record only.
+
+### Workload / PR boundary (feature-branch-chain, ≤400 authored lines per review unit)
+
+| Unit | Files | Authored lines |
+| --- | --- | ---: |
+| `p2.green-remote` (2 review groups: the SDK/platform packages + root ranges; the nested Koffi/zod tree + orphaned `vscode-jsonrpc`) | 2 | 491 |
+| `p3.red` contract test | 1 | 227 |
+| `p3.green-build-tooling` | 6 | 35 |
+| `p3.green-ci-wiring` | 18 | 245 |
+| `p3.green-stamping` | 4 | 62 |
+| `p3.green-deps` (2 review groups: `package.json` + the three base packages' lock entries) | 2 | 306 |
+| `w37-typecheck-coupling` | 1 | 6 |
+| **Total authored** | **34** | **1,364** |
+
+- Every unit is ≤400 lines; the pass total exceeds one leaf by construction because the assignment covers P2.GREEN **and** P3.GREEN, i.e. two chain stages. No `size:exception` is claimed and no comment, blank line, doc or test was compressed or removed to fit a number; the largest single deletion (`remote/package-lock.json`, 484 lines) is a generated member-block removal accompanied by a structural consistency proof.
+
+### Review focus for the verifier
+
+1. `remote/package-lock.json` is format-faithful (byte-exact round-trip), internally resolved (0 unresolved edges) and Copilot-free while `zod`/`mxc-sdk`/`sandbox-runtime`/`ripgrep-universal` are retained; `remote/package.json` matches the root manifest versions for every shared dependency (hygiene `checkPackageJSON` replica: 0 mismatches).
+2. Both gulpfiles stamp only commit/date/version/checksums/NLS-hash and compose the Walker gallery product; no retention loss for ripgrep, OS-proxy-resolver, MXC or the Foundry exclusion (`getFoundryLocalExcludeFilter` deliberately stays — the desktop package still must not ship the Foundry native payload).
+3. The 18 pipeline edits removed only agent payload staging/production/installation; the smoke-flaky compile-step parameter wiring is consistent (the parameter no longer exists anywhere), and all touched YAML parses.
+4. `build/lib/test/agentProducerFreePackaging.test.ts` is the permanent guard: it must keep failing if any retained module, manifest, test glob or pipeline re-acquires an agent producer reference, and it is written to survive the W38 `git rm` unchanged.
+5. The one deviation (`dictationRuntime` inert member) and the W38/W36 tail are the only disclosed residues; the retained-but-unreachable `localTranscription` tree is the suggested follow-up decision.
+
+## O1 `delete-orphaned-dictation-tree` executed (2026-10-07, parent answer to the P3.GREEN interaction)
+
+### Structured status consumed and decision
+
+- Parent answer consumed verbatim: **O1 `delete-orphaned-dictation-tree`** — "approved with the full listed path set (recorded in `parent-authorization.md` "Dictation disposition") … Rationale: unreachable (zero injectors) + unprovisionable (producer gone); inert retention is reserved for public API." The binding grant is `parent-authorization.md` §"Dictation disposition (2026-10-07, O1 `delete-orphaned-dictation-tree`)": `src/vs/platform/localTranscription/**`, `src/vs/workbench/services/localTranscription/**`, `src/vs/workbench/workbench.desktop.main.ts`, `src/vs/workbench/workbench.web.main.ts`, `src/vs/base/common/product.ts`, `build/npm/postinstall.ts`, `build/gulpfile.vscode.ts`, `package.json`, `package-lock.json`. Whole-file deletions are parent-owned → recorded as W38.h/W38.i.
+- `actionContext` unchanged (`mode: implement`, workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat`, never commit); no warnings; Node 24.18.0; no stage/commit/delete/install/network command.
+
+### Work executed (O1 slice: 113 authored lines, one review unit)
+
+- **Entrypoints:** the two `registerSingleton` side-effect imports removed — `src/vs/workbench/workbench.desktop.main.ts` (1) and `src/vs/workbench/workbench.web.main.ts` (1).
+- **Product contract:** `IDictationRuntimeProductConfig` and `readonly dictationRuntime?: …` removed from `src/vs/base/common/product.ts`, replacing the interim inert-contract block from the previous leaf (`git diff` vs `HEAD`: 0 additions / 33 deletions, which also drops `agentSdks`/`IAgentSdkProductConfig`).
+- **Build wiring:** `build/next/index.ts` dropped `vs/platform/localTranscription/node/localTranscriptionMain` from `desktopEntryPoints` (3 lines, see the deletion-coupling note below); `build/npm/postinstall.ts` lost the 46-line `VSCODE_FOUNDRY_LOCAL_NATIVE_DIR` coreInterop patch loop; `build/gulpfile.vscode.ts` lost `getFoundryLocalExcludeFilter` plus its `filter(...)` slot and the explanatory comment (17 lines) — the desktop package no longer strips a payload for a package that is not installed.
+- **Manifests:** `package.json` lost the `foundry-local-sdk` dependency and the `foundry-local-sdk@1.2.3` allow-scripts entry (2 lines; 7 deletions cumulative with the earlier agent-SDK removals); `package-lock.json` lost `node_modules/foundry-local-sdk` and its only-dependent-free transitive package `node_modules/adm-zip` (2 entries, 20 generated lines). A hoisting-aware resolver over the retained graph reports **0 unresolved references** afterwards, and `@microsoft/mxc-sdk`, `@vscode/sandbox-runtime`, `zod`, `vscode-jsonrpc`, `node-pty` and `kerberos` all remain resolved.
+- **Deletion coupling inside the approved O1 tree (disclosed):** `src/vs/workbench/services/localTranscription/electron-browser/localTranscriptionService.ts` (5 lines) lost its `IProductService` dependency, the `const runtime = this.productService.dictationRuntime;` read and the `runtimeUrlTemplate`/`runtimeVersion` payload fields. Without this the file cannot compile once the contract member is gone, and both files are deleted wholesale by the parent's `git rm`, so the edit exists only to keep the pre-deletion tree green per the coupling rule.
+- **Deletion coupling found outside O1's list, fixed under the standing `build/**` grant:** `build/next/index.ts`'s `desktopEntryPoints` also still listed the two entry points of the **already-deleted** agent host (`vs/platform/agentHost/node/agentHostMain`, `vs/platform/agentHost/node/diffWorkerMain`; `src/vs/platform/agentHost` does not exist). All three entries are removed, which is the precondition for `npm run build-fast` to resolve its desktop entry points at all. This is recorded in `deletion-review.md` §W38 addition.
+- **W38 manifest:** `deletion-review.md` gained W38.h (the 8-file platform tree, 2,300 lines) and W38.i (the 2-file workbench tree, 164 lines) with per-file evidence; the coupled contract removal and the post-`git rm` expectation are recorded there.
+
+### Verification evidence (this pass, Node 24.18.0)
+
+| Command | Result |
+| --- | --- |
+| `npm run compile-client` | **exit 0**, 0 compile errors |
+| `npm run typecheck-client` | **exit 0** (red only during the intra-pass window before the coupled consumer edit; the interim error was the single `TS2339` in the deleted tree's proxy) |
+| `npm run typecheck --prefix build` | **exit 0** |
+| `npm run gulp compile-extensions` | **exit 0**, every retained extension 0 errors |
+| `npm test --prefix build` | **494 passing / 0 failing** (62 suites; 493 before this pass's added test) |
+| `cd build && node --test lib/test/agentProducerFreePackaging.test.ts` | **8/8 passing**, including the new "the unreachable on-device dictation stack is fully deprovisioned" guard |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | **10 passing** |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` | **30 passing** |
+| `git diff --check` | clean |
+
+- Read-only sweeps after the edits: `grep -rn "localTranscription\|foundry\|dictationRuntime"` over `*.ts|js|json|yml|md` (excluding `node_modules`, `out*/**`, `openspec/**`, the two W38 trees and the guard test itself) returns **zero** hits; the guard test re-checks the wiring, manifests, lock and product contract mechanically.
+- Not run, by design: any `git rm` (parent-owned) and packaging runs (V1-owned).
+
+### Persisted task state
+
+- `tasks.md` re-read after this pass: **109 rows / 71 checked / 38 unchecked** — unchanged by O1, deliberately. **P3.GREEN stays `- [ ]` with a single remaining step**: every disconnection, dependency, wiring and contract item in its text is done and verified, but the row's "Remove …" wording closes under the standing deletion protocol only once the parent observes the W38 `git rm` (exactly how P2.GREEN was treated pending W37, and then closed after the deletion was observed). The guard test is deletion-stable, so the post-`git rm` re-verification needs no source change.
+- Remaining unchecked rows for this stage: `P3.GREEN` (parent W38 `git rm`), `P2/P3.TRIANGULATE` (V1 packaging runs), `C7.RED → GREEN` / `C7.TRIANGULATE` (not this pass's assigned rows; their W37 precondition is observed).
+
+### Workload / PR boundary
+
+- O1 is a single cohesive review unit at **113 authored lines** (platform/workbench wiring 2 · product contract 18 net · `build/next/index.ts` 3 · `postinstall.ts` 46 · `gulpfile.vscode.ts` 17 · `package.json` 2 · `package-lock.json` 20 generated · coupled consumer 5), well inside the 400-line cap, with no `size:exception`.
+- Cumulative for the whole P2/P3 assignment: **1,492 authored lines** across 8 review units, each ≤400; the largest single deletion (remote lock 484) remains a generated member-block removal with a structural proof.
+
+### Review focus for the verifier
+
+1. The dictation removal is complete at the wiring level: no `build/` module, no workbench entry point, no manifest and no lock entry references `localTranscription`/`foundry`, and `IProductConfiguration` declares neither `agentSdks` nor `dictationRuntime` — asserted mechanically by `agentProducerFreePackaging.test.ts` (8 tests).
+2. Deletion coupling is honest: the only edit inside the doomed tree is the 5-line `IProductService`/`dictationRuntime` read removal, and it is disclosed in both the W38 addition and here.
+3. `package-lock.json` lost `foundry-local-sdk` **and** its orphaned `adm-zip`, while `vscode-jsonrpc`, `zod` and all retained native packages stay resolved (0 unresolved edges).
+4. `build/next/index.ts` no longer lists any entry point whose source tree is absent (`localTranscription` + the two agent-host entries); `npm run build-fast`'s desktop target can resolve again.

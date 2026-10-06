@@ -82,7 +82,7 @@ suite('Walker packaged product composition', () => {
 			commit: 'reh-test-commit',
 			date: '2025-01-02T03:04:05Z',
 			version: '1.2.3',
-			agentSdks: { test: { version: '4.5.6' } }
+			nlsCoreBaseUrl: 'https://example.test/nls-core'
 		});
 		const productJson = JSON.stringify(remoteProduct);
 		const output = await inlineProductForTarget('server', productJson);
@@ -91,7 +91,7 @@ suite('Walker packaged product composition', () => {
 		assert.strictEqual(output[0].contents?.toString(), `export const product=${productJson};`);
 		assert.deepStrictEqual(remoteProduct.extensionsGallery, expectedGallery);
 		assert.strictEqual(remoteProduct.commit, 'reh-test-commit');
-		assert.deepStrictEqual(remoteProduct.agentSdks, { test: { version: '4.5.6' } });
+		assert.strictEqual(remoteProduct.nlsCoreBaseUrl, 'https://example.test/nls-core');
 	});
 
 	test('product metadata and entrypoints do not expose account tunnel infrastructure', () => {
