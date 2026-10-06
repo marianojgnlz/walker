@@ -20,7 +20,6 @@ import * as platform from '../../base/common/platform.js';
 import { createRegExp, escapeRegExpCharacters } from '../../base/common/strings.js';
 import { URI } from '../../base/common/uri.js';
 import { generateUuid } from '../../base/common/uuid.js';
-import { getOSReleaseInfo } from '../../base/node/osReleaseInfo.js';
 import { findFreePort } from '../../base/node/ports.js';
 import { addUNCHostToAllowlist, disableUNCAccessRestrictions } from '../../base/node/unc.js';
 import { PersistentProtocol } from '../../base/parts/ipc/common/ipc.net.js';
@@ -31,7 +30,6 @@ import { ILogService } from '../../platform/log/common/log.js';
 import { IProductService } from '../../platform/product/common/productService.js';
 import { ConnectionType, ConnectionTypeRequest, ErrorMessage, HandshakeMessage, IRemoteExtensionHostStartParams, ITunnelConnectionStartParams, OKMessage, SignRequest } from '../../platform/remote/common/remoteAgentConnection.js';
 import { RemoteAgentConnectionContext } from '../../platform/remote/common/remoteAgentEnvironment.js';
-import { ITelemetryService } from '../../platform/telemetry/common/telemetry.js';
 import { ExtensionHostConnection } from './extensionHostConnection.js';
 import { ManagementConnection } from './remoteExtensionManagement.js';
 import { determineServerConnectionToken, requestHasValidConnectionToken as httpRequestHasValidConnectionToken, ServerConnectionToken, ServerConnectionTokenParseError, ServerConnectionTokenType } from './serverConnectionToken.js';
@@ -743,55 +741,6 @@ export async function createServer(address: string | net.AddressInfo | null, arg
 	const vscodeServerListenTime: number = (<any>global).vscodeServerListenTime;
 	// eslint-disable-next-line local/code-no-any-casts
 	const vscodeServerCodeLoadedTime: number = (<any>global).vscodeServerCodeLoadedTime;
-
-	instantiationService.invokeFunction(async (accessor) => {
-		const telemetryService = accessor.get(ITelemetryService);
-
-		type ServerStartClassification = {
-			owner: 'alexdima';
-			comment: 'The server has started up';
-			startTime: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The time the server started at.' };
-			startedTime: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The time the server began listening for connections.' };
-			codeLoadedTime: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The time which the code loaded on the server' };
-			readyTime: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The time when the server was completely ready' };
-		};
-		type ServerStartEvent = {
-			startTime: number;
-			startedTime: number;
-			codeLoadedTime: number;
-			readyTime: number;
-		};
-		telemetryService.publicLog2<ServerStartEvent, ServerStartClassification>('serverStart', {
-			startTime: vscodeServerStartTime,
-			startedTime: vscodeServerListenTime,
-			codeLoadedTime: vscodeServerCodeLoadedTime,
-			readyTime: currentTime
-		});
-
-		if (platform.isLinux) {
-			const logService = accessor.get(ILogService);
-			const releaseInfo = await getOSReleaseInfo(logService.error.bind(logService));
-			if (releaseInfo) {
-				type ServerPlatformInfoClassification = {
-					platformId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A string identifying the operating system without any version information.' };
-					platformVersionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A string identifying the operating system version excluding any name information or release code.' };
-					platformIdLike: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A string identifying the operating system the current OS derivate is closely related to.' };
-					owner: 'deepak1556';
-					comment: 'Provides insight into the distro information on Linux.';
-				};
-				type ServerPlatformInfoEvent = {
-					platformId: string;
-					platformVersionId: string | undefined;
-					platformIdLike: string | undefined;
-				};
-				telemetryService.publicLog2<ServerPlatformInfoEvent, ServerPlatformInfoClassification>('serverPlatformInfo', {
-					platformId: releaseInfo.id,
-					platformVersionId: releaseInfo.version_id,
-					platformIdLike: releaseInfo.id_like
-				});
-			}
-		}
-	});
 
 	if (args['print-startup-performance']) {
 		let output = '';

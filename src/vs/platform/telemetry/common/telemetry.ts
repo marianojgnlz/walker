@@ -90,9 +90,6 @@ export interface ICustomEndpointTelemetryService {
 export const currentSessionDateStorageKey = 'telemetry.currentSessionDate';
 export const firstSessionDateStorageKey = 'telemetry.firstSessionDate';
 export const lastSessionDateStorageKey = 'telemetry.lastSessionDate';
-export const machineIdKey = 'telemetry.machineId';
-export const sqmIdKey = 'telemetry.sqmId';
-export const devDeviceIdKey = 'telemetry.devDeviceId';
 
 // Configuration Keys
 export const TELEMETRY_SECTION_ID = 'telemetry';

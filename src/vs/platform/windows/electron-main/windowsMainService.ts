@@ -213,9 +213,6 @@ export class WindowsMainService extends Disposable implements IWindowsMainServic
 	private readonly windowsStateHandler: WindowsStateHandler;
 
 	constructor(
-		private readonly machineId: string,
-		private readonly sqmId: string,
-		private readonly devDeviceId: string,
 		private readonly initialUserEnv: IProcessEnvironment,
 		@ILogService private readonly logService: ILogService,
 		@ILoggerMainService private readonly loggerService: ILoggerMainService,
@@ -1487,9 +1484,6 @@ export class WindowsMainService extends Disposable implements IWindowsMainServic
 			...this.environmentMainService.args,
 			...options.cli,
 
-			machineId: this.machineId,
-			sqmId: this.sqmId,
-			devDeviceId: this.devDeviceId,
 			isPortable: this.environmentMainService.isPortable,
 
 			windowId: -1,	// Will be filled in by the window once loaded later

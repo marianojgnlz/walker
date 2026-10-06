@@ -9,13 +9,10 @@ import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { Event } from '../../../../base/common/event.js';
 import { joinPath } from '../../../../base/common/resources.js';
 import { URI } from '../../../../base/common/uri.js';
-import { isUUID } from '../../../../base/common/uuid.js';
 import { IRequestContext, IRequestOptions, OfflineError } from '../../../../base/parts/request/common/request.js';
-import { mock } from '../../../../base/test/common/mock.js';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
 import { IConfigurationService } from '../../../configuration/common/configuration.js';
 import { TestConfigurationService } from '../../../configuration/test/common/testConfigurationService.js';
-import { IEnvironmentService } from '../../../environment/common/environment.js';
 import { TargetPlatform } from '../../../extensions/common/extensions.js';
 import { resolveMarketplaceHeaders } from '../../../externalServices/common/marketplace.js';
 import { IFileService } from '../../../files/common/files.js';
@@ -25,22 +22,12 @@ import { NullLogService } from '../../../log/common/log.js';
 import product from '../../../product/common/product.js';
 import { IProductService } from '../../../product/common/productService.js';
 import { AuthInfo, Credentials, IRequestService } from '../../../request/common/request.js';
-import { InMemoryStorageService, IStorageService } from '../../../storage/common/storage.js';
 import { TelemetryConfiguration, TELEMETRY_SETTING_ID } from '../../../telemetry/common/telemetry.js';
 import { NullTelemetryService } from '../../../telemetry/common/telemetryUtils.js';
 import { AllowedExtensionsService } from '../../common/allowedExtensionsService.js';
 import { ExtensionGalleryManifestStatus, ExtensionGalleryResourceType, IExtensionGalleryManifest, IExtensionGalleryManifestService } from '../../common/extensionGalleryManifest.js';
 import { ExtensionGalleryError, ExtensionGalleryErrorCode, IGalleryExtension, InstallOperation } from '../../common/extensionManagement.js';
 import { ExtensionGalleryServiceWithNoStorageService, IRawGalleryExtensionVersion, filterLatestExtensionVersionsForTargetPlatform, sortExtensionVersions } from '../../common/extensionGalleryService.js';
-
-class EnvironmentServiceMock extends mock<IEnvironmentService>() {
-	override readonly serviceMachineIdResource: URI;
-	constructor(serviceMachineIdResource: URI) {
-		super();
-		this.serviceMachineIdResource = serviceMachineIdResource;
-		this.isBuilt = true;
-	}
-}
 
 const latestVersionUri = 'https://marketplace.test/_apis/public/gallery/publishers/{publisher}/extensions/{name}/latest';
 const queryServiceUri = 'https://marketplace.test/_apis/public/gallery/extensionquery';
@@ -161,15 +148,13 @@ function createExtensionGalleryManifestService(): IExtensionGalleryManifestServi
 
 suite('Extension Gallery Service', () => {
 	const disposables = ensureNoDisposablesAreLeakedInTestSuite();
-	let fileService: IFileService, environmentService: IEnvironmentService, storageService: IStorageService, productService: IProductService, configurationService: IConfigurationService;
+	let fileService: IFileService, productService: IProductService, configurationService: IConfigurationService;
 
 	setup(() => {
-		const serviceMachineIdResource = joinPath(URI.file('tests').with({ scheme: 'vscode-tests' }), 'machineid');
-		environmentService = new EnvironmentServiceMock(serviceMachineIdResource);
 		fileService = disposables.add(new FileService(new NullLogService()));
+		const testResource = URI.file('tests').with({ scheme: 'vscode-tests' });
 		const fileSystemProvider = disposables.add(new InMemoryFileSystemProvider());
-		disposables.add(fileService.registerProvider(serviceMachineIdResource.scheme, fileSystemProvider));
-		storageService = disposables.add(new InMemoryStorageService());
+		disposables.add(fileService.registerProvider(testResource.scheme, fileSystemProvider));
 		configurationService = new TestConfigurationService({ [TELEMETRY_SETTING_ID]: TelemetryConfiguration.ON });
 		configurationService.updateValue(TELEMETRY_SETTING_ID, TelemetryConfiguration.ON);
 		productService = { _serviceBrand: undefined, ...product, enableTelemetry: true };
@@ -177,15 +162,19 @@ suite('Extension Gallery Service', () => {
 
 	function createExtensionGalleryService(requestService: IRequestService, logService = new NullLogService()): ExtensionGalleryServiceWithNoStorageService {
 		const allowedExtensionsService = disposables.add(new AllowedExtensionsService(productService, configurationService));
-		return new ExtensionGalleryServiceWithNoStorageService(requestService, logService, environmentService, NullTelemetryService, fileService, productService, configurationService, allowedExtensionsService, createExtensionGalleryManifestService());
+		return new ExtensionGalleryServiceWithNoStorageService(requestService, logService, NullTelemetryService, fileService, productService, configurationService, allowedExtensionsService, createExtensionGalleryManifestService());
 	}
 
-	test('marketplace machine id', async () => {
-		const headers = await resolveMarketplaceHeaders(product.version, productService, environmentService, configurationService, fileService, storageService, NullTelemetryService);
-		assert.ok(headers['X-Market-User-Id']);
-		assert.ok(isUUID(headers['X-Market-User-Id']));
-		const headers2 = await resolveMarketplaceHeaders(product.version, productService, environmentService, configurationService, fileService, storageService, NullTelemetryService);
-		assert.strictEqual(headers['X-Market-User-Id'], headers2['X-Market-User-Id']);
+	test('marketplace headers stay functional and anonymous', async () => {
+		const headers = await resolveMarketplaceHeaders(product.version, productService);
+		assert.strictEqual(headers['X-Market-Client-Id'], `VSCode ${product.version}`);
+		assert.strictEqual(headers['User-Agent'], `VSCode ${product.version} (${productService.nameShort})`);
+		assert.strictEqual(headers['X-Market-User-Id'], undefined);
+		assert.strictEqual(headers['VSCode-SessionId'], undefined);
+		assert.strictEqual(headers['X-Machine-Id'], undefined);
+
+		const headers2 = await resolveMarketplaceHeaders(product.version, productService);
+		assert.deepStrictEqual(headers2, headers);
 	});
 
 	test('getExtensions uses query API for extension info without uuid', async () => {

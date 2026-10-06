@@ -39,9 +39,6 @@ export interface INativeWorkbenchEnvironmentService extends IBrowserWorkbenchEnv
 	// --- Main
 	readonly mainPid: number;
 	readonly os: IOSConfiguration;
-	readonly machineId: string;
-	readonly sqmId: string;
-	readonly devDeviceId: string;
 	readonly isPortable: boolean;
 
 	// --- Paths
@@ -60,15 +57,6 @@ export class NativeWorkbenchEnvironmentService extends AbstractNativeEnvironment
 
 	@memoize
 	get mainPid() { return this.configuration.mainPid; }
-
-	@memoize
-	get machineId() { return this.configuration.machineId; }
-
-	@memoize
-	get sqmId() { return this.configuration.sqmId; }
-
-	@memoize
-	get devDeviceId() { return this.configuration.devDeviceId; }
 
 	@memoize
 	get isPortable() { return this.configuration.isPortable; }

@@ -32,9 +32,6 @@ export class SharedProcess extends Disposable {
 	readonly onDidCrash = this._onDidCrash.event;
 
 	constructor(
-		private readonly machineId: string,
-		private readonly sqmId: string,
-		private readonly devDeviceId: string,
 		@IEnvironmentMainService private readonly environmentMainService: IEnvironmentMainService,
 		@IUserDataProfilesService private readonly userDataProfilesService: IUserDataProfilesService,
 		@ILifecycleMainService private readonly lifecycleMainService: ILifecycleMainService,
@@ -182,9 +179,6 @@ export class SharedProcess extends Disposable {
 
 	private createSharedProcessConfiguration(): ISharedProcessConfiguration {
 		return {
-			machineId: this.machineId,
-			sqmId: this.sqmId,
-			devDeviceId: this.devDeviceId,
 			codeCachePath: this.environmentMainService.codeCachePath,
 			profiles: {
 				home: this.userDataProfilesService.profilesHome,

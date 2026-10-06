@@ -55,15 +55,15 @@ The path sets above are ownership partitions, not blanket directories. Cross-cut
 | Ledger entry | Current path/member candidate | Exact removal owner / required retained assertion |
 | --- | --- | --- |
 | T1.001 | `src/vs/code/electron-main/app.ts`: telemetry registration branch | I1 binds no-op; no `telemetryAppender` request; ordinary service collection still resolves |
-| T1.002 | `app.ts`: `resolveCommonProperties`, `machineId`, `sqmId`, `devDeviceId`, `getPiiPathsFromEnvironment` | remove reporting IDs/payload builder; don't erase stored IDs or alter unrelated identity/security consumers |
-| T1.003 | `app.ts`: `power.suspend`, `power.resume` and `PowerEvent` | remove event and event-only listener/timing; retain power lifecycle behavior |
-| T1.004 | `app.ts`: `gpu.crash.fallback`, GPU status and fallback event payload | remove reporter only; retain GPU fallback and diagnostic/error handling |
-| T1.005 | `app.ts`: `networkProcess.launched`, `networkProcess.gone`, exit/crash classifications | remove event listener/payload when sole consumer; retain child lifecycle |
-| T1.006 | `app.ts`: `osProxyConfig`, `OSProxyConfigEvent`, PAC/platform proxy-state gathering | remove report-only classification and timer; retain actual proxy configuration and ordinary errors |
+| T1.002 | `app.ts`: `resolveCommonProperties`, `machineId`, `sqmId`, `devDeviceId`, `getPiiPathsFromEnvironment` | **pruned (`u11.a.002`, 2026-10-08):** identity resolution, state keys, shared-process/window configuration fields, environment-service getters and `resolveCommonProperties` are removed; stored IDs are not wiped and no unrelated identity/security consumer was touched. |
+| T1.003 | `app.ts`: `power.suspend`, `power.resume` and `PowerEvent` | **pruned (`u11.a.001`):** event, classification, event-only listener and idle/thermal sampling removed; power lifecycle behavior is Electron-owned and unchanged. |
+| T1.004 | `app.ts`: `gpu.crash.fallback`, GPU status and fallback event payload | **pruned (`u11.a.001`):** reporter, `getGPULogMessages` payload and the GPU-log string builder removed; GPU fallback/diagnostic handling is untouched. |
+| T1.005 | `app.ts`: `networkProcess.launched`, `networkProcess.gone`, exit/crash classifications | **pruned (`u11.a.001`):** both events/classifications removed while the ordinary `[network process] launched/gone` diagnostic log lines stay. |
+| T1.006 | `app.ts`: `osProxyConfig`, `OSProxyConfigEvent`, PAC/platform proxy-state gathering | **pruned (`u11.a.001`):** event, classification, `logOSProxyConfigTelemetry`, `getPACScriptStats`, `getOSProxyEnvironmentState`, `hasOSProxyBypassRules` and the mutating `telemetryLevel` gate removed; the read-only `readProxyConfigWithPackage` native API is left in place (now consumer-less, T12 residual). |
 | T1.007 | app `ErrorTelemetry` construction and telemetry imports | I1 cutoff then I.ALL removes collector; ordinary uncaught errors remain visible |
 | T1.008 | `src/main.ts`: crashReporter args/config/IDs and `configureCrashReporter` | I7; old flags powerless and no child ID propagation; normal startup errors remain |
-| T1.009 | `src/vs/platform/telemetry/common/commonProperties.ts`: common identity/product/session properties | remove report-only properties and helper; no generic product/version request breakage |
-| T1.010 | electron/node telemetry `resolveMachineId`, `resolveSqmId`, `resolveDevDeviceId`, state keys | remove telemetry ID readers/writers after consumer audit; never wipe old state |
+| T1.009 | `src/vs/platform/telemetry/common/commonProperties.ts`: common identity/product/session properties | **pruned (`u11.a.002`):** `resolveCommonProperties` (identity, session UUID, timestamps, sequence, snap/platform details) removed; only `verifyMicrosoftInternalDomain` remains for the TAS/experiment gate. |
+| T1.010 | electron/node telemetry `resolveMachineId`, `resolveSqmId`, `resolveDevDeviceId`, state keys | **identity half pruned (`u11.a.002`):** all four resolvers/validators, the three state keys and their DI threading were removed and the module is empty (parent-deletion manifest) without wiping stored state. Remaining: `base/node/id.ts` helpers, session-date keys, `virtualMachineHint` consumer audit. |
 | T1.011 | telemetry `supportsTelemetry`, `isLoggingOnly`, `getTelemetryLevel`, `TelemetryLevel` | no product/environment/settings switch may re-enable logging/reporting after cutoff |
 | T1.012 | common/Node/browser 1DS and telemetry log appenders | I.ALL deletes output/network code and direct package deps after no-op wiring |
 | T1.013 | `src/vs/code/electron-utility/sharedProcess/sharedProcessMain.ts`: `appenders`, custom endpoint, appender channel | I4 no channel/appender/flush; extension-management/log services survive |
@@ -138,7 +138,7 @@ Every alias/payload row is assigned to an owning T/I/B family; physical `T*.001`
 
 | Path/member | Current reporting edge | Functional edge retained / future owner |
 | --- | --- | --- |
-| `src/vs/platform/externalServices/common/marketplace.ts:16–38` | settings-gated `getServiceMachineId`, `X-Market-User-Id`, `VSCode-SessionId`, service/telemetry DI params | product/version/User-Agent and ordinary gallery request headers; T7 |
+| `src/vs/platform/externalServices/common/marketplace.ts:16–38` | settings-gated `getServiceMachineId`, `X-Market-User-Id`, `VSCode-SessionId`, service/telemetry DI params | **pruned (`u11.g.001`, 2026-10-08):** the stored service-machine identifier (`serviceMachineId.ts`, emptied for parent deletion), both correlation headers and the `X-Machine-Id` twin in `extensionResourceLoader` are gone; `resolveMarketplaceHeaders(version, productService)` keeps only `X-Market-Client-Id`/`User-Agent`, and product/version/User-Agent plus `X-Client-Name`/`X-Client-Version`/`X-Client-Commit` are retained. `extensionGalleryService.test.ts` asserts the headers stay functional and anonymous. |
 | `src/vs/platform/extensionManagement/common/extensionGalleryService.ts:667,780,817,1080,1301,1479,1539,1636,1901` | additional query/name, engine fallback, query duration/count, latest and CDN fallback event calls | query/latest/download fallback operations; T7 |
 | `extensionGalleryService.ts:1295–1301,1432–1479,1559–1636` | `StopWatch`/duration/count work adjacent to publicLog calls | Remove if only payload; retain independent download/query timing only with consumer evidence |
 | `extensionGalleryService.ts:1649–1676` | `reportStatistic()` sends gallery statistics resource POST; telemetry bypass candidate | remove usage statistics request; preserve metadata, functional gallery requests, installs and local VSIX |
@@ -286,3 +286,30 @@ Reporter search output above includes 97 exact paths: Copilot 25, Git 7, GitHub 
 * `scripts/test.sh` and integration runner contents were read for crash/auth/Copilot/Agent Host tails; no runner was edited in U00.
 
 <!-- end U00.b ledger -->
+
+## U11 pruning progress — pass 1 (2026-10-08; T1/T3/T7/T8/T11 partial)
+
+Group states stay `pending` until every entry in the group closes; the rows below record what this pass actually retired and what remains. Measured diff: 39 source/test files, +109/−1,746 authored lines (`git diff --shortstat -- src`).
+
+| Closed entry | Leaf | Evidence |
+| --- | --- | --- |
+| T1.003 power suspend/resume, T1.004 GPU crash fallback, T1.005 network-process events, T1.006 `osProxyConfig` payload+timer | `u11.a.001` | `app.ts` has no `ITelemetryService`/`TelemetryLevel` usage; `productDebloat.test.ts` (9 passing) + `typecheck-client` |
+| Metered-connection state reporting (`meteredConnectionStateChange`, `setTelemetryService`) | `u11.a.001` | `meteredConnectionMainService.ts` keeps only the deferred-init + state propagation behavior |
+| T1.002 identity payload, T1.009 common properties, T1.010 machine/SQM/device ID resolution | `u11.a.002` | `platform/telemetry/electron-main/telemetryUtils.ts` emptied (parent-deletion manifest); no `machineIdKey`/`sqmIdKey`/`devDeviceIdKey` remains; stored state untouched |
+| Shared-process `clientPlatformInfo` + Linux distro/DE payload reads; server `serverStart`/`serverPlatformInfo` | `u11.a.003` | no `publicLog` remains in `sharedProcessMain.ts` or `remoteExtensionHostAgentServer.ts` |
+| Workbench call-site contribution (`workspaceLoad`, `fileGet`, `filePUT`, configuration-setting events) | `u11.c.001` | contribution emptied + unregistered; `productDebloat.test.ts` and `productDebloatChatIntegrations.test.ts` assert the absence |
+| Effective-policy telemetry (`policy.applied`) + its obsolete suite | `u11.c.002` | contribution and test emptied + unregistered; generic policy suites untouched |
+| Marketplace/gallery correlation identity (`getServiceMachineId`, `X-Market-User-Id`, `VSCode-SessionId`, `X-Machine-Id`) | `u11.g.001` | `serviceMachineId.ts` emptied; gallery suite 38 passing with the anonymous-header assertion |
+| Release-notes marketing attribution gated on telemetry settings | `u11.c.003` | `addGAParameters`/utm parameters removed; release-note links open unchanged |
+| Remote `updateTelemetryLevel` / `logTelemetry` / `flushTelemetry` RPC + propagation contribution | `u11.h.001` | the `telemetry` channel client and the `updateTelemetryLevel` remote RPC are gone; `getRoundTripTime` uses the retained remote-extension-environment channel |
+| `telemetry.telemetryLevel` / `telemetry.enableTelemetry` registrations; `telemetry.enableCrashReporter` registration | `u11.k.001` | `platform/telemetry/common/telemetryService.ts` now registers only the retained `telemetry.feedback.enabled`; `desktop.contribution.ts` lost the crash-reporter setting |
+
+### Retained / regressed items handled in the same pass
+
+* **U10 regression fixed:** the retained non-telemetry `telemetry.feedback.enabled` setting (read by the issue reporter, NPS survey and relauncher) had been silently unregistered when U10 removed its renderer side-effect importer. `u11.k.001` restores that registration from `workbench.common.main.ts` with unchanged type/default/description/policy. This keeps the `EnableFeedback` policy entry in `build/lib/policies/policyData.jsonc` matched; the `TelemetryLevel` policy entry has no registration and is a recorded T11 residual.
+* **Latency measurement:** `remoteConnectionLatencyMeasurer`/`getRoundTripTime` is retained (it drives the remote indicator tooltip and diagnostic-info latency), but it was already non-functional after U10 removed the telemetry channel's `ping` handler. The `RemoteConnectionLatencyClassification` event in `contrib/remote/browser/remoteConnectionHealth.ts` remains a T8 residual.
+* **`disable-telemetry` argv** is retained as a documented inert invocation-compatibility input because the integration runners, the smoke runner and `extensions/vscode-test-resolver` still pass it; `telemetry-level`, `crash-reporter-directory` and `crash-reporter-id` remain T11 residual work together with their `environmentService` getters, `desktop.contribution.ts` argv help entries and `server.cli.ts` validation.
+
+### Focused selectors run in this pass
+
+`./scripts/test.sh --run vs/platform/telemetry/test/common/nullTelemetryService.test` (2 passing) · `vs/code/test/electron-main/productDebloat.test` (9) · `vs/workbench/test/browser/productDebloatChatIntegrations.test` (30) · `vs/workbench/api/test/common/accountFreeApi.test` (10) · `vs/platform/extensionManagement/test/common/extensionGalleryService.test` (38) · `npm run typecheck-client` (exit 0) · `npm run compile-client` (exit 0).

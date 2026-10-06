@@ -92,9 +92,6 @@ import { RemoteConnectionType } from '../../../platform/remote/common/remoteAuth
 import { nodeSocketFactory } from '../../../platform/remote/node/nodeSocketFactory.js';
 import { NativeEnvironmentService } from '../../../platform/environment/node/environmentService.js';
 import { SharedProcessRawConnection, SharedProcessLifecycle } from '../../../platform/sharedProcess/common/sharedProcess.js';
-import { getOSReleaseInfo } from '../../../base/node/osReleaseInfo.js';
-import { getDesktopEnvironment } from '../../../base/common/desktopEnvironmentInfo.js';
-import { getCodeDisplayProtocol, getDisplayProtocol } from '../../../base/node/osDisplayProtocolInfo.js';
 import { RequestService } from '../../../platform/request/electron-utility/requestService.js';
 import { DefaultExtensionsInitializer } from './contrib/defaultExtensionsInitializer.js';
 import { AllowedExtensionsService } from '../../../platform/extensionManagement/common/allowedExtensionsService.js';
@@ -154,7 +151,6 @@ class SharedProcessMain extends Disposable implements IClientConnectionFilter {
 
 		instantiationService.invokeFunction(accessor => {
 			const logService = accessor.get(ILogService);
-			const telemetryService = accessor.get(ITelemetryService);
 
 			// Log info
 			logService.trace('sharedProcess configuration', JSON.stringify(this.configuration));
@@ -164,9 +160,6 @@ class SharedProcessMain extends Disposable implements IClientConnectionFilter {
 
 			// Error handler
 			this.registerErrorHandler(logService);
-
-			// Report Client OS/DE Info
-			this.reportClientOSInfo(telemetryService, logService);
 		});
 
 		// Instantiate Contributions
@@ -409,45 +402,6 @@ class SharedProcessMain extends Disposable implements IClientConnectionFilter {
 
 			logService.error(`[uncaught exception in sharedProcess]: ${message}`);
 		});
-	}
-
-	private async reportClientOSInfo(telemetryService: ITelemetryService, logService: ILogService): Promise<void> {
-		if (isLinux) {
-			const [releaseInfo, displayProtocol] = await Promise.all([
-				getOSReleaseInfo(logService.error.bind(logService)),
-				getDisplayProtocol(logService.error.bind(logService))
-			]);
-			const desktopEnvironment = getDesktopEnvironment();
-			const codeSessionType = getCodeDisplayProtocol(displayProtocol, this.configuration.args['ozone-platform']);
-			if (releaseInfo) {
-				type ClientPlatformInfoClassification = {
-					platformId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A string identifying the operating system without any version information.' };
-					platformVersionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A string identifying the operating system version excluding any name information or release code.' };
-					platformIdLike: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A string identifying the operating system the current OS derivate is closely related to.' };
-					desktopEnvironment: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A string identifying the desktop environment the user is using.' };
-					displayProtocol: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A string identifying the users display protocol type.' };
-					codeDisplayProtocol: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A string identifying the vscode display protocol type.' };
-					owner: 'benibenj';
-					comment: 'Provides insight into the distro and desktop environment information on Linux.';
-				};
-				type ClientPlatformInfoEvent = {
-					platformId: string;
-					platformVersionId: string | undefined;
-					platformIdLike: string | undefined;
-					desktopEnvironment: string | undefined;
-					displayProtocol: string | undefined;
-					codeDisplayProtocol: string | undefined;
-				};
-				telemetryService.publicLog2<ClientPlatformInfoEvent, ClientPlatformInfoClassification>('clientPlatformInfo', {
-					platformId: releaseInfo.id,
-					platformVersionId: releaseInfo.version_id,
-					platformIdLike: releaseInfo.id_like,
-					desktopEnvironment: desktopEnvironment,
-					displayProtocol: displayProtocol,
-					codeDisplayProtocol: codeSessionType
-				});
-			}
-		}
 	}
 
 	handledClientConnection(e: MessageEvent): boolean {

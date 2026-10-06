@@ -25,7 +25,6 @@ import { ILogService } from '../../log/common/log.js';
 import { IProductService } from '../../product/common/productService.js';
 import { asJson, asTextOrError, IRequestService, isClientError, isServerError, isSuccess } from '../../request/common/request.js';
 import { resolveMarketplaceHeaders } from '../../externalServices/common/marketplace.js';
-import { IStorageService } from '../../storage/common/storage.js';
 import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { StopWatch } from '../../../base/common/stopwatch.js';
 import { format2 } from '../../../base/common/strings.js';
@@ -611,10 +610,8 @@ export abstract class AbstractExtensionGalleryService implements IExtensionGalle
 	private readonly commonHeadersPromise: Promise<IHeaders>;
 
 	constructor(
-		storageService: IStorageService | undefined,
 		@IRequestService private readonly requestService: IRequestService,
 		@ILogService private readonly logService: ILogService,
-		@IEnvironmentService private readonly environmentService: IEnvironmentService,
 		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IFileService private readonly fileService: IFileService,
 		@IProductService private readonly productService: IProductService,
@@ -626,12 +623,7 @@ export abstract class AbstractExtensionGalleryService implements IExtensionGalle
 		this.unpkgResourceApi = productService.extensionsGallery?.extensionUrlTemplate;
 		this.commonHeadersPromise = resolveMarketplaceHeaders(
 			productService.version,
-			productService,
-			this.environmentService,
-			this.configurationService,
-			this.fileService,
-			storageService,
-			this.telemetryService);
+			productService);
 	}
 
 	isEnabled(): boolean {
@@ -1990,7 +1982,6 @@ export abstract class AbstractExtensionGalleryService implements IExtensionGalle
 export class ExtensionGalleryService extends AbstractExtensionGalleryService {
 
 	constructor(
-		@IStorageService storageService: IStorageService,
 		@IRequestService requestService: IRequestService,
 		@ILogService logService: ILogService,
 		@IEnvironmentService environmentService: IEnvironmentService,
@@ -2001,7 +1992,7 @@ export class ExtensionGalleryService extends AbstractExtensionGalleryService {
 		@IAllowedExtensionsService allowedExtensionsService: IAllowedExtensionsService,
 		@IExtensionGalleryManifestService extensionGalleryManifestService: IExtensionGalleryManifestService,
 	) {
-		super(storageService, requestService, logService, environmentService, telemetryService, fileService, productService, configurationService, allowedExtensionsService, extensionGalleryManifestService);
+		super(requestService, logService, telemetryService, fileService, productService, configurationService, allowedExtensionsService, extensionGalleryManifestService);
 	}
 }
 
@@ -2010,7 +2001,6 @@ export class ExtensionGalleryServiceWithNoStorageService extends AbstractExtensi
 	constructor(
 		@IRequestService requestService: IRequestService,
 		@ILogService logService: ILogService,
-		@IEnvironmentService environmentService: IEnvironmentService,
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IFileService fileService: IFileService,
 		@IProductService productService: IProductService,
@@ -2018,6 +2008,6 @@ export class ExtensionGalleryServiceWithNoStorageService extends AbstractExtensi
 		@IAllowedExtensionsService allowedExtensionsService: IAllowedExtensionsService,
 		@IExtensionGalleryManifestService extensionGalleryManifestService: IExtensionGalleryManifestService,
 	) {
-		super(undefined, requestService, logService, environmentService, telemetryService, fileService, productService, configurationService, allowedExtensionsService, extensionGalleryManifestService);
+		super(requestService, logService, telemetryService, fileService, productService, configurationService, allowedExtensionsService, extensionGalleryManifestService);
 	}
 }

@@ -67,6 +67,24 @@ suite('Product debloat process startup', () => {
 		assert.doesNotMatch(contribution, /ErrorTelemetry|showTelemetry|TelemetryLogGroup|telemetryLogId/);
 	});
 
+	test('workbench telemetry call-site contributions are removed from the shell', () => {
+		const commonMain = readRepoFile('src/vs/workbench/workbench.common.main.ts');
+		assert.doesNotMatch(commonMain, /contrib\/telemetry\/browser\/telemetry\.contribution/);
+		assert.doesNotMatch(commonMain, /services\/policies\/browser\/policyTelemetry\.contribution/);
+
+		// Representative call-site modules: no event, payload, classification or telemetry
+		// service residue may survive in them (spec criterion 3/4).
+		const callSites: [string, RegExp][] = [
+			['src/vs/workbench/contrib/telemetry/browser/telemetry.contribution.ts', /publicLog|workspaceLoad|fileGet|filePUT|WorkbenchTelemetry|TelemetryTrustedValue/],
+			['src/vs/workbench/services/policies/browser/policyTelemetry.contribution.ts', /publicLog|PolicyAppliedEvent|PolicyAppliedClassification|policy\.applied/],
+		];
+		for (const [relativePath, removal] of callSites) {
+			const source = readRepoFile(relativePath);
+			assert.doesNotMatch(source, removal, relativePath);
+			assert.doesNotMatch(source, /ITelemetryService/, relativePath);
+		}
+	});
+
 	test('extension telemetry facade never reports and no 1DS reporting dependency remains in core', () => {
 		const extHost = readRepoFile('src/vs/workbench/api/common/extHostTelemetry.ts');
 		assert.doesNotMatch(extHost, /@microsoft\/1ds|cleanData|TelemetryLogGroup|\.sendEventData\(|\.sendErrorData\(|\.flush\(/);

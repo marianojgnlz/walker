@@ -11,12 +11,6 @@ import { PolicyDefinition, PolicyValue } from '../../policy/common/policy.js';
 import { UriComponents, UriDto } from '../../../base/common/uri.js';
 
 export interface ISharedProcessConfiguration {
-	readonly machineId: string;
-
-	readonly sqmId: string;
-
-	readonly devDeviceId: string;
-
 	readonly codeCachePath: string | undefined;
 
 	readonly args: NativeParsedArgs;

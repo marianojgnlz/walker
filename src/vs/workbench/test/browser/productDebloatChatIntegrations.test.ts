@@ -350,9 +350,18 @@ suite('Product chat integration boundaries', () => {
 		assert.doesNotMatch(testingContribution, /TestingChatAgentToolContribution|testingChatAgentTool\.js/);
 		assert.match(testingContribution, /registerWorkbenchContribution2\(TestingContentProvider\.ID/);
 
-		const telemetryContribution = readWorkbenchSource('contrib/telemetry/browser/telemetry.contribution.ts');
-		assert.doesNotMatch(telemetryContribution, /TerminalContribSettingId\.OutputLocation|terminal\.integrated\.chatAgentTools\.outputLocation/);
-		assert.match(telemetryContribution, /TerminalContribSettingId\.SuggestEnabled/);
+		const telemetryContributionPath = join(process.cwd(), 'src/vs/workbench', 'contrib/telemetry/browser/telemetry.contribution.ts');
+		if (existsSync(telemetryContributionPath)) {
+			const telemetryContribution = readFileSync(telemetryContributionPath, 'utf8');
+			assert.doesNotMatch(telemetryContribution, /TerminalContribSettingId|terminal\.integrated\.chatAgentTools\.outputLocation/);
+		}
+
+		// The workbench telemetry call-site contribution is no longer registered: T3 removed
+		// the workspace-load/file/configuration events, so neither the Chat-only setting
+		// reference nor the telemetry machinery can come back through it.
+		const commonMain = readWorkbenchSource('workbench.common.main.ts');
+		assert.doesNotMatch(commonMain, /contrib\/telemetry\/browser\/telemetry\.contribution/);
+		assert.doesNotMatch(commonMain, /policyTelemetry\.contribution/);
 	});
 
 	test('terminal startup and command decoration preserve generic behavior without Chat', () => {
