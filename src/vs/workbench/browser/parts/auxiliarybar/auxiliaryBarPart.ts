@@ -109,7 +109,6 @@ export class AuxiliaryBarPart extends AbstractPaneCompositePart {
 			ActiveAuxiliaryContext.bindTo(contextKeyService),
 			AuxiliaryBarFocusContext.bindTo(contextKeyService),
 			'auxiliarybar',
-			'auxiliarybar',
 			undefined,
 			SIDE_BAR_TITLE_BORDER,
 			ViewContainerLocation.AuxiliaryBar,

@@ -35,7 +35,6 @@ import { IconLabel } from '../../../../base/browser/ui/iconLabel/iconLabel.js';
 import { SCMViewService } from './scmViewService.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
 import { WorkbenchToolBar } from '../../../../platform/actions/browser/toolbar.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IResourceNode, ResourceTree } from '../../../../base/common/resourceTree.js';
 import { URI } from '../../../../base/common/uri.js';
@@ -89,8 +88,7 @@ class ArtifactGroupRenderer implements ICompressibleTreeRenderer<SCMArtifactGrou
 		@IKeybindingService private readonly _keybindingService: IKeybindingService,
 		@IMenuService private readonly _menuService: IMenuService,
 		@ICommandService private readonly _commandService: ICommandService,
-		@ISCMViewService private readonly _scmViewService: ISCMViewService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService
+		@ISCMViewService private readonly _scmViewService: ISCMViewService
 	) { }
 
 	renderTemplate(container: HTMLElement): ArtifactGroupTemplate {
@@ -99,7 +97,7 @@ class ArtifactGroupRenderer implements ICompressibleTreeRenderer<SCMArtifactGrou
 		const label = new IconLabel(element, { supportIcons: false });
 
 		const actionsContainer = append(element, $('.actions'));
-		const actionBar = new WorkbenchToolBar(actionsContainer, { actionViewItemProvider: this.actionViewItemProvider }, this._menuService, this._contextKeyService, this._contextMenuService, this._keybindingService, this._commandService, this._telemetryService);
+		const actionBar = new WorkbenchToolBar(actionsContainer, { actionViewItemProvider: this.actionViewItemProvider }, this._menuService, this._contextKeyService, this._contextMenuService, this._keybindingService, this._commandService);
 
 		return { icon, label, actionBar, elementDisposables: new DisposableStore(), templateDisposable: combinedDisposable(label, actionBar) };
 	}
@@ -156,8 +154,7 @@ class ArtifactRenderer implements ICompressibleTreeRenderer<SCMArtifactTreeEleme
 		@IKeybindingService private readonly _keybindingService: IKeybindingService,
 		@IMenuService private readonly _menuService: IMenuService,
 		@ICommandService private readonly _commandService: ICommandService,
-		@ISCMViewService private readonly _scmViewService: ISCMViewService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService
+		@ISCMViewService private readonly _scmViewService: ISCMViewService
 	) { }
 
 	renderTemplate(container: HTMLElement): ArtifactTemplate {
@@ -169,7 +166,7 @@ class ArtifactRenderer implements ICompressibleTreeRenderer<SCMArtifactTreeEleme
 		const timestamp = append(timestampContainer, $('.timestamp'));
 
 		const actionsContainer = append(element, $('.actions'));
-		const actionBar = new WorkbenchToolBar(actionsContainer, { actionViewItemProvider: this.actionViewItemProvider }, this._menuService, this._contextKeyService, this._contextMenuService, this._keybindingService, this._commandService, this._telemetryService);
+		const actionBar = new WorkbenchToolBar(actionsContainer, { actionViewItemProvider: this.actionViewItemProvider }, this._menuService, this._contextKeyService, this._contextMenuService, this._keybindingService, this._commandService);
 
 		return { icon, label, timestampContainer, timestamp, actionBar, elementDisposables: new DisposableStore(), templateDisposable: combinedDisposable(label, actionBar) };
 	}

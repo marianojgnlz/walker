@@ -6,7 +6,6 @@
 import * as nls from '../../../../../nls.js';
 import * as DOM from '../../../../../base/browser/dom.js';
 import { IStorageService } from '../../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService, registerThemingParticipant } from '../../../../../platform/theme/common/themeService.js';
 import { EditorPaneSelectionChangeReason, EditorPaneSelectionCompareResult, IEditorOpenContext, IEditorPaneScrollPosition, IEditorPaneSelection, IEditorPaneSelectionChangeEvent, IEditorPaneWithScrolling, IEditorPaneWithSelection } from '../../../../common/editor.js';
 import { getDefaultNotebookCreationOptions } from '../notebookEditorWidget.js';
@@ -164,12 +163,11 @@ export class NotebookTextDiffEditor extends EditorPane implements INotebookTextD
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@INotebookEditorWorkerService private readonly notebookEditorWorkerService: INotebookEditorWorkerService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IStorageService storageService: IStorageService,
 		@INotebookService private readonly notebookService: INotebookService,
 		@IEditorService private readonly editorService: IEditorService,
 	) {
-		super(NotebookTextDiffEditor.ID, group, telemetryService, themeService, storageService);
+		super(NotebookTextDiffEditor.ID, group, themeService, storageService);
 		this.diffEditorCalcuator = this.instantiationService.createInstance(DiffEditorHeightCalculatorService, this.fontInfo.lineHeight);
 		this._notebookOptions = instantiationService.createInstance(NotebookOptions, this.window, false, undefined);
 		this._register(this._notebookOptions);

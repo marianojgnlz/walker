@@ -12,7 +12,6 @@ import { localize } from '../../../../nls.js';
 import { IContextMenuService, IContextViewService } from '../../../../platform/contextview/browser/contextView.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { IUserDataProfile, IUserDataProfilesService, ProfileResourceType } from '../../../../platform/userDataProfile/common/userDataProfile.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
@@ -110,7 +109,6 @@ export class UserDataProfilesEditor extends EditorPane implements IUserDataProfi
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IQuickInputService private readonly quickInputService: IQuickInputService,
@@ -118,7 +116,7 @@ export class UserDataProfilesEditor extends EditorPane implements IUserDataProfi
 		@IContextMenuService private readonly contextMenuService: IContextMenuService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 	) {
-		super(UserDataProfilesEditor.ID, group, telemetryService, themeService, storageService);
+		super(UserDataProfilesEditor.ID, group, themeService, storageService);
 	}
 
 	layout(dimension: Dimension, position?: IDomPosition | undefined): void {

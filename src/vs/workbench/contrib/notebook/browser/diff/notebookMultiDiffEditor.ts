@@ -6,7 +6,6 @@
 import * as DOM from '../../../../../base/browser/dom.js';
 import { IWorkbenchUIElementFactory, MultiDiffEditorItemLabelKind, type IResourceLabel } from '../../../../../editor/browser/widget/multiDiffEditor/workbenchUIElementFactory.js';
 import { IStorageService } from '../../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
 import { IEditorOpenContext } from '../../../../common/editor.js';
 import { IEditorGroup } from '../../../../services/editor/common/editorGroupsService.js';
@@ -69,11 +68,10 @@ export class NotebookMultiTextDiffEditor extends EditorPane {
 		@IContextKeyService private readonly _parentContextKeyService: IContextKeyService,
 		@INotebookEditorWorkerService private readonly notebookEditorWorkerService: INotebookEditorWorkerService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IStorageService storageService: IStorageService,
 		@INotebookService private readonly notebookService: INotebookService,
 	) {
-		super(NotebookMultiTextDiffEditor.ID, group, telemetryService, themeService, storageService);
+		super(NotebookMultiTextDiffEditor.ID, group, themeService, storageService);
 		this.modelSpecificResources = this._register(new DisposableStore());
 		this.ctxAllCollapsed = this._parentContextKeyService.createKey<boolean>(NOTEBOOK_DIFF_CELLS_COLLAPSED.key, false);
 		this.ctxHasUnchangedCells = this._parentContextKeyService.createKey<boolean>(NOTEBOOK_DIFF_HAS_UNCHANGED_CELLS.key, false);

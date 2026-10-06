@@ -10,8 +10,6 @@ import { IEditorSerializer, IEditorFactoryRegistry, EditorExtensions, EditorInpu
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { Registry } from '../../../../../platform/registry/common/platform.js';
 import { SyncDescriptor } from '../../../../../platform/instantiation/common/descriptors.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
-import { NullTelemetryService } from '../../../../../platform/telemetry/common/telemetryUtils.js';
 import { workbenchInstantiationService, TestEditorGroupView, TestEditorGroupsService, registerTestResourceEditor, TestEditorInput, createEditorPart, TestTextResourceConfigurationService } from '../../workbenchTestServices.js';
 import { TextResourceEditorInput } from '../../../../common/editor/textResourceEditorInput.js';
 import { TestThemeService } from '../../../../../platform/theme/test/common/testThemeService.js';
@@ -38,7 +36,7 @@ class TestEditor extends EditorPane {
 
 	constructor(group: IEditorGroup,) {
 		const disposables = new DisposableStore();
-		super('TestEditor', group, NullTelemetryService, NullThemeService, disposables.add(new TestStorageService()));
+		super('TestEditor', group, NullThemeService, disposables.add(new TestStorageService()));
 
 		this._register(disposables);
 	}
@@ -52,7 +50,7 @@ class OtherTestEditor extends EditorPane {
 
 	constructor(group: IEditorGroup,) {
 		const disposables = new DisposableStore();
-		super('testOtherEditor', group, NullTelemetryService, NullThemeService, disposables.add(new TestStorageService()));
+		super('testOtherEditor', group, NullThemeService, disposables.add(new TestStorageService()));
 
 		this._register(disposables);
 	}
@@ -458,8 +456,8 @@ suite('EditorPane', () => {
 	test('WorkspaceTrustRequiredEditor', async function () {
 
 		class TrustRequiredTestEditor extends EditorPane {
-			constructor(group: IEditorGroup, @ITelemetryService telemetryService: ITelemetryService) {
-				super('TestEditor', group, NullTelemetryService, NullThemeService, disposables.add(new TestStorageService()));
+			constructor(group: IEditorGroup) {
+				super('TestEditor', group, NullThemeService, disposables.add(new TestStorageService()));
 			}
 
 			override getId(): string { return 'trustRequiredTestEditor'; }

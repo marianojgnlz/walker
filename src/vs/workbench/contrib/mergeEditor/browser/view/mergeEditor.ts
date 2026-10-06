@@ -28,7 +28,6 @@ import { IEditorOptions, ITextEditorOptions, ITextResourceEditorInput } from '..
 import { IFileService } from '../../../../../platform/files/common/files.js';
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
 import { AbstractTextEditor } from '../../../../browser/parts/editor/textEditor.js';
 import { DEFAULT_EDITOR_ASSOCIATION, EditorInputWithOptions, IEditorOpenContext, IResourceMergeEditorInput } from '../../../../common/editor.js';
@@ -96,7 +95,6 @@ export class MergeEditor extends AbstractTextEditor<IMergeEditorViewState> {
 		group: IEditorGroup,
 		@IInstantiationService instantiation: IInstantiationService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IStorageService storageService: IStorageService,
 		@IThemeService themeService: IThemeService,
 		@ITextResourceConfigurationService textResourceConfigurationService: ITextResourceConfigurationService,
@@ -105,7 +103,7 @@ export class MergeEditor extends AbstractTextEditor<IMergeEditorViewState> {
 		@IFileService fileService: IFileService,
 		@ICodeEditorService private readonly _codeEditorService: ICodeEditorService
 	) {
-		super(MergeEditor.ID, group, telemetryService, instantiation, storageService, textResourceConfigurationService, themeService, editorService, editorGroupService, fileService);
+		super(MergeEditor.ID, group, instantiation, storageService, textResourceConfigurationService, themeService, editorService, editorGroupService, fileService);
 		this._sessionDisposables = new DisposableStore();
 		this._viewModel = observableValue<MergeEditorViewModel | undefined>(this, undefined);
 		this._grid = this._register(new MutableDisposable<Grid<IView>>());

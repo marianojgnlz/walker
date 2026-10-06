@@ -21,7 +21,6 @@ export interface IAgentEditorCommentsOverlayOptions {
 	readonly previousActionId: string;
 	readonly nextActionId: string;
 	readonly navigationBearingActionId: string;
-	readonly telemetrySource: string;
 }
 
 class SubmitCommentsActionRunner extends ActionRunner {
@@ -119,7 +118,6 @@ export class AgentEditorCommentsOverlayWidget extends Disposable {
 			this._domNode.appendChild(this._toolbarNode);
 		}
 		const toolbar = this._showStore.add(this._instantiationService.createInstance(MenuWorkbenchToolBar, this._toolbarNode, this._options.menuId, {
-			telemetrySource: this._options.telemetrySource,
 			hiddenItemStrategy: HiddenItemStrategy.Ignore,
 			toolbarOptions: {
 				primaryGroup: () => true,

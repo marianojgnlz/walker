@@ -7,7 +7,6 @@ import { localize } from '../../../../nls.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { EditorInput } from '../../../common/editor/editorInput.js';
 import { BinaryEditorModel } from '../../../common/editor/binaryEditorModel.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
 import { ByteSize } from '../../../../platform/files/common/files.js';
@@ -36,11 +35,10 @@ export abstract class BaseBinaryResourceEditor extends EditorPlaceholder {
 		id: string,
 		group: IEditorGroup,
 		private readonly callbacks: IOpenCallbacks,
-		telemetryService: ITelemetryService,
 		themeService: IThemeService,
 		@IStorageService storageService: IStorageService
 	) {
-		super(id, group, telemetryService, themeService, storageService);
+		super(id, group, themeService, storageService);
 	}
 
 	override getTitle(): string {

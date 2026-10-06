@@ -5,7 +5,6 @@
 
 import { localize } from '../../../../../nls.js';
 import { BaseBinaryResourceEditor } from '../../../../browser/parts/editor/binaryEditor.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
 import { EditorInput } from '../../../../common/editor/editorInput.js';
 import { FileEditorInput } from './fileEditorInput.js';
@@ -26,7 +25,6 @@ export class BinaryFileEditor extends BaseBinaryResourceEditor {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IEditorResolverService private readonly editorResolverService: IEditorResolverService,
 		@IStorageService storageService: IStorageService
@@ -37,7 +35,6 @@ export class BinaryFileEditor extends BaseBinaryResourceEditor {
 			{
 				openInternal: (input, options) => this.openInternal(input, options)
 			},
-			telemetryService,
 			themeService,
 			storageService
 		);

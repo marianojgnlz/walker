@@ -34,7 +34,6 @@ import { multibyteAwareBtoa } from '../../../../base/common/strings.js';
 import { ByteSize, FileOperationError, FileOperationResult, IFileService, TooLargeFileOperationError } from '../../../../platform/files/common/files.js';
 import { IBoundarySashes } from '../../../../base/browser/ui/sash/sash.js';
 import { IPreferencesService } from '../../../services/preferences/common/preferences.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { DiffEditorWidget } from '../../../../editor/browser/widget/diffEditor/diffEditorWidget.js';
 
 /**
@@ -58,7 +57,6 @@ export class TextDiffEditor extends AbstractTextEditor<IDiffEditorViewState> imp
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IStorageService storageService: IStorageService,
 		@ITextResourceConfigurationService configurationService: ITextResourceConfigurationService,
@@ -69,7 +67,7 @@ export class TextDiffEditor extends AbstractTextEditor<IDiffEditorViewState> imp
 		@IPreferencesService private readonly preferencesService: IPreferencesService,
 		@IEditorResolverService private readonly editorResolverService: IEditorResolverService
 	) {
-		super(TextDiffEditor.ID, group, telemetryService, instantiationService, storageService, configurationService, themeService, editorService, editorGroupService, fileService);
+		super(TextDiffEditor.ID, group, instantiationService, storageService, configurationService, themeService, editorService, editorGroupService, fileService);
 	}
 
 	override getTitle(): string {

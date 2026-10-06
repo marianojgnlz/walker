@@ -10,7 +10,6 @@ import Severity from '../../../../base/common/severity.js';
 import { IEditorOpenContext, isEditorOpenError } from '../../../common/editor.js';
 import { EditorInput } from '../../../common/editor/editorInput.js';
 import { EditorPane } from './editorPane.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { DomScrollableElement } from '../../../../base/browser/ui/scrollbar/scrollableElement.js';
 import { ScrollbarVisibility } from '../../../../base/common/scrollable.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
@@ -58,11 +57,10 @@ export abstract class EditorPlaceholder extends EditorPane {
 	constructor(
 		id: string,
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService
 	) {
-		super(id, group, telemetryService, themeService, storageService);
+		super(id, group, themeService, storageService);
 	}
 
 	protected createEditor(parent: HTMLElement): void {
@@ -190,13 +188,12 @@ export class WorkspaceTrustRequiredPlaceholderEditor extends EditorPlaceholder {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@ICommandService private readonly commandService: ICommandService,
 		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
 		@IStorageService storageService: IStorageService
 	) {
-		super(WorkspaceTrustRequiredPlaceholderEditor.ID, group, telemetryService, themeService, storageService);
+		super(WorkspaceTrustRequiredPlaceholderEditor.ID, group, themeService, storageService);
 	}
 
 	override getTitle(): string {
@@ -228,14 +225,13 @@ export class ErrorPlaceholderEditor extends EditorPlaceholder {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IFileService private readonly fileService: IFileService,
 		@IDialogService private readonly dialogService: IDialogService,
 		@ICommandService private readonly commandService: ICommandService
 	) {
-		super(ErrorPlaceholderEditor.ID, group, telemetryService, themeService, storageService);
+		super(ErrorPlaceholderEditor.ID, group, themeService, storageService);
 	}
 
 	protected async getContents(input: EditorInput, options: IErrorEditorPlaceholderOptions, disposables: DisposableStore): Promise<IEditorPlaceholderContents> {

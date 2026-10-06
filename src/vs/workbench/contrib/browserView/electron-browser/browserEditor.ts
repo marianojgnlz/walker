@@ -18,7 +18,6 @@ import { URI } from '../../../../base/common/uri.js';
 import { IQuickInputButton } from '../../../../platform/quickinput/common/quickInput.js';
 import { IBrowserViewModel } from '../../browserView/common/browserView.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
 import { IEditorGroup } from '../../../services/editor/common/editorGroupsService.js';
 import { IEditorOptions } from '../../../../platform/editor/common/editor.js';
@@ -448,14 +447,13 @@ export class BrowserEditor extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@ILayoutService private readonly layoutService: ILayoutService,
 	) {
-		super(BrowserEditorInput.EDITOR_ID, group, telemetryService, themeService, storageService);
+		super(BrowserEditorInput.EDITOR_ID, group, themeService, storageService);
 	}
 
 	protected override createEditor(parent: HTMLElement): void {

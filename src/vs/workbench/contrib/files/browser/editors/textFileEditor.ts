@@ -17,7 +17,6 @@ import { applyTextEditorOptions } from '../../../../common/editor/editorOptions.
 import { BinaryEditorModel } from '../../../../common/editor/binaryEditorModel.js';
 import { FileEditorInput } from './fileEditorInput.js';
 import { FileOperationError, FileOperationResult, FileChangesEvent, IFileService, FileOperationEvent, FileOperation, ByteSize, TooLargeFileOperationError } from '../../../../../platform/files/common/files.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IWorkspaceContextService } from '../../../../../platform/workspace/common/workspace.js';
 import { IStorageService } from '../../../../../platform/storage/common/storage.js';
 import { ITextResourceConfigurationService } from '../../../../../editor/common/services/textResourceConfiguration.js';
@@ -47,7 +46,6 @@ export class TextFileEditor extends AbstractTextCodeEditor<ICodeEditorViewState>
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IFileService fileService: IFileService,
 		@IPaneCompositePartService private readonly paneCompositeService: IPaneCompositePartService,
 		@IInstantiationService instantiationService: IInstantiationService,
@@ -66,7 +64,7 @@ export class TextFileEditor extends AbstractTextCodeEditor<ICodeEditorViewState>
 		@IHostService private readonly hostService: IHostService,
 		@IFilesConfigurationService private readonly filesConfigurationService: IFilesConfigurationService
 	) {
-		super(TextFileEditor.ID, group, telemetryService, instantiationService, storageService, textResourceConfigurationService, themeService, editorService, editorGroupService, fileService);
+		super(TextFileEditor.ID, group, instantiationService, storageService, textResourceConfigurationService, themeService, editorService, editorGroupService, fileService);
 
 		// Clear view state for deleted files
 		this._register(this.fileService.onDidFilesChange(e => this.onDidFilesChange(e)));

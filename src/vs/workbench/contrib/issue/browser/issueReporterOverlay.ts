@@ -361,7 +361,6 @@ export class IssueReporterOverlay {
 				this.contextMenuProvider!.showContextMenu({
 					getAnchor: () => this.floatingBar!,
 					getActions: () => allActions,
-					skipTelemetry: true,
 					onHide: () => {
 						menuOpen = false;
 						hideAction.dispose();

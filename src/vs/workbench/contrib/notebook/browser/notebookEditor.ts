@@ -93,7 +93,7 @@ export class NotebookEditor extends EditorPane implements INotebookEditorPane, I
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
+		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
 		@IStorageService private readonly _storageService: IStorageService,
@@ -112,7 +112,7 @@ export class NotebookEditor extends EditorPane implements INotebookEditorPane, I
 		@IDialogService private readonly _dialogService: IDialogService,
 		@IWorkbenchEnvironmentService private readonly _environmentService: IWorkbenchEnvironmentService
 	) {
-		super(NotebookEditor.ID, group, telemetryService, themeService, _storageService);
+		super(NotebookEditor.ID, group, themeService, _storageService);
 		this._editorMemento = this.getEditorMemento<INotebookEditorViewState>(_editorGroupService, configurationService, NOTEBOOK_EDITOR_VIEW_STATE_PREFERENCE_KEY);
 
 		this._register(this._fileService.onDidChangeFileSystemProviderCapabilities(e => this._onDidChangeFileSystemProvider(e.scheme)));

@@ -338,12 +338,11 @@ export class StandaloneKeybindingService extends AbstractKeybindingService {
 	constructor(
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@ICommandService commandService: ICommandService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@INotificationService notificationService: INotificationService,
 		@ILogService logService: ILogService,
 		@ICodeEditorService codeEditorService: ICodeEditorService
 	) {
-		super(contextKeyService, commandService, telemetryService, notificationService, logService);
+		super(contextKeyService, commandService, notificationService, logService);
 
 		this._cachedResolver = null;
 		this._dynamicKeybindings = [];

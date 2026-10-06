@@ -135,7 +135,6 @@ export class FloatingEditorToolbarWidget extends Disposable {
 				menuOptions: {
 					shouldForwardArgs: true
 				},
-				telemetrySource: 'editor.overlayToolbar',
 				toolbarOptions: {
 					primaryGroup: () => true,
 					useSeparatorsInPrimaryActions: true

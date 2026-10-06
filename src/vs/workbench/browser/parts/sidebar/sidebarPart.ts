@@ -96,7 +96,6 @@ export class SidebarPart extends AbstractPaneCompositePart {
 			ActiveViewletContext.bindTo(contextKeyService),
 			SidebarFocusContext.bindTo(contextKeyService),
 			'sideBar',
-			'viewlet',
 			SIDE_BAR_TITLE_FOREGROUND,
 			SIDE_BAR_TITLE_BORDER,
 			ViewContainerLocation.Sidebar,

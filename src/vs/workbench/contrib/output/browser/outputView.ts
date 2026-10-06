@@ -6,7 +6,6 @@ import './output.css';
 import * as nls from '../../../../nls.js';
 import { ICodeEditor } from '../../../../editor/browser/editorBrowser.js';
 import { IEditorOptions as ICodeEditorOptions } from '../../../../editor/common/config/editorOptions.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { ITextResourceConfigurationService } from '../../../../editor/common/services/textResourceConfiguration.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
@@ -230,7 +229,6 @@ export class OutputEditor extends AbstractTextResourceEditor {
 	private readonly resourceContext: ResourceContextKey;
 
 	constructor(
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IStorageService storageService: IStorageService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
@@ -240,7 +238,7 @@ export class OutputEditor extends AbstractTextResourceEditor {
 		@IEditorService editorService: IEditorService,
 		@IFileService fileService: IFileService
 	) {
-		super(OUTPUT_VIEW_ID, editorGroupService.activeGroup /* this is not correct but pragmatic */, telemetryService, instantiationService, storageService, textResourceConfigurationService, themeService, editorGroupService, editorService, fileService);
+		super(OUTPUT_VIEW_ID, editorGroupService.activeGroup /* this is not correct but pragmatic */, instantiationService, storageService, textResourceConfigurationService, themeService, editorGroupService, editorService, fileService);
 
 		this.resourceContext = this._register(instantiationService.createInstance(ResourceContextKey));
 	}

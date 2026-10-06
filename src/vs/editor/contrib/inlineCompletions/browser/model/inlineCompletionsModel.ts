@@ -119,7 +119,7 @@ export class InlineCompletionsModel extends Disposable {
 		@IInlineCompletionsService private readonly _inlineCompletionsService: IInlineCompletionsService,
 	) {
 		super();
-		this._source = this._register(this._instantiationService.createInstance(InlineCompletionsSource, this.textModel, this._textModelVersionId, this._debounceValue, this.primaryPosition, undefined));
+		this._source = this._register(this._instantiationService.createInstance(InlineCompletionsSource, this.textModel, this._textModelVersionId, this._debounceValue, this.primaryPosition));
 		this.lastTriggerKind = this._source.inlineCompletions.map(this, v => v?.request?.context.triggerKind);
 
 		this._editorObs = observableCodeEditor(this._editor);

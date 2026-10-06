@@ -532,7 +532,6 @@ class RemoteViewPaneContainer extends FilterViewPaneContainer implements IViewMo
 
 	constructor(
 		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IWorkspaceContextService contextService: IWorkspaceContextService,
 		@IStorageService storageService: IStorageService,
 		@IConfigurationService configurationService: IConfigurationService,
@@ -544,7 +543,7 @@ class RemoteViewPaneContainer extends FilterViewPaneContainer implements IViewMo
 		@IViewDescriptorService viewDescriptorService: IViewDescriptorService,
 		@ILogService logService: ILogService,
 	) {
-		super(VIEWLET_ID, remoteExplorerService.onDidChangeTargetType, configurationService, layoutService, telemetryService, storageService, instantiationService, themeService, contextMenuService, extensionService, contextService, viewDescriptorService, logService);
+		super(VIEWLET_ID, remoteExplorerService.onDidChangeTargetType, configurationService, layoutService, storageService, instantiationService, themeService, contextMenuService, extensionService, contextService, viewDescriptorService, logService);
 		this.addConstantViewDescriptors([this.helpPanelDescriptor]);
 		this._register(this.remoteSwitcher = this.instantiationService.createInstance(SwitchRemoteViewItem));
 		this._register(this.remoteExplorerService.onDidChangeHelpInformation(extensions => {

@@ -5,7 +5,6 @@
 
 import { localize } from '../../../../nls.js';
 import { BINARY_DIFF_EDITOR_ID } from '../../../common/editor.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { SideBySideEditor } from './sideBySideEditor.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
@@ -25,7 +24,6 @@ export class BinaryResourceDiffEditor extends SideBySideEditor {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
@@ -34,7 +32,7 @@ export class BinaryResourceDiffEditor extends SideBySideEditor {
 		@IEditorService editorService: IEditorService,
 		@IEditorGroupsService editorGroupService: IEditorGroupsService
 	) {
-		super(group, telemetryService, instantiationService, themeService, storageService, configurationService, textResourceConfigurationService, editorService, editorGroupService);
+		super(group, instantiationService, themeService, storageService, configurationService, textResourceConfigurationService, editorService, editorGroupService);
 	}
 
 	getMetadata(): string | undefined {

@@ -13,7 +13,6 @@ import { IEditor } from '../../../common/editorCommon.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { EditorAction, registerEditorAction } from '../../../browser/editorExtensions.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
@@ -30,10 +29,9 @@ export class StandaloneCommandsQuickAccessProvider extends AbstractEditorCommand
 		@ICodeEditorService private readonly codeEditorService: ICodeEditorService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@ICommandService commandService: ICommandService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IDialogService dialogService: IDialogService
 	) {
-		super({ showAlias: false }, instantiationService, keybindingService, commandService, telemetryService, dialogService);
+		super({ showAlias: false }, instantiationService, keybindingService, commandService, dialogService);
 	}
 
 	protected async getCommandPicks(): Promise<Array<ICommandQuickPick>> {

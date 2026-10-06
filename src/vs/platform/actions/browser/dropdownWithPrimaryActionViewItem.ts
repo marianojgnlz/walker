@@ -30,7 +30,6 @@ export interface IDropdownWithPrimaryActionViewItemOptions {
 	closeAnimation?: IContextViewCloseAnimation;
 	getAnchor?: () => HTMLElement;
 	menuAsChild?: boolean;
-	skipTelemetry?: boolean;
 }
 
 export class DropdownWithPrimaryActionViewItem extends BaseActionViewItem {
@@ -71,7 +70,6 @@ export class DropdownWithPrimaryActionViewItem extends BaseActionViewItem {
 			actionRunner: this._options?.actionRunner,
 			keybindingProvider: this._options?.getKeyBinding ?? (action => _keybindingService.lookupKeybinding(action.id)),
 			hoverDelegate: _options?.hoverDelegate,
-			skipTelemetry: _options?.skipTelemetry,
 		});
 	}
 

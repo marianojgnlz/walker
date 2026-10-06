@@ -15,7 +15,6 @@ import { IInstantiationService } from '../../../../platform/instantiation/common
 import { InstantiationService } from '../../../../platform/instantiation/common/instantiationService.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { ResourceLabel } from '../../../browser/labels.js';
 import { AbstractEditorWithViewState } from '../../../browser/parts/editor/editorWithViewState.js';
@@ -60,7 +59,6 @@ export class MultiDiffEditor extends AbstractEditorWithViewState<IMultiDiffEdito
 	constructor(
 		group: IEditorGroup,
 		@IInstantiationService instantiationService: InstantiationService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IEditorService editorService: IEditorService,
@@ -74,7 +72,6 @@ export class MultiDiffEditor extends AbstractEditorWithViewState<IMultiDiffEdito
 			MultiDiffEditor.ID,
 			group,
 			'multiDiffEditor',
-			telemetryService,
 			instantiationService,
 			storageService,
 			textResourceConfigurationService,

@@ -257,7 +257,7 @@ export class SettingsEditor2 extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
+		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IWorkbenchConfigurationService private readonly configurationService: IWorkbenchConfigurationService,
 		@ITextResourceConfigurationService textResourceConfigurationService: ITextResourceConfigurationService,
 		@IThemeService themeService: IThemeService,
@@ -279,7 +279,7 @@ export class SettingsEditor2 extends EditorPane {
 		@IKeybindingService private readonly keybindingService: IKeybindingService,
 		@IExperimentalSettingsService experimentalSettingsService: IExperimentalSettingsService,
 	) {
-		super(SettingsEditor2.ID, group, telemetryService, themeService, storageService);
+		super(SettingsEditor2.ID, group, themeService, storageService);
 		this.searchDelayer = this._register(new Delayer(200));
 		this.viewState = { settingsTarget: ConfigurationTarget.USER_LOCAL };
 

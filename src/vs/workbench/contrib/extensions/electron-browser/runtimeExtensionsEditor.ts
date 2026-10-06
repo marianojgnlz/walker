@@ -25,7 +25,6 @@ import { ILabelService } from '../../../../platform/label/common/label.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IV8Profile, Utils } from '../../../../platform/profiling/common/profiling.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { ActiveEditorContext } from '../../../common/contextkeys.js';
 import { IEditorGroup } from '../../../services/editor/common/editorGroupsService.js';
@@ -74,7 +73,6 @@ export class RuntimeExtensionsEditor extends AbstractRuntimeExtensionsEditor {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IExtensionsWorkbenchService extensionsWorkbenchService: IExtensionsWorkbenchService,
@@ -91,7 +89,7 @@ export class RuntimeExtensionsEditor extends AbstractRuntimeExtensionsEditor {
 		@IHoverService hoverService: IHoverService,
 		@IMenuService menuService: IMenuService,
 	) {
-		super(group, telemetryService, themeService, contextKeyService, extensionsWorkbenchService, extensionService, notificationService, contextMenuService, instantiationService, storageService, labelService, environmentService, clipboardService, extensionFeaturesManagementService, hoverService, menuService);
+		super(group, themeService, contextKeyService, extensionsWorkbenchService, extensionService, notificationService, contextMenuService, instantiationService, storageService, labelService, environmentService, clipboardService, extensionFeaturesManagementService, hoverService, menuService);
 		this._profileInfo = this._extensionHostProfileService.lastProfile;
 		this._extensionsHostRecorded = CONTEXT_EXTENSION_HOST_PROFILE_RECORDED.bindTo(contextKeyService);
 		this._profileSessionState = CONTEXT_PROFILE_SESSION_STATE.bindTo(contextKeyService);

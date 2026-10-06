@@ -37,7 +37,6 @@ import { ServiceCollection } from '../../../../platform/instantiation/common/ser
 import { ColorDetector } from '../../../../editor/contrib/colorPicker/browser/colorDetector.js';
 import { LinkDetector } from '../../../../editor/contrib/links/browser/links.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { KeyCode } from '../../../../base/common/keyCodes.js';
 import { DEFAULT_FONT_FAMILY } from '../../../../base/browser/fonts.js';
 import { Codicon } from '../../../../base/common/codicons.js';
@@ -155,9 +154,8 @@ class SCMInputWidgetToolbar extends WorkbenchToolBar {
 		@ICommandService commandService: ICommandService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@IStorageService private readonly storageService: IStorageService,
-		@ITelemetryService telemetryService: ITelemetryService,
 	) {
-		super(container, options, menuService, contextKeyService, contextMenuService, keybindingService, commandService, telemetryService);
+		super(container, options, menuService, contextKeyService, contextMenuService, keybindingService, commandService);
 
 		this._dropdownAction = new Action(
 			'scmInputMoreActions',

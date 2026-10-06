@@ -12,7 +12,6 @@ import { IEditorControl, IEditorPane, IEditorOpenContext, EditorExtensions, SIDE
 import { SideBySideEditorInput } from '../../../common/editor/sideBySideEditorInput.js';
 import { EditorInput } from '../../../common/editor/editorInput.js';
 import { EditorPane } from './editorPane.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { IEditorPaneRegistry } from '../../editor.js';
@@ -124,7 +123,6 @@ export class SideBySideEditor extends AbstractEditorWithViewState<ISideBySideEdi
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
@@ -133,7 +131,7 @@ export class SideBySideEditor extends AbstractEditorWithViewState<ISideBySideEdi
 		@IEditorService editorService: IEditorService,
 		@IEditorGroupsService editorGroupService: IEditorGroupsService
 	) {
-		super(SideBySideEditor.ID, group, SideBySideEditor.VIEW_STATE_PREFERENCE_KEY, telemetryService, instantiationService, storageService, textResourceConfigurationService, themeService, editorService, editorGroupService);
+		super(SideBySideEditor.ID, group, SideBySideEditor.VIEW_STATE_PREFERENCE_KEY, instantiationService, storageService, textResourceConfigurationService, themeService, editorService, editorGroupService);
 
 		this.orientation = this.configurationService.getValue<'vertical' | 'horizontal'>(SideBySideEditor.SIDE_BY_SIDE_LAYOUT_SETTING) === 'vertical' ? Orientation.VERTICAL : Orientation.HORIZONTAL;
 

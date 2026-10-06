@@ -30,7 +30,6 @@ import { IInstantiationService, ServicesAccessor } from '../../../../platform/in
 import { WorkbenchTable } from '../../../../platform/list/browser/listService.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { editorBackground } from '../../../../platform/theme/common/colorRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
@@ -101,7 +100,6 @@ export class DisassemblyView extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
@@ -111,7 +109,7 @@ export class DisassemblyView extends EditorPane {
 		@IMenuService menuService: IMenuService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 	) {
-		super(DISASSEMBLY_VIEW_ID, group, telemetryService, themeService, storageService);
+		super(DISASSEMBLY_VIEW_ID, group, themeService, storageService);
 
 		this.menu = menuService.createMenu(MenuId.DebugDisassemblyContext, contextKeyService);
 		this._register(this.menu);

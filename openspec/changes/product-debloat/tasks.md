@@ -446,6 +446,19 @@ Landed leaves and what each row still needs. Checkboxes stay unchecked until the
 
 **Pass-2 regression fix (not a T row):** `u11.c.004` restored the retained `telemetry.feedback.enabled` registration that the pass-1 commit had deleted (issue reporter / NPS / relauncher behavior), and repaired the two guards the W40 deletion had left red.
 
+### U11 pass 3 status (2026-10-06; no row closed, no checkbox flipped)
+
+Landed leaves and what each row still needs. Checkboxes stay unchecked until the whole group closes; this table is status only and does not redefine any row's scope. Measured pass diff: **106 tracked files, +213/−835 authored lines** (`git diff --numstat`), plus one emptied module handed to the parent as W42.
+
+| Row | Landed in pass 3 | Still open in that row |
+| --- | --- | --- |
+| T2 | `u11.b.004`/`u11.b.005` `inlineCompletion.endOfLife` + payload/classification types + whole `editor/contrib/inlineCompletions/browser/telemetry.ts` module with both producers (`inlineCompletionsSource.ts`, `mainThreadLanguageFeatures.ts`), `u11.b.006` reader-less `ICodeEditor.getTelemetryData()`/`telemetryData`, plus the `inlineCompletionsHintsWidget`/`platform/actions/browser/toolbar.ts` `telemetrySource` parameter | `contrib/editTelemetry/**` event forwarding (`_aiEditTelemetryService` in `mainThreadLanguageFeatures.ts`), `platform/quickinput`-adjacent editor stubs, the remaining test-only `ITelemetryService` stubs under `editor/**/test/**`, and the `emptyResponseInformation` option registration as a T11/T12 residual |
+| T3 | `u11.c.009` `Composite`/`PaneComposite`/`EditorPane`/`ViewPaneContainer` telemetry constructor threading across 43 base/subclass files with 4 test files; `u11.c.010` `workbenchActionExecuted` producers in `platform/actions` + `actionWidgetDropdownClosed` in `platform/actionWidget` with the `telemetrySource` option, `nameForTelemetry` threading and 9 caller sites, plus the SCM/notebook positional toolbar constructions; `u11.c.011` `platform/{keybinding,quickinput,menubar}` producers (incl. the editor/standalone/workbench `commandsQuickAccess` subclasses); `u11.c.012` inert `skipTelemetry` plumbing across base UI/platform-actions/view-container callers | `workbench/services/{extensions,search,views,languageDetection,textMate,accessibility}`, `platform/profiling/common/profilingTelemetrySpec.ts` (`reportSample`), remaining `platform/{dialogs,update,utilityProcess,browserView,diagnostics}` sites, the five self-injecting pane producers (`gettingStarted`, `extensionEditor`, `notebookEditor`, `settingsEditor2`, `surveyEditorPane`) and the `contrib/**` sites |
+| T1 | untouched in this pass (pass-1 partials stand) | Playwright telemetry parameter/event; `base/node/id.ts` helpers + `virtualMachineHint`; session-date storage keys; `telemetryUtils` readers; argv/`environmentService` getters; `services/extensions` host-manager init payloads |
+| T4–T6, T7–T12 | untouched in this pass (T7/T11 keep their pass-1 partials) | unchanged |
+
+**Note (not a T row):** no regression was found or introduced in this pass; the pass-1 `telemetry.feedback.enabled` guard from `u11.c.004` was re-run green, and `productDebloat.test.ts` grew four new absence assertions (16 passing total).
+
 ## Verification — T
 
 Each leaf uses `./scripts/test.sh --run <file>` for its owning subsystem and affected retained-behavior tests. Use `npm run typecheck-client` for changed constructor/DI/API graphs not already covered by current compilation, extension-level tests/builds for T9/B changes, build-tooling typecheck/tests for T11, and server/CLI checks for T1/T8/T11. Re-run no-network/no-telemetry-log/no-sender/flush fixtures with legacy reporting settings after constructor/payload refactors. Inventory closure requires evidence for payload-only computation and remaining dependencies, not merely zero literal `publicLog` matches.

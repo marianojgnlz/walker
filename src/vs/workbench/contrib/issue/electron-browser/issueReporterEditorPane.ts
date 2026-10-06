@@ -12,7 +12,6 @@ import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { localize } from '../../../../nls.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
 import { IEditorGroup, IEditorGroupsService } from '../../../services/editor/common/editorGroupsService.js';
@@ -74,7 +73,6 @@ export class IssueReporterEditorPane extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IRecordingService private readonly recordingService: IRecordingService,
@@ -96,7 +94,7 @@ export class IssueReporterEditorPane extends EditorPane {
 		@IEditorGroupsService private readonly editorGroupsService: IEditorGroupsService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 	) {
-		super(IssueReporterEditorPane.ID, group, telemetryService, themeService, storageService);
+		super(IssueReporterEditorPane.ID, group, themeService, storageService);
 		IssueReporterEditorPane.liveInstances.add(this);
 		this._register({ dispose: () => IssueReporterEditorPane.liveInstances.delete(this) });
 	}

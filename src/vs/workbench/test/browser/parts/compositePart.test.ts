@@ -30,11 +30,10 @@ class TestComposite extends Composite {
 	static readonly ID = 'testComposite';
 
 	constructor(
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 	) {
-		super(TestComposite.ID, telemetryService, themeService, storageService);
+		super(TestComposite.ID, themeService, storageService);
 	}
 
 	layout(_dimension: Dimension): void { }
@@ -81,7 +80,6 @@ class TestCompositePart extends CompositePart<TestComposite> {
 			registry,
 			'test.activeComposite',
 			TestComposite.ID,
-			'test',
 			'test-composite',
 			undefined,
 			undefined,

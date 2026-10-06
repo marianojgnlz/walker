@@ -18,7 +18,6 @@ import { InstantiationService } from '../../../../platform/instantiation/common/
 import { ServiceCollection } from '../../../../platform/instantiation/common/serviceCollection.js';
 import { IKeyboardEvent } from '../../../../platform/keybinding/common/keybinding.js';
 import { NullLogService } from '../../../../platform/log/common/log.js';
-import { NullTelemetryService } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { createModelServices } from '../../../test/common/testTextModel.js';
 import { IModelService } from '../../../common/services/model.js';
 
@@ -100,7 +99,7 @@ suite('StandaloneKeybindingService', () => {
 		const notificationService = new StandaloneNotificationService();
 		const standaloneThemeService = disposables.add(new StandaloneThemeService());
 		const codeEditorService = disposables.add(new StandaloneCodeEditorService(contextKeyService, standaloneThemeService));
-		const keybindingService = disposables.add(new TestStandaloneKeybindingService(contextKeyService, commandService, NullTelemetryService, notificationService, new NullLogService(), codeEditorService));
+		const keybindingService = disposables.add(new TestStandaloneKeybindingService(contextKeyService, commandService, notificationService, new NullLogService(), codeEditorService));
 
 		let commandInvoked = false;
 		disposables.add(keybindingService.addDynamicKeybinding('testCommand', KeyCode.F9, () => {

@@ -173,7 +173,7 @@ export class GettingStartedPage extends EditorPane {
 		@IKeybindingService private readonly keybindingService: IKeybindingService,
 		@IWalkthroughsService private readonly gettingStartedService: IWalkthroughsService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
-		@ITelemetryService telemetryService: ITelemetryService,
+		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@ILanguageService private readonly languageService: ILanguageService,
 		@IFileService private readonly fileService: IFileService,
 		@IOpenerService private readonly openerService: IOpenerService,
@@ -193,7 +193,7 @@ export class GettingStartedPage extends EditorPane {
 		@IAccessibilityService private readonly accessibilityService: IAccessibilityService,
 	) {
 
-		super(GettingStartedPage.ID, group, telemetryService, themeService, storageService);
+		super(GettingStartedPage.ID, group, themeService, storageService);
 
 		this.container = $('.gettingStartedContainer',
 			{

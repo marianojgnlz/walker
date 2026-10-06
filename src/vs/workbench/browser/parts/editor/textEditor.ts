@@ -18,7 +18,6 @@ import { IEditorViewState } from '../../../../editor/common/editorCommon.js';
 import { Selection } from '../../../../editor/common/core/selection.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { ITextResourceConfigurationChangeEvent, ITextResourceConfigurationService } from '../../../../editor/common/services/textResourceConfiguration.js';
 import { IEditorOptions as ICodeEditorOptions } from '../../../../editor/common/config/editorOptions.js';
@@ -66,7 +65,6 @@ export abstract class AbstractTextEditor<T extends IEditorViewState> extends Abs
 	constructor(
 		id: string,
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IStorageService storageService: IStorageService,
 		@ITextResourceConfigurationService textResourceConfigurationService: ITextResourceConfigurationService,
@@ -75,7 +73,7 @@ export abstract class AbstractTextEditor<T extends IEditorViewState> extends Abs
 		@IEditorGroupsService editorGroupService: IEditorGroupsService,
 		@IFileService protected readonly fileService: IFileService
 	) {
-		super(id, group, AbstractTextEditor.VIEW_STATE_PREFERENCE_KEY, telemetryService, instantiationService, storageService, textResourceConfigurationService, themeService, editorService, editorGroupService);
+		super(id, group, AbstractTextEditor.VIEW_STATE_PREFERENCE_KEY, instantiationService, storageService, textResourceConfigurationService, themeService, editorService, editorGroupService);
 
 		// Listen to configuration changes
 		this._register(this.textResourceConfigurationService.onDidChangeConfiguration(e => this.handleConfigurationChangeEvent(e)));

@@ -238,7 +238,7 @@ export class ExtensionEditor extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
+		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IExtensionsWorkbenchService private readonly extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@IExtensionGalleryService private readonly extensionGalleryService: IExtensionGalleryService,
@@ -254,7 +254,7 @@ export class ExtensionEditor extends EditorPane {
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@IHoverService private readonly hoverService: IHoverService,
 	) {
-		super(ExtensionEditor.ID, group, telemetryService, themeService, storageService);
+		super(ExtensionEditor.ID, group, themeService, storageService);
 		this.extensionReadme = null;
 		this.extensionChangelog = null;
 		this.extensionManifest = null;

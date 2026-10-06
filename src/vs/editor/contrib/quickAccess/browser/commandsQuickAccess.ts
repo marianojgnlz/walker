@@ -12,7 +12,6 @@ import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { AbstractCommandsQuickAccessProvider, ICommandQuickPick, ICommandsQuickAccessOptions } from '../../../../platform/quickinput/browser/commandsQuickAccess.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 
 export abstract class AbstractEditorCommandsQuickAccessProvider extends AbstractCommandsQuickAccessProvider {
 
@@ -21,10 +20,9 @@ export abstract class AbstractEditorCommandsQuickAccessProvider extends Abstract
 		instantiationService: IInstantiationService,
 		keybindingService: IKeybindingService,
 		commandService: ICommandService,
-		telemetryService: ITelemetryService,
 		dialogService: IDialogService
 	) {
-		super(options, instantiationService, keybindingService, commandService, telemetryService, dialogService);
+		super(options, instantiationService, keybindingService, commandService, dialogService);
 	}
 
 	/**

@@ -315,7 +315,6 @@ export abstract class EditorTabsControl extends Themable implements IEditorTabsC
 			actionRunner: this.editorActionsToolbarDisposables.add(new EditorCommandsContextActionRunner(context)),
 			anchorAlignmentProvider: () => AnchorAlignment.RIGHT,
 			renderDropdownAsChildElement: this.renderDropdownAsChildElement,
-			telemetrySource: 'editorPart',
 			resetMenu: editorActionsMenuId,
 			overflowBehavior: { maxItems: 9, exempted: EDITOR_CORE_NAVIGATION_COMMANDS },
 			highlightToggledItems: true
@@ -347,7 +346,6 @@ export abstract class EditorTabsControl extends Themable implements IEditorTabsC
 			actionRunner: this.editorLayoutActionsToolbarDisposables.add(new EditorCommandsContextActionRunner(context)),
 			anchorAlignmentProvider: () => AnchorAlignment.RIGHT,
 			renderDropdownAsChildElement: this.renderDropdownAsChildElement,
-			telemetrySource: 'editorPartTrailing',
 			resetMenu: MenuId.EditorTitleLayout,
 			hiddenItemStrategy: HiddenItemStrategy.NoHide,
 			highlightToggledItems: true

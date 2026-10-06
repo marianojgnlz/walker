@@ -28,7 +28,6 @@ import { TriggerAction } from '../../../../platform/quickinput/browser/pickerQui
 import { DefaultQuickAccessFilterValue } from '../../../../platform/quickinput/common/quickAccess.js';
 import { IQuickInputService, IQuickPickSeparator } from '../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkbenchQuickAccessConfiguration } from '../../../browser/quickaccess.js';
 import { CommandInformationResult, IAiRelatedInformationService, RelatedInformationType } from '../../../services/aiRelatedInformation/common/aiRelatedInformation.js';
 import { IEditorGroupsService } from '../../../services/editor/common/editorGroupsService.js';
@@ -67,7 +66,6 @@ export class CommandsQuickAccessProvider extends AbstractEditorCommandsQuickAcce
 		@IInstantiationService instantiationService: IInstantiationService,
 		@IKeybindingService keybindingService: IKeybindingService,
 		@ICommandService commandService: ICommandService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IDialogService dialogService: IDialogService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IEditorGroupsService private readonly editorGroupService: IEditorGroupsService,
@@ -81,7 +79,7 @@ export class CommandsQuickAccessProvider extends AbstractEditorCommandsQuickAcce
 				label: localize('noCommandResults', "No matching commands"),
 				commandId: ''
 			}),
-		}, instantiationService, keybindingService, commandService, telemetryService, dialogService);
+		}, instantiationService, keybindingService, commandService, dialogService);
 
 		this.extensionRegistrationRace = raceTimeout(extensionService.whenInstalledExtensionsRegistered(), 800);
 		this._register(configurationService.onDidChangeConfiguration((e) => this.updateOptions(e)));

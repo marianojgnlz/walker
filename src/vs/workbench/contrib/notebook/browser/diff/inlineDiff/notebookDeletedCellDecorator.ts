@@ -36,7 +36,7 @@ export class NotebookDeletedCellDecorator extends Disposable implements INoteboo
 	private readonly deletedCellInfos = new Map<number, { height: number; previousIndex: number; offset: number }>();
 	constructor(
 		private readonly _notebookEditor: INotebookEditor,
-		private readonly toolbar: { menuId: MenuId; className: string; telemetrySource?: string; argFactory: (deletedCellIndex: number) => any; actionViewItemProvider?: IActionViewItemProvider } | undefined,
+		private readonly toolbar: { menuId: MenuId; className: string; argFactory: (deletedCellIndex: number) => any; actionViewItemProvider?: IActionViewItemProvider } | undefined,
 		@ILanguageService private readonly languageService: ILanguageService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 	) {
@@ -179,7 +179,7 @@ export class NotebookDeletedCellWidget extends Disposable {
 
 	constructor(
 		private readonly _notebookEditor: INotebookEditor,
-		private readonly _toolbarOptions: { menuId: MenuId; className: string; telemetrySource?: string; argFactory: (deletedCellIndex: number) => any; actionViewItemProvider?: IActionViewItemProvider } | undefined,
+		private readonly _toolbarOptions: { menuId: MenuId; className: string; argFactory: (deletedCellIndex: number) => any; actionViewItemProvider?: IActionViewItemProvider } | undefined,
 		private readonly code: string,
 		private readonly language: string,
 		container: HTMLElement,
@@ -226,7 +226,6 @@ export class NotebookDeletedCellWidget extends Disposable {
 
 			const scopedInstaService = this._register(this.instantiationService.createChild(new ServiceCollection([IContextKeyService, this._notebookEditor.scopedContextKeyService])));
 			const toolbarWidget = scopedInstaService.createInstance(MenuWorkbenchToolBar, toolbar, this._toolbarOptions.menuId, {
-				telemetrySource: this._toolbarOptions.telemetrySource,
 				hiddenItemStrategy: HiddenItemStrategy.NoHide,
 				toolbarOptions: { primaryGroup: () => true },
 				menuOptions: {

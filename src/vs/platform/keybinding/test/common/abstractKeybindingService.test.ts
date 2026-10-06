@@ -19,7 +19,6 @@ import { USLayoutResolvedKeybinding } from '../../common/usLayoutResolvedKeybind
 import { createUSLayoutResolvedKeybinding } from './keybindingsTestUtils.js';
 import { NullLogService } from '../../../log/common/log.js';
 import { INotification, INotificationService, IPromptChoice, IPromptOptions, IStatusMessageOptions, NoOpNotification } from '../../../notification/common/notification.js';
-import { NullTelemetryService } from '../../../telemetry/common/telemetryUtils.js';
 
 function createContext(ctx: any) {
 	return {
@@ -40,7 +39,7 @@ suite('AbstractKeybindingService', () => {
 			commandService: ICommandService,
 			notificationService: INotificationService
 		) {
-			super(contextKeyService, commandService, NullTelemetryService, notificationService, new NullLogService());
+			super(contextKeyService, commandService, notificationService, new NullLogService());
 			this._resolver = resolver;
 		}
 

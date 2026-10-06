@@ -51,7 +51,6 @@ export class CommandCenterControl {
 			toolbarOptions: {
 				primaryGroup: () => true,
 			},
-			telemetrySource: 'commandCenter',
 			actionViewItemProvider: (action, options) => {
 				if (action instanceof SubmenuItemAction && action.item.submenu === MenuId.CommandCenterCenter) {
 					return instantiationService.createInstance(CommandCenterCenterViewItem, action, windowTitle, { ...options, hoverDelegate });
@@ -138,7 +137,6 @@ class CommandCenterCenterViewItem extends BaseActionViewItem {
 			// nested toolbar
 			const toolbar = this._instaService.createInstance(WorkbenchToolBar, container, {
 				hiddenItemStrategy: HiddenItemStrategy.NoHide,
-				telemetrySource: 'commandCenterCenter',
 				actionViewItemProvider: (action, options) => {
 					options = {
 						...options,

@@ -31,7 +31,6 @@ import { ServiceCollection } from '../../../../platform/instantiation/common/ser
 import { ILabelService } from '../../../../platform/label/common/label.js';
 import { IEditorProgressService, LongRunningOperation } from '../../../../platform/progress/common/progress.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { inputBorder, registerColor } from '../../../../platform/theme/common/colorRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
@@ -100,7 +99,6 @@ export class SearchEditor extends AbstractTextCodeEditor<SearchEditorViewState> 
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IModelService private readonly modelService: IModelService,
@@ -120,7 +118,7 @@ export class SearchEditor extends AbstractTextCodeEditor<SearchEditorViewState> 
 		@ILogService private readonly logService: ILogService,
 		@IHoverService private readonly hoverService: IHoverService
 	) {
-		super(SearchEditor.ID, group, telemetryService, instantiationService, storageService, textResourceService, themeService, editorService, editorGroupService, fileService);
+		super(SearchEditor.ID, group, instantiationService, storageService, textResourceService, themeService, editorService, editorGroupService, fileService);
 		this.container = DOM.$('.search-editor');
 
 		this.searchOperation = this._register(new LongRunningOperation(progressService));

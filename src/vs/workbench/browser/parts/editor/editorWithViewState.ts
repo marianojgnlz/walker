@@ -9,7 +9,6 @@ import { IEditorMemento, IEditorCloseEvent, IEditorOpenContext, EditorResourceAc
 import { EditorPane } from './editorPane.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { ITextResourceConfigurationService } from '../../../../editor/common/services/textResourceConfiguration.js';
 import { IEditorGroupsService, IEditorGroup } from '../../../services/editor/common/editorGroupsService.js';
@@ -33,7 +32,6 @@ export abstract class AbstractEditorWithViewState<T extends object> extends Edit
 		id: string,
 		group: IEditorGroup,
 		viewStateStorageKey: string,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IInstantiationService protected readonly instantiationService: IInstantiationService,
 		@IStorageService storageService: IStorageService,
 		@ITextResourceConfigurationService protected readonly textResourceConfigurationService: ITextResourceConfigurationService,
@@ -41,7 +39,7 @@ export abstract class AbstractEditorWithViewState<T extends object> extends Edit
 		@IEditorService protected readonly editorService: IEditorService,
 		@IEditorGroupsService protected readonly editorGroupService: IEditorGroupsService
 	) {
-		super(id, group, telemetryService, themeService, storageService);
+		super(id, group, themeService, storageService);
 
 		this.viewState = this.getEditorMemento<T>(editorGroupService, textResourceConfigurationService, viewStateStorageKey, 100);
 	}

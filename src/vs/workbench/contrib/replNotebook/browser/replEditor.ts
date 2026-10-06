@@ -14,7 +14,6 @@ import { ICodeEditorViewState, ICompositeCodeEditor } from '../../../../editor/c
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
 import { EditorPaneSelectionChangeReason, IEditorMemento, IEditorOpenContext, IEditorPaneScrollPosition, IEditorPaneSelectionChangeEvent, IEditorPaneWithScrolling } from '../../../common/editor.js';
@@ -117,7 +116,6 @@ export class ReplEditor extends EditorPane implements IEditorPaneWithScrolling {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IInstantiationService instantiationService: IInstantiationService,
@@ -138,7 +136,6 @@ export class ReplEditor extends EditorPane implements IEditorPaneWithScrolling {
 		super(
 			REPL_EDITOR_ID,
 			group,
-			telemetryService,
 			themeService,
 			storageService
 		);

@@ -8,7 +8,7 @@ import { ButtonBar, ButtonWithDropdown, IButton } from '../../../base/browser/ui
 import { createPixelSpinner } from '../../../base/browser/ui/pixelSpinner/pixelSpinner.js';
 import './buttonbar.css';
 import { createInstantHoverDelegate } from '../../../base/browser/ui/hover/hoverDelegateFactory.js';
-import { ActionRunner, IAction, IActionRunner, IRunEvent, SubmenuAction, WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../base/common/actions.js';
+import { ActionRunner, IAction, IActionRunner, IRunEvent, SubmenuAction } from '../../../base/common/actions.js';
 import { Codicon } from '../../../base/common/codicons.js';
 import { Emitter, Event } from '../../../base/common/event.js';
 import { IMarkdownString } from '../../../base/common/htmlContent.js';
@@ -23,7 +23,6 @@ import { IContextKeyService } from '../../contextkey/common/contextkey.js';
 import { IContextMenuService } from '../../contextview/browser/contextView.js';
 import { IHoverService } from '../../hover/browser/hover.js';
 import { IKeybindingService } from '../../keybinding/common/keybinding.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { renderAsPlaintext } from '../../../base/browser/markdownRenderer.js';
 import { stripIcons } from '../../../base/common/iconLabels.js';
 
@@ -50,7 +49,6 @@ export interface IButtonConfig {
 export type IButtonConfigProvider = (action: IAction, index: number) => IButtonConfig | undefined;
 
 export interface IWorkbenchButtonBarOptions {
-	telemetrySource?: string;
 	buttonConfigProvider?: IButtonConfigProvider;
 	small?: boolean;
 	disableWhileRunning?: boolean;
@@ -74,20 +72,11 @@ export class WorkbenchButtonBar extends ButtonBar {
 		private readonly _options: IWorkbenchButtonBarOptions | undefined,
 		@IContextMenuService private readonly _contextMenuService: IContextMenuService,
 		@IKeybindingService private readonly _keybindingService: IKeybindingService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IHoverService private readonly _hoverService: IHoverService,
 	) {
 		super(container);
 
 		this._actionRunner = this._store.add(new ActionRunner());
-		if (_options?.telemetrySource) {
-			this._actionRunner.onDidRun(e => {
-				telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>(
-					'workbenchActionExecuted',
-					{ id: e.action.id, from: _options.telemetrySource! }
-				);
-			}, undefined, this._store);
-		}
 	}
 
 	override dispose() {
@@ -299,10 +288,9 @@ export class MenuWorkbenchButtonBar extends WorkbenchButtonBar {
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IKeybindingService keybindingService: IKeybindingService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IHoverService hoverService: IHoverService,
 	) {
-		super(container, options, contextMenuService, keybindingService, telemetryService, hoverService);
+		super(container, options, contextMenuService, keybindingService, hoverService);
 
 		const menu = menuService.createMenu(menuId, contextKeyService);
 		this._store.add(menu);

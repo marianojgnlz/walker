@@ -639,3 +639,18 @@ The module below is now an empty `export { }` file with zero importers after `u1
 * `src/vs/platform/telemetry/common/telemetryService.ts` was **re-created** in this pass (`u11.c.004`, 39 lines) after the U11 pass-1 commit deleted it. It is the retained, non-reporting `telemetry.feedback.enabled` registration (type/default/description/`EnableFeedback` policy unchanged) and is side-effect-imported from `workbench.common.main.ts`. It must not be added to a deletion manifest: removing it silently disables the issue reporter, the NPS survey and the relauncher observer (see `telemetry-inventory.md` pass-2 regression note and `productDebloat.test.ts`).
 * `src/vs/workbench/services/assignment/common/assignmentExperiments.ts` (27 lines) is the new home of the telemetry-independent experiment/TAS gate.
 * `src/vs/workbench/services/telemetry/{browser,electron-browser}/telemetryService.ts` (no-op shape registrations) and `src/vs/workbench/services/telemetry/common/` are otherwise unchanged; only the common helper module above is emptied.
+
+### W42 — U11 pass-3 pruning, one emptied module ready for parent `git rm` (2026-10-06)
+
+The module below is now an empty `export { }` file with zero importers after `u11.b.004`/`u11.b.005`; the parent executes the `git rm`. This executor performed no unlink, stage, or commit. Line count is measured at `HEAD` with `git show HEAD:<path> | wc -l`.
+
+| # | Path(s) | Lines | Ready? | Evidence |
+| --- | --- | ---: | --- | --- |
+| W42.a | `src/vs/editor/contrib/inlineCompletions/browser/telemetry.ts` (120) | 120 | **Yes** | It contained only `sendInlineCompletionsEndOfLifeTelemetry` plus the `InlineCompletionEndOfLifeEvent`/`InlineCompletionsEndOfLifeClassification` types. Both producers removed their imports: `editor/contrib/inlineCompletions/browser/model/inlineCompletionsSource.ts` (empty-response reporting, `RequestResponseData`, data-channel service) and `workbench/api/browser/mainThreadLanguageFeatures.ts` (extension-backed `endOfLifeSummary` forwarding, `extractEngineFromCorrelationId`, forwarding-service instantiation). `git grep -n "inlineCompletions/browser/telemetry"` returns no importer, and `npm run compile-client`, `npm run typecheck-client` plus the inline-completion/extension-language-feature suites are green with the empty module still on disk. |
+
+**Not manifest items (deliberately retained in this pass):**
+
+* `src/vs/platform/telemetry/common/telemetryService.ts` (the retained `telemetry.feedback.enabled` registration) stays excluded per pass-2 W41.
+* `src/vs/platform/dataChannel/browser/forwardingTelemetryService.ts` and the `contrib/editTelemetry/**` tree stay: `editTelemetry` still consumes the forwarding service and the AI-edit telemetry service API, which is a separate T3/T6 residual, not part of the `inlineCompletion.endOfLife` removal.
+* `src/vs/editor/contrib/inlineCompletions/browser/model/provideInlineCompletions.ts` is **not** a manifest item: its `LifetimeSummary`/`handleEndOfLifetime` path is the retained extension API, not the removed event.
+* The now reader-less `editor.inlineSuggest.experimental.emptyResponseInformation` option registration in `src/vs/editor/common/config/editorOptions.ts` is left in place as a T11/T12 residual (an editor-option registration is not deleted in a call-site leaf).

@@ -27,7 +27,6 @@ import { IInstantiationService } from '../../../../platform/instantiation/common
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
 import { IEditorOpenContext } from '../../../common/editor.js';
@@ -174,7 +173,6 @@ export class McpServerEditor extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService,
 		@INotificationService private readonly notificationService: INotificationService,
@@ -188,7 +186,7 @@ export class McpServerEditor extends EditorPane {
 		@IHoverService private readonly hoverService: IHoverService,
 		@IContextMenuService private readonly contextMenuService: IContextMenuService,
 	) {
-		super(McpServerEditor.ID, group, telemetryService, themeService, storageService);
+		super(McpServerEditor.ID, group, themeService, storageService);
 		this.mcpServerReadme = null;
 		this.mcpServerManifest = null;
 	}

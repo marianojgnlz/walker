@@ -39,12 +39,12 @@ export class SurveyEditorPane extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
+		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IEditorService private readonly editorService: IEditorService,
 	) {
-		super(SurveyEditorPane.ID, group, telemetryService, themeService, storageService);
+		super(SurveyEditorPane.ID, group, themeService, storageService);
 	}
 
 	protected override createEditor(parent: HTMLElement): void {

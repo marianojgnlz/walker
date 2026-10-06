@@ -30,7 +30,6 @@ import { WorkbenchList } from '../../../../platform/list/browser/listService.js'
 import { INotificationService, Severity } from '../../../../platform/notification/common/notification.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { editorBackground } from '../../../../platform/theme/common/colorRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
@@ -80,7 +79,6 @@ export abstract class AbstractRuntimeExtensionsEditor extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@IExtensionsWorkbenchService private readonly _extensionsWorkbenchService: IExtensionsWorkbenchService,
@@ -96,7 +94,7 @@ export abstract class AbstractRuntimeExtensionsEditor extends EditorPane {
 		@IHoverService private readonly _hoverService: IHoverService,
 		@IMenuService private readonly _menuService: IMenuService,
 	) {
-		super(AbstractRuntimeExtensionsEditor.ID, group, telemetryService, themeService, storageService);
+		super(AbstractRuntimeExtensionsEditor.ID, group, themeService, storageService);
 
 		this._list = null;
 		this._elements = null;

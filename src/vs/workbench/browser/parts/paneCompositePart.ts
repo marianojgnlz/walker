@@ -139,7 +139,6 @@ export abstract class AbstractPaneCompositePart extends CompositePart<PaneCompos
 		activePaneCompositeSettingsKey: string,
 		private readonly activePaneContextKey: IContextKey<string>,
 		private paneFocusContextKey: IContextKey<boolean>,
-		nameForTelemetry: string,
 		compositeCSSClass: string,
 		titleForegroundColor: string | undefined,
 		titleBorderColor: string | undefined,
@@ -172,7 +171,6 @@ export abstract class AbstractPaneCompositePart extends CompositePart<PaneCompos
 			Registry.as<PaneCompositeRegistry>(registryId),
 			activePaneCompositeSettingsKey,
 			viewDescriptorService.getDefaultViewContainer(location)?.id || '',
-			nameForTelemetry,
 			compositeCSSClass,
 			titleForegroundColor,
 			titleBorderColor,
@@ -361,8 +359,7 @@ export abstract class AbstractPaneCompositePart extends CompositePart<PaneCompos
 				toggleMenuTitle: localize('moreActions', "More Actions..."),
 				hoverDelegate: this.toolbarHoverDelegate,
 				hiddenItemStrategy: HiddenItemStrategy.NoHide,
-				highlightToggledItems: true,
-				telemetrySource: this.nameForTelemetry
+				highlightToggledItems: true
 			}
 		));
 
@@ -732,7 +729,6 @@ export abstract class AbstractPaneCompositePart extends CompositePart<PaneCompos
 					getActions: () => activePaneCompositeActions,
 					getActionViewItem: (action, options) => this.actionViewItemProvider(action, options),
 					actionRunner: activePaneComposite.getActionRunner(),
-					skipTelemetry: true
 				});
 			}
 		}
@@ -749,7 +745,6 @@ export abstract class AbstractPaneCompositePart extends CompositePart<PaneCompos
 				this.contextMenuService.showContextMenu({
 					getAnchor: () => event,
 					getActions: () => actions,
-					skipTelemetry: true
 				});
 			}
 		}

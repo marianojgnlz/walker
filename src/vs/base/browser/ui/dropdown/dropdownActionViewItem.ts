@@ -40,7 +40,6 @@ export interface IDropdownMenuActionViewItemOptions extends IBaseActionViewItemO
 	readonly getAnchor?: () => HTMLElement;
 	readonly anchorAlignmentProvider?: IAnchorAlignmentProvider;
 	readonly menuAsChild?: boolean;
-	readonly skipTelemetry?: boolean;
 }
 
 export class DropdownMenuActionViewItem extends BaseActionViewItem {
@@ -91,7 +90,6 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
 			menuClassName: this.options.menuClassName,
 			closeAnimation: this.options.closeAnimation,
 			getAnchor: this.options.getAnchor,
-			skipTelemetry: this.options.skipTelemetry
 		};
 
 		this.dropdownMenu = this._register(new DropdownMenu(container, options));

@@ -13,7 +13,6 @@ import * as nls from '../../../../nls.js';
 import { IContextKeyService, IScopedContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
 import { IEditorOptions } from '../../../../platform/editor/common/editor.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
 import { IEditorOpenContext } from '../../../common/editor.js';
@@ -54,7 +53,6 @@ export class WebviewEditor extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IEditorGroupsService private readonly _editorGroupsService: IEditorGroupsService,
@@ -63,7 +61,7 @@ export class WebviewEditor extends EditorPane {
 		@IHostService private readonly _hostService: IHostService,
 		@IContextKeyService private readonly _contextKeyService: IContextKeyService,
 	) {
-		super(WebviewEditor.ID, group, telemetryService, themeService, storageService);
+		super(WebviewEditor.ID, group, themeService, storageService);
 	}
 
 	private get webview(): IOverlayWebview | undefined {

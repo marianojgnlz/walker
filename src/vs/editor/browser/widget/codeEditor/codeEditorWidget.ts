@@ -230,8 +230,6 @@ export class CodeEditorWidget extends Disposable implements editorBrowser.ICodeE
 		return this._configuration.contextMenuId;
 	}
 
-	private readonly _telemetryData?: object;
-
 	private readonly _domElement: HTMLElement;
 	private readonly _overflowWidgetsDomNode: HTMLElement | undefined;
 	private readonly _id: number;
@@ -295,7 +293,6 @@ export class CodeEditorWidget extends Disposable implements editorBrowser.ICodeE
 		this._id = (++EDITOR_ID);
 		this._decorationTypeKeysToIds = {};
 		this._decorationTypeSubtypes = {};
-		this._telemetryData = codeEditorWidgetOptions.telemetryData;
 
 		this._configuration = this._register(this._createConfiguration(codeEditorWidgetOptions.isSimpleWidget || false,
 			codeEditorWidgetOptions.contextMenuId ?? (codeEditorWidgetOptions.isSimpleWidget ? MenuId.SimpleEditorContext : MenuId.EditorContext),
@@ -2043,10 +2040,6 @@ export class CodeEditorWidget extends Disposable implements editorBrowser.ICodeE
 		return this._codeEditorService.resolveDecorationOptions(typeKey, writable);
 	}
 
-	public getTelemetryData(): object | undefined {
-		return this._telemetryData;
-	}
-
 	public hasModel(): this is editorBrowser.IActiveCodeEditor {
 		return (this._modelData !== null);
 	}
@@ -2100,12 +2093,6 @@ export interface ICodeEditorWidgetOptions {
 	 * Defaults to EditorExtensionsRegistry.getEditorContributions().
 	 */
 	contributions?: IEditorContributionDescription[];
-
-	/**
-	 * Telemetry data associated with this CodeEditorWidget.
-	 * Defaults to null.
-	 */
-	telemetryData?: object;
 
 	/**
 	 * The ID of the context menu.

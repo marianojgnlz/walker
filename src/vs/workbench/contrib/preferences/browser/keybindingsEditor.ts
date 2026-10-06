@@ -17,7 +17,6 @@ import { IAction, Action, Separator } from '../../../../base/common/actions.js';
 import { ActionBar } from '../../../../base/browser/ui/actionbar/actionbar.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
 import { IEditorOpenContext } from '../../../common/editor.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IClipboardService } from '../../../../platform/clipboard/common/clipboardService.js';
 import { KeybindingsEditorModel, KEYBINDING_ENTRY_TEMPLATE_ID } from '../../../services/preferences/browser/keybindingsEditorModel.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
@@ -118,7 +117,6 @@ export class KeybindingsEditor extends EditorPane<IKeybindingsEditorMemento> imp
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IKeybindingService private readonly keybindingsService: IKeybindingService,
 		@IContextMenuService private readonly contextMenuService: IContextMenuService,
@@ -132,7 +130,7 @@ export class KeybindingsEditor extends EditorPane<IKeybindingsEditorMemento> imp
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IAccessibilityService private readonly accessibilityService: IAccessibilityService
 	) {
-		super(KeybindingsEditor.ID, group, telemetryService, themeService, storageService);
+		super(KeybindingsEditor.ID, group, themeService, storageService);
 		this.delayedFiltering = this._register(new Delayer<void>(300));
 		this._register(keybindingsService.onDidUpdateKeybindings(() => this.render(!!this.keybindingFocusContextKey.get())));
 

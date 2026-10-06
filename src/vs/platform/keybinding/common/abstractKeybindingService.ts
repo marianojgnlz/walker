@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../base/common/actions.js';
 import * as arrays from '../../../base/common/arrays.js';
 import { IntervalTimer, TimeoutTimer } from '../../../base/common/async.js';
 import { illegalState } from '../../../base/common/errors.js';
@@ -21,14 +20,11 @@ import { ResolutionResult, KeybindingResolver, ResultKind, NoMatchingKb } from '
 import { ResolvedKeybindingItem } from './resolvedKeybindingItem.js';
 import { ILogService } from '../../log/common/log.js';
 import { INotificationService, IStatusHandle } from '../../notification/common/notification.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 
 interface CurrentChord {
 	keypress: string;
 	label: string | null;
 }
-
-const HIGH_FREQ_COMMANDS = /^(cursor|delete|undo|redo|tab|editor\.action\.clipboard)/;
 
 /**
  * Whether the keystroke belongs to an in-flight IME composition. `StandardKeyboardEvent` normalizes
@@ -73,7 +69,6 @@ export abstract class AbstractKeybindingService extends Disposable implements IK
 	constructor(
 		private _contextKeyService: IContextKeyService,
 		protected _commandService: ICommandService,
-		protected _telemetryService: ITelemetryService,
 		private _notificationService: INotificationService,
 		protected _logService: ILogService,
 	) {
@@ -397,10 +392,6 @@ export abstract class AbstractKeybindingService extends Disposable implements IK
 						}
 					} finally {
 						this._currentlyDispatchingCommandId = null;
-					}
-
-					if (!HIGH_FREQ_COMMANDS.test(resolveResult.commandId)) {
-						this._telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: resolveResult.commandId, from: 'keybinding', detail: userKeypress.getUserSettingsLabel() ?? undefined });
 					}
 				}
 

@@ -691,7 +691,6 @@ export class BrowserTitlebarPart extends Part implements ITitlebarPart {
 			anchorAlignmentProvider: () => AnchorAlignment.RIGHT,
 			dropdownMenuClassName: WORKBENCH_MENU_MOTION_CLASS,
 			dropdownMenuCloseAnimation: workbenchMenuCloseAnimation,
-			telemetrySource: 'titlePart',
 			highlightToggledItems: this.isAuxiliary, // Only show toggled state for auxiliary title bars
 			actionViewItemProvider: (action, options) => this.actionViewItemProvider(action, options),
 			hoverDelegate: this.hoverDelegate

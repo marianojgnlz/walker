@@ -43,7 +43,6 @@ import { IKeyboardMapper } from '../../../../platform/keyboardLayout/common/keyb
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IUriIdentityService } from '../../../../platform/uriIdentity/common/uriIdentity.js';
 
 // workbench
@@ -188,7 +187,6 @@ export class WorkbenchKeybindingService extends AbstractKeybindingService {
 	constructor(
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@ICommandService commandService: ICommandService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@INotificationService notificationService: INotificationService,
 		@IUserDataProfileService userDataProfileService: IUserDataProfileService,
 		@IHostService private readonly hostService: IHostService,
@@ -198,7 +196,7 @@ export class WorkbenchKeybindingService extends AbstractKeybindingService {
 		@ILogService logService: ILogService,
 		@IKeyboardLayoutService private readonly keyboardLayoutService: IKeyboardLayoutService
 	) {
-		super(contextKeyService, commandService, telemetryService, notificationService, logService);
+		super(contextKeyService, commandService, notificationService, logService);
 
 		this.isComposingGlobalContextKey = contextKeyService.createKey(EditorContextKeys.isComposing.key, false);
 

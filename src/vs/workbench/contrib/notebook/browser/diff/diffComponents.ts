@@ -36,7 +36,6 @@ import { ITextModelService } from '../../../../../editor/common/services/resolve
 import { IConfigurationService } from '../../../../../platform/configuration/common/configuration.js';
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
 import { WorkbenchToolBar } from '../../../../../platform/actions/browser/toolbar.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { fixedDiffEditorOptions, fixedEditorOptions, getEditorPadding } from './diffCellEditorOptions.js';
 import { AccessibilityVerbositySettingId } from '../../../accessibility/browser/accessibilityConfiguration.js';
 import { IAccessibilityService } from '../../../../../platform/accessibility/common/accessibility.js';
@@ -118,7 +117,6 @@ class PropertyHeader extends Disposable {
 		@IMenuService private readonly menuService: IMenuService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@IThemeService private readonly themeService: IThemeService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IAccessibilityService private readonly accessibilityService: IAccessibilityService
 	) {
 		super();
@@ -141,7 +139,7 @@ class PropertyHeader extends Disposable {
 
 				return undefined;
 			}
-		}, this.menuService, this.contextKeyService, this.contextMenuService, this.keybindingService, this.commandService, this.telemetryService));
+		}, this.menuService, this.contextKeyService, this.contextMenuService, this.keybindingService, this.commandService));
 		this._toolbar.context = this.cell;
 
 		const scopedContextKeyService = this.contextKeyService.createScoped(cellToolbarContainer);

@@ -51,7 +51,6 @@ export interface IToolBarOptions {
 	renderDropdownAsChildElement?: boolean;
 	moreIcon?: ThemeIcon;
 	allowContextMenu?: boolean;
-	skipTelemetry?: boolean;
 	hoverDelegate?: IHoverDelegate;
 	trailingSeparator?: boolean;
 
@@ -137,7 +136,6 @@ export class ToolBar extends Disposable {
 							closeAnimation: this.options.dropdownMenuCloseAnimation,
 							anchorAlignmentProvider: this.options.anchorAlignmentProvider,
 							menuAsChild: !!this.options.renderDropdownAsChildElement,
-							skipTelemetry: this.options.skipTelemetry,
 							isMenu: true,
 							hoverDelegate: this.options.hoverDelegate
 						}
@@ -170,7 +168,6 @@ export class ToolBar extends Disposable {
 							closeAnimation: this.options.dropdownMenuCloseAnimation,
 							anchorAlignmentProvider: this.options.anchorAlignmentProvider,
 							menuAsChild: !!this.options.renderDropdownAsChildElement,
-							skipTelemetry: this.options.skipTelemetry,
 							hoverDelegate: this.options.hoverDelegate
 						}
 					);

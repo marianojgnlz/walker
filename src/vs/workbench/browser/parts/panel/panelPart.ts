@@ -90,7 +90,6 @@ export class PanelPart extends AbstractPaneCompositePart {
 			ActivePanelContext.bindTo(contextKeyService),
 			PanelFocusContext.bindTo(contextKeyService),
 			'panel',
-			'panel',
 			undefined,
 			PANEL_TITLE_BORDER,
 			ViewContainerLocation.Panel,

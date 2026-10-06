@@ -31,7 +31,6 @@ import { hasNativeContextMenu } from '../../../../platform/window/common/window.
 import { Gesture, EventType as TouchEventType } from '../../../../base/browser/touch.js';
 import { ActionWidgetDropdown, IActionWidgetDropdownAction } from '../../../../platform/actionWidget/browser/actionWidgetDropdown.js';
 import { IActionWidgetService } from '../../../../platform/actionWidget/browser/actionWidget.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { renderLabelWithIcons } from '../../../../base/browser/ui/iconLabel/iconLabels.js';
 
 export class StartDebugActionViewItem extends BaseActionViewItem {
@@ -59,7 +58,6 @@ export class StartDebugActionViewItem extends BaseActionViewItem {
 		@IHoverService private readonly hoverService: IHoverService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@IActionWidgetService private readonly actionWidgetService: IActionWidgetService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService
 	) {
 		super(context, action, options);
 		this.toDispose = [];
@@ -150,7 +148,7 @@ export class StartDebugActionViewItem extends BaseActionViewItem {
 				filterPlaceholder: nls.localize('debugLaunchConfigurations.search', "Search configurations"),
 				focusFilterOnOpen: true,
 			},
-		}, this.actionWidgetService, this.keybindingService, this.telemetryService);
+		}, this.actionWidgetService, this.keybindingService);
 		this.toDispose.push(this.dropdown);
 		this.toDispose.push(this.dropdown.onDidChangeVisibility(visible => {
 			this.dropdownLabel?.setAttribute('aria-expanded', String(visible));

@@ -14,7 +14,6 @@ import { generateUuid } from '../../../../../base/common/uuid.js';
 import { IEditorOptions } from '../../../../../platform/editor/common/editor.js';
 import { IInstantiationService } from '../../../../../platform/instantiation/common/instantiation.js';
 import { IStorageService } from '../../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
 import { IUriIdentityService } from '../../../../../platform/uriIdentity/common/uriIdentity.js';
 import { EditorPane } from '../../../../browser/parts/editor/editorPane.js';
@@ -101,13 +100,12 @@ export class NotebookOutputEditor extends EditorPane implements INotebookDelegat
 		group: IEditorGroup,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IStorageService storageService: IStorageService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@INotebookService private readonly notebookService: INotebookService,
 
 	) {
-		super(NotebookOutputEditor.ID, group, telemetryService, themeService, storageService);
+		super(NotebookOutputEditor.ID, group, themeService, storageService);
 		this._notebookOptions = this.instantiationService.createInstance(NotebookOptions, this.window, false, undefined);
 		this._register(this._notebookOptions);
 	}

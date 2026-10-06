@@ -201,9 +201,116 @@ suite('Product debloat process startup', () => {
 			['src/vs/editor/contrib/suggest/browser/suggestController.ts', /publicLog|suggest\.acceptedSuggestion|ITelemetryService/],
 			['src/vs/editor/contrib/suggest/browser/suggestModel.ts', /publicLog|suggest\.durations|ITelemetryService/],
 			['src/vs/editor/contrib/inlineCompletions/browser/hintsWidget/hoverParticipant.ts', /publicLog|inlineCompletionHover|ITelemetryService/],
+			['src/vs/editor/contrib/inlineCompletions/browser/telemetry.ts', /publicLog|sendInlineCompletionsEndOfLifeTelemetry|dataChannel\.publicLog2|InlineCompletionsEndOfLifeClassification/],
+			['src/vs/editor/contrib/inlineCompletions/browser/model/inlineCompletionsSource.ts', /publicLog|DataChannelForwardingTelemetryService|sendInlineCompletionsEndOfLifeTelemetry|emptyResponseInformation|RequestResponseData/],
 		];
 		for (const [relativePath, removal] of prunedSites) {
 			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+
+		// The workbench side of the same `inlineCompletion.endOfLife` event (extension-backed providers).
+		assert.doesNotMatch(
+			readRepoFile('src/vs/workbench/api/browser/mainThreadLanguageFeatures.ts'),
+			/sendInlineCompletionsEndOfLifeTelemetry|endOfLifeSummary|DataChannelForwardingTelemetryService|isCopilotLikeExtension|extractEngineFromCorrelationId/
+		);
+	});
+
+	test('editor and view container bases no longer thread a telemetry service', () => {
+		// T3.001: the composite/editor-pane/view-pane-container constructor threading was the last
+		// reason these panes resolved ITelemetryService without emitting anything themselves.
+		for (const relativePath of [
+			'src/vs/workbench/browser/composite.ts',
+			'src/vs/workbench/browser/panecomposite.ts',
+			'src/vs/workbench/browser/parts/editor/editorPane.ts',
+			'src/vs/workbench/browser/parts/views/viewPaneContainer.ts',
+			'src/vs/workbench/browser/parts/views/viewsViewlet.ts',
+			'src/vs/workbench/browser/parts/editor/editorPlaceholder.ts',
+			'src/vs/workbench/browser/parts/editor/editorWithViewState.ts',
+			'src/vs/workbench/browser/parts/editor/textEditor.ts',
+			'src/vs/workbench/browser/parts/editor/textResourceEditor.ts',
+			'src/vs/workbench/browser/parts/editor/sideBySideEditor.ts',
+			'src/vs/workbench/browser/parts/editor/binaryEditor.ts',
+			'src/vs/workbench/browser/parts/editor/binaryDiffEditor.ts',
+			'src/vs/workbench/contrib/debug/browser/debugViewlet.ts',
+			'src/vs/workbench/contrib/extensions/browser/extensionsViewlet.ts',
+			'src/vs/workbench/contrib/files/browser/explorerViewlet.ts',
+			'src/vs/workbench/contrib/multiDiffEditor/browser/multiDiffEditor.ts',
+			'src/vs/workbench/contrib/scm/browser/scmViewPaneContainer.ts',
+			'src/vs/workbench/contrib/testing/browser/testingViewPaneContainer.ts',
+			'src/vs/workbench/services/views/browser/viewsService.ts',
+		]) {
+			assert.doesNotMatch(readRepoFile(relativePath), /ITelemetryService|telemetryService/, relativePath);
+		}
+
+		// Producers inside the hierarchy keep their own injection; none of them may receive it from a base class.
+		for (const relativePath of [
+			'src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts',
+			'src/vs/workbench/contrib/extensions/browser/extensionEditor.ts',
+			'src/vs/workbench/contrib/notebook/browser/notebookEditor.ts',
+			'src/vs/workbench/contrib/preferences/browser/settingsEditor2.ts',
+			'src/vs/workbench/contrib/surveys/browser/surveyEditorPane.ts',
+		]) {
+			const source = readRepoFile(relativePath);
+			assert.doesNotMatch(source, /super\([^)]*telemetryService/s, relativePath);
+			assert.match(source, /@ITelemetryService private readonly telemetryService: ITelemetryService,/, relativePath);
+		}
+	});
+
+	test('platform action surfaces no longer report workbench action executions', () => {
+		// T3.001: `workbenchActionExecuted` had producers in the shared action/action-widget surfaces;
+		// the `telemetrySource` option and the workbench telemetry-name plumbing are gone with them.
+		for (const relativePath of [
+			'src/vs/platform/actions/browser/actionbar.ts',
+			'src/vs/platform/actions/browser/toolbar.ts',
+			'src/vs/platform/actions/browser/buttonbar.ts',
+			'src/vs/platform/actions/browser/actionWidgetDropdownActionViewItem.ts',
+			'src/vs/platform/actionWidget/browser/actionWidgetDropdown.ts',
+		]) {
+			assert.doesNotMatch(readRepoFile(relativePath), /telemetry|Telemetry/, relativePath);
+		}
+
+		for (const relativePath of [
+			'src/vs/workbench/browser/parts/compositePart.ts',
+			'src/vs/workbench/browser/parts/paneCompositePart.ts',
+		]) {
+			assert.doesNotMatch(readRepoFile(relativePath), /nameForTelemetry|telemetrySource|ITelemetryService|publicLog/, relativePath);
+		}
+	});
+
+	test('keybinding, quick-input and menubar surfaces carry no telemetry emission', () => {
+		// T3.001: the last `workbenchActionExecuted` producers outside the workbench shell.
+		const prunedSites: [string, RegExp][] = [
+			['src/vs/platform/keybinding/common/abstractKeybindingService.ts', /telemetry|Telemetry|HIGH_FREQ_COMMANDS/],
+			['src/vs/platform/quickinput/browser/commandsQuickAccess.ts', /telemetry|Telemetry|WorkbenchActionExecuted/],
+			['src/vs/platform/menubar/electron-main/menubar.ts', /telemetry|Telemetry/],
+			['src/vs/editor/contrib/quickAccess/browser/commandsQuickAccess.ts', /ITelemetryService|telemetryService/],
+			['src/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.ts', /ITelemetryService|telemetryService/],
+			['src/vs/workbench/contrib/quickaccess/browser/commandsQuickAccess.ts', /ITelemetryService|telemetryService/],
+		];
+		for (const [relativePath, removal] of prunedSites) {
+			assert.doesNotMatch(readRepoFile(relativePath), removal, relativePath);
+		}
+
+		// The standalone editor keeps its no-op service shape and wires it without any producer.
+		const standaloneServices = readRepoFile('src/vs/editor/standalone/browser/standaloneServices.ts');
+		assert.match(standaloneServices, /super\(contextKeyService, commandService, notificationService, logService\)/);
+		assert.match(standaloneServices, /class StandaloneTelemetryService implements ITelemetryService/);
+	});
+
+	test('inert telemetry plumbing is gone from the shared UI and editor widget layers', () => {
+		// T2.001/T3.001: `skipTelemetry` lost its only reader with the context-view cleanup and the
+		// editor `telemetryData` option had no producer left; both were carried through the layers as dead
+		// parameters. The retained `ICodeEditor`/widget surface must not re-introduce them.
+		for (const relativePath of [
+			'src/vs/base/browser/contextmenu.ts',
+			'src/vs/base/browser/ui/dropdown/dropdown.ts',
+			'src/vs/base/browser/ui/dropdown/dropdownActionViewItem.ts',
+			'src/vs/base/browser/ui/toolbar/toolbar.ts',
+			'src/vs/platform/actions/browser/dropdownWithPrimaryActionViewItem.ts',
+			'src/vs/editor/browser/editorBrowser.ts',
+			'src/vs/editor/browser/widget/codeEditor/codeEditorWidget.ts',
+		]) {
+			assert.doesNotMatch(readRepoFile(relativePath), /telemetry|Telemetry/, relativePath);
 		}
 	});
 

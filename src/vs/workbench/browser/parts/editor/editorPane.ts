@@ -6,7 +6,6 @@
 import { Composite } from '../../composite.js';
 import { IEditorPane, GroupIdentifier, IEditorMemento, IEditorOpenContext, isEditorInput } from '../../../common/editor.js';
 import { EditorInput } from '../../../common/editor/editorInput.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { IEditorGroup, IEditorGroupsService } from '../../../services/editor/common/editorGroupsService.js';
@@ -80,11 +79,10 @@ export abstract class EditorPane<MementoType extends object = object> extends Co
 	constructor(
 		id: string,
 		readonly group: IEditorGroup,
-		telemetryService: ITelemetryService,
 		themeService: IThemeService,
 		storageService: IStorageService
 	) {
-		super(id, telemetryService, themeService, storageService);
+		super(id, themeService, storageService);
 	}
 
 	override create(parent: HTMLElement): void {

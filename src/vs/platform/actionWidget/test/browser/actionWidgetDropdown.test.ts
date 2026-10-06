@@ -19,7 +19,6 @@ import { IActionWidgetService } from '../../browser/actionWidget.js';
 import { ACTION_WIDGET_DROPDOWN_MOTION_CLASS, ActionWidgetDropdown, actionWidgetDropdownCloseAnimation, IActionWidgetDropdownAction, withActionWidgetDropdownMotion } from '../../browser/actionWidgetDropdown.js';
 import { ActionWidgetDropdownActionViewItem } from '../../../actions/browser/actionWidgetDropdownActionViewItem.js';
 import { MockContextKeyService, MockKeybindingService } from '../../../keybinding/test/common/mockKeybindingService.js';
-import { NullTelemetryService } from '../../../telemetry/common/telemetryUtils.js';
 
 interface ICapturedAction {
 	readonly id: string;
@@ -89,7 +88,6 @@ suite('ActionWidgetDropdown', () => {
 			},
 			actionWidgetService,
 			new MockKeybindingService(),
-			NullTelemetryService,
 		));
 
 		dropdown.show();
@@ -140,7 +138,6 @@ suite('ActionWidgetDropdown', () => {
 			},
 			actionWidgetService,
 			new MockKeybindingService(),
-			NullTelemetryService,
 		));
 
 		dropdown.show();
@@ -171,7 +168,6 @@ suite('ActionWidgetDropdown', () => {
 			},
 			actionWidgetService,
 			new MockKeybindingService(),
-			NullTelemetryService,
 		));
 
 		dropdown.show();
@@ -195,7 +191,6 @@ suite('ActionWidgetDropdown', () => {
 			new TestActionWidgetService(),
 			new MockKeybindingService(),
 			new MockContextKeyService(),
-			NullTelemetryService,
 		));
 		const container = mainWindow.document.createElement('div');
 		actionViewItem.render(container);

@@ -6368,10 +6368,6 @@ declare namespace monaco.editor {
 		 */
 		writeScreenReaderContent(reason: string): void;
 		/**
-		 * Returns the editor's container dom node
-		 */
-		getContainerDomNode(): HTMLElement;
-		/**
 		 * Returns the editor's dom node
 		 */
 		getDomNode(): HTMLElement | null;

@@ -58,7 +58,6 @@ import { getActionBarActions, getFlatContextMenuActions } from '../../../../plat
 import { IResourceLabel, ResourceLabels } from '../../../browser/labels.js';
 import { FileKind } from '../../../../platform/files/common/files.js';
 import { WorkbenchToolBar } from '../../../../platform/actions/browser/toolbar.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { basename } from '../../../../base/common/path.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { ScmHistoryItemResolver } from '../../multiDiffEditor/browser/scmMultiDiffSourceResolver.js';
@@ -462,7 +461,6 @@ class HistoryItemRenderer implements ICompressibleTreeRenderer<SCMHistoryItemVie
 		@IKeybindingService private readonly _keybindingService: IKeybindingService,
 		@IMarkdownRendererService private readonly _markdownRendererService: IMarkdownRendererService,
 		@IMenuService private readonly _menuService: IMenuService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService
 	) {
 		this._badgesConfig = observableConfigValue<'all' | 'filter'>('scm.graph.badges', 'filter', this._configurationService);
 	}
@@ -477,7 +475,7 @@ class HistoryItemRenderer implements ICompressibleTreeRenderer<SCMHistoryItemVie
 		const labelContainer = append(element, $('.label-container'));
 
 		const actionsContainer = append(element, $('.actions'));
-		const actionBar = new WorkbenchToolBar(actionsContainer, undefined, this._menuService, this._contextKeyService, this._contextMenuService, this._keybindingService, this._commandService, this._telemetryService);
+		const actionBar = new WorkbenchToolBar(actionsContainer, undefined, this._menuService, this._contextKeyService, this._contextMenuService, this._keybindingService, this._commandService);
 
 		return { element, graphContainer, label: iconLabel, labelContainer, actionBar, elementDisposables: new DisposableStore(), disposables: combinedDisposable(iconLabel, actionBar) };
 	}
@@ -677,7 +675,6 @@ class HistoryItemChangeRenderer implements ICompressibleTreeRenderer<SCMHistoryI
 		@IKeybindingService private readonly _keybindingService: IKeybindingService,
 		@ILabelService private readonly _labelService: ILabelService,
 		@IMenuService private readonly _menuService: IMenuService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 	) { }
 
 	renderTemplate(container: HTMLElement): HistoryItemChangeTemplate {
@@ -692,7 +689,7 @@ class HistoryItemChangeRenderer implements ICompressibleTreeRenderer<SCMHistoryI
 
 		const disposables = new DisposableStore();
 		const actionsContainer = append(resourceLabel.element, $('.actions'));
-		const actionBar = new WorkbenchToolBar(actionsContainer, undefined, this._menuService, this._contextKeyService, this._contextMenuService, this._keybindingService, this._commandService, this._telemetryService);
+		const actionBar = new WorkbenchToolBar(actionsContainer, undefined, this._menuService, this._contextKeyService, this._contextMenuService, this._keybindingService, this._commandService);
 		disposables.add(actionBar);
 
 		return { rowElement, element, graphPlaceholder, resourceLabel, actionBar, disposables };

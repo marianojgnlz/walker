@@ -13,7 +13,6 @@ import { IAction, Separator } from '../../base/common/actions.js';
 import { MenuId, SubmenuItemAction } from '../../platform/actions/common/actions.js';
 import { IContextMenuService } from '../../platform/contextview/browser/contextView.js';
 import { IStorageService } from '../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../platform/theme/common/themeService.js';
 import { IWorkspaceContextService } from '../../platform/workspace/common/workspace.js';
 import { ViewPaneContainer, ViewsSubMenu } from './parts/views/viewPaneContainer.js';
@@ -30,7 +29,6 @@ export abstract class PaneComposite<MementoType extends object = object> extends
 
 	constructor(
 		id: string,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IStorageService protected storageService: IStorageService,
 		@IInstantiationService protected instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService,
@@ -38,7 +36,7 @@ export abstract class PaneComposite<MementoType extends object = object> extends
 		@IExtensionService protected extensionService: IExtensionService,
 		@IWorkspaceContextService protected contextService: IWorkspaceContextService
 	) {
-		super(id, telemetryService, themeService, storageService);
+		super(id, themeService, storageService);
 	}
 
 	override create(parent: HTMLElement): void {

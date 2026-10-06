@@ -25,7 +25,6 @@ import { IContextMenuService } from '../../../../platform/contextview/browser/co
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { KeybindingWeight } from '../../../../platform/keybinding/common/keybindingsRegistry.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { activeContrastBorder, asCssVariable } from '../../../../platform/theme/common/colorRegistry.js';
 import { IThemeService, Themable } from '../../../../platform/theme/common/themeService.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
@@ -357,7 +356,6 @@ export class ViewPaneContainer<MementoType extends object = object> extends Comp
 		@IConfigurationService protected configurationService: IConfigurationService,
 		@IWorkbenchLayoutService protected layoutService: IWorkbenchLayoutService,
 		@IContextMenuService protected contextMenuService: IContextMenuService,
-		@ITelemetryService protected telemetryService: ITelemetryService,
 		@IExtensionService protected extensionService: IExtensionService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService protected storageService: IStorageService,

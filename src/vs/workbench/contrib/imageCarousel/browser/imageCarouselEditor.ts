@@ -17,7 +17,6 @@ import { IFileService } from '../../../../platform/files/common/files.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
 import { IEditorOpenContext } from '../../../common/editor.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
 import { IEditorGroup } from '../../../services/editor/common/editorGroupsService.js';
 import { IWebviewElement, IWebviewService } from '../../webview/browser/webview.js';
@@ -73,13 +72,12 @@ export class ImageCarouselEditor extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IFileService private readonly _fileService: IFileService,
 		@IWebviewService private readonly _webviewService: IWebviewService
 	) {
-		super(ImageCarouselEditor.ID, group, telemetryService, themeService, storageService);
+		super(ImageCarouselEditor.ID, group, themeService, storageService);
 	}
 
 	protected override createEditor(parent: HTMLElement): void {
