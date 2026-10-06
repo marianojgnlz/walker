@@ -567,3 +567,32 @@ src/vs/workbench/services/accounts/**
 src/vs/workbench/services/policies/common/accountPolicyService.ts
 src/vs/workbench/services/policies/test/browser/multiplexPolicyService.test.ts
 Scope: resolve the wave's dangling references (exact error list in the apply brief). The default-account surface (platform interface + services impl) is account-owned → delete; remove its plumbing from web.main/desktop.main/workbenchTestServices/policy services/tests (AccountPolicyService ctor may drop the account dependency — generic policy behavior preserved). cellRenderer/terminal.contribution/extensionGalleryManifestService.test dangling refs: mechanical removal of deleted-module usage, preserving generic notebook/terminal/gallery-manifest behavior.
+
+### U07 grant additions (2026-10-06)
+src/vs/server/node/serverEnvironmentService.ts
+src/vs/server/node/server.main.ts
+src/vs/server/node/remoteExtensionHostAgentServer.ts
+src/vs/server/node/serverServices.ts
+src/vs/server/test/node/serverConnectionToken.test.ts
+extensions/vscode-test-resolver/src/extension.ts
+extensions/vscode-test-resolver/package.json
+test/smoke/src/areas/agentsWindow/**
+Scope: C6 TS-side agent-host tails (argv/env bridge schema, server startup wiring, test-resolver agent entries, smoke agentsWindow areas) — narrow agent-host removal only; generic server/remote behavior preserved. The U07.a.001 643-line delta is ACCEPTED as a coupled deletion-review batch per its recorded split analysis (consistent with the c.035/five-pairs precedents).
+
+### U07 grant additions (2026-10-07; `approve-smoke-automation-orphan-closure`)
+
+src/server-main.ts
+test/smoke/src/main.ts
+test/automation/src/index.ts
+test/automation/src/workbench.ts
+test/automation/src/agentsWindow.ts
+
+Scope: (a) remove `'agent-host-port', 'agent-host-path'` from `src/server-main.ts`'s minimist quick-parse string list (the last agent-host name in the granted server area, inert after the `serverOptions` removal); (b) disconnect the smoke runner's `areas/agentsWindow` import + `setupAgentsWindowTests` registration so the whole directory can be deleted; (c) disconnect the `test/automation` `AgentsWindow` helper (`Workbench` field/constructor + the `index.ts` re-export) so `test/automation/src/agentsWindow.ts` joins the W36 deletion manifest. Generic server/remote/IPC/SSH behavior and the retained smoke browserView/mock-LLM infrastructure are preserved. Physical deletion of the six W36 files remains parent-owned.
+
+### C6 cleanup additions (2026-10-06)
+src/vs/workbench/test/browser/productDebloatChatIntegrations.test.ts
+src/vs/workbench/contrib/debug/**
+src/vs/workbench/contrib/preferences/common/configurationRegistry.ts
+build/lib/i18n.ts
+.github/workflows/**
+Scope: (1) fix the stale ENOENT reads in productDebloatChatIntegrations.test (assert absence instead — the files died in earlier waves); (2) C6.TRIANGULATE residues: `inspect-agenthost`/`inspect-brk-agenthost` debug configs + caller-less `parseAgentHostDebugPort`, the consumer-less `configurationRegistry` agentHost-sync mechanism, remaining W34 `.github` agent-host files. (The editTelemetry `agentHost` category is T10-owned — leave for the telemetry stage.)

@@ -454,3 +454,57 @@ The parent approved the three escalation groups; the reference cleanups are done
 ### Lint rule fixed (2026-10-07, `approve-translation-remind-rule-fix`)
 
 `.eslint-plugin-local/code-translation-remind.ts` previously spread `[...parsed.workbench, ...parsed.sessions]` from `build/lib/i18n.resources.json`, so removing the `sessions` project crashed repo lint (`TypeError: parsed.sessions is not iterable`). The parent approved the path; the rule is now project-agnostic (`Object.values(parsed).flatMap(project => Array.isArray(project) ? project : [])`) and its dead `vs/sessions/contrib/...` branch is gone, so `build/lib/i18n.resources.json` is back to exactly the retained `editor` + `workbench` projects with no `vs/sessions`/`vs/workbench/services/agentHost` entry and no placeholder container. Verified: RED crash reproduced before the fix; eslint on nls-importing contrib/services/editor/notebook/terminal files exit 0; `Linter`-API semantics check keeps the enforcing `missing` report for unlisted resources; `npm run typecheck --prefix build` exit 0; build tests 30/30. Note: `.eslint-plugin-local/tsconfig.json` is red at HEAD for untouched rule files (visitor-type drift vs `@typescript-eslint/utils`); zero errors reference the edited rule.
+
+### W35 — Rust CLI Agent Host surface, disconnected and ready for parent `git rm` (2026-10-07, `U07.a.001`)
+
+The executor disconnected every registration/reference and left the whole files in place; the parent executes the `git rm` between passes. Measured in the current worktree (`git ls-files` + `wc -l`), all plain text, no binaries:
+
+| # | Path | Lines | Ready? | Evidence |
+| --- | --- | ---: | --- | --- |
+| W35.a | `cli/src/commands/agent.rs` | 400 | **Yes** | `pub mod agent;` removed from `commands.rs`; `Commands::Agent`/`AgentArgs`/`AgentSubcommand`/dispatch removed; its only inbound consumers (`main.rs` dispatch + `args.rs`) are cleaned; zero remaining `commands::agent` references outside the file. |
+| W35.b | `cli/src/commands/agent_discovery.rs` | 317 | **Yes** | module registration removed; only agent modules (`agent.rs`, `agent_ps.rs`, `agent_kill.rs`, `agent_logs.rs`) imported it; no retained importer. |
+| W35.c | `cli/src/commands/agent_endpoints.rs` | 146 | **Yes** | registration + dispatch removed; sole consumer was `main.rs`; zero retained references. |
+| W35.d | `cli/src/commands/agent_host.rs` | 1202 | **Yes** | registration + dispatch + `command_shell.rs` `ensure_supervisor_running` consumer + `control_server.rs` `ActiveAgentHost` consumer all removed; `AgentHostArgs`/bridge fields gone; zero retained imports. |
+| W35.e | `cli/src/commands/agent_kill.rs` | 168 | **Yes** | registration + dispatch removed; zero retained imports. |
+| W35.f | `cli/src/commands/agent_logs.rs` | 222 | **Yes** | registration + dispatch removed; zero retained imports. |
+| W35.g | `cli/src/commands/agent_ps.rs` | 497 | **Yes** | registration + dispatch removed; zero retained imports. |
+| W35.h | `cli/src/commands/agent_relay.rs` | 344 | **Yes** | registration + dispatch removed; zero retained imports. |
+| W35.i | `cli/src/commands/agent_stop.rs` | 108 | **Yes** | registration + dispatch removed; zero retained imports. |
+| W35.j | `cli/src/tunnels/agent_host.rs` | 3658 | **Yes** | `pub mod agent_host;` removed from `tunnels.rs`; the command-side consumers are W35.a–i; no retained importer of the module remains (grep over compiled files = 0). |
+| W35.k | `cli/src/tunnels/agent_host_registry.rs` | 1591 | **Yes** | module registration removed; its only importers (agent commands, `tunnels/agent_host.rs`, `user_data_path.rs`) are all manifest-bound; no retained importer. |
+| W35.l | `cli/src/tunnels/agent_host_registry_acl_windows.rs` | 350 | **Yes** | the `#[cfg(windows)] mod agent_host_registry_acl_windows;` registration was removed with the registry; it is the registry's Windows ACL helper and has no other declaration site. |
+| W35.m | `cli/src/tunnels/idle_timeout.rs` | 353 | **Yes** | agent-supervisor-only idle termination (`commands/agent_host.rs` + `tunnels/agent_host.rs` consumers gone); `pub mod idle_timeout;` unregistered; zero retained references. Not part of the generic `serve_stream`/`serve-web`/SSH tunnel core. |
+| W35.n | `cli/src/tunnels/user_data_path.rs` | 334 | **Yes** | agent-host registry user-data resolver; its only callers were the agent commands + `tunnels/agent_host{,_registry}.rs`; `pub mod user_data_path;` unregistered; zero retained references. |
+
+**W35 readiness total: 14 files / 9,690 lines**, all disconnected, `cargo check` + full `cargo test` green without them being compiled. The `tunnels/` core (`code_server.rs`, `control_server.rs`, `machine_status.rs`, `paths.rs`, `protocol.rs`, `legal.rs`, `challenge.rs`, `server_bridge.rs`, `server_multiplexer.rs`, `shutdown_signal.rs`, `socket_signal.rs`) and `cli/src/auth.rs` stay — the `tunnels` crate dependency is still consumed by `auth.rs` (`AuthorizationProvider for Auth`) and `tunnels/protocol.rs` (`TUNNEL_PROTOCOL_*`), so no `cli/Cargo.toml`/`Cargo.lock` change is claimed.
+
+**C6 still open after W35 — agent-host tails outside this leaf's surfaces (recorded for the parent):**
+
+1. `src/vs/server/node/serverEnvironmentService.ts` — argv schema/interface/redaction for `agent-host-port`, `agent-host-bridge-{port,path,host,connection-token}` and `agentHostBridgeConnectionTokenEnvironmentVariable` (lines ~18, 28–29, 102–107, 237–242).
+2. `src/vs/server/node/server.main.ts` (~15, 38–39, 72) — reads and deletes `VSCODE_AGENT_HOST_BRIDGE_CONNECTION_TOKEN` and threads it into `doCreateServer`.
+3. `src/vs/server/node/remoteExtensionHostAgentServer.ts` (~612, 653) — `createServer(..., agentHostBridgeConnectionToken)` parameter.
+4. `src/vs/server/node/serverServices.ts` (~105) — `setupServerServices(..., _agentHostBridgeConnectionToken: string | undefined, ...)` (already unused, `_`-prefixed).
+5. `src/vs/server/test/node/serverConnectionToken.test.ts` (~105–121) — fixture exercising the bridge redaction.
+6. `extensions/vscode-test-resolver/src/extension.ts` (~26, 167–194) + `extensions/vscode-test-resolver/package.json` (~160–171) — `testresolver.agentHostPort`/`agentHostBridgePort`/`agentHostBridgeConnectionToken` settings that emit `--agent-host-port` / `--agent-host-bridge-port` + the env var.
+7. `test/smoke/src/areas/agentsWindow/**` (5 tracked files incl. the `packagedAgentHost.ts`/`tunnelAuthentication/**` fixtures) — full agent-host smoke suite for the deleted trees; referenced by the smoke runner and by the retained mock LLM server chain (W33-retained note).
+
+None of these compile against the removed Rust modules, so W35 is independently deletable; they are TS-side C6/U06 tails whose edit paths are outside the `cli/**` surfaces of this leaf and need a parent grant (or a separate C6 TS-tail leaf).
+
+### W36 — Agent Host smoke + automation tails, disconnected and ready for parent `git rm` (2026-10-07, `u07.a.002`)
+
+The executor disconnected every retained reference (smoke runner import/registration, automation `Workbench` field/export) and left the whole files in place; the parent executes the `git rm` between passes. Measured with `wc -l` in the current worktree, all plain text, no binaries:
+
+| # | Path | Lines | Ready? | Evidence |
+| --- | --- | ---: | --- | --- |
+| W36.a | `test/smoke/src/areas/agentsWindow/agentsWindow.test.ts` | 936 | **Yes** | Sole importer was `test/smoke/src/main.ts` (import + `setupAgentsWindowTests` registration removed in `u07.a.002`); drives the removed `app.workbench.agentsWindow` automation field and imports `../chat/shellScenarios` + `./remoteDevContainerFixtures`; it is the only file carrying post-disconnection `test/smoke` tsc errors (exactly 64, all its own `app.workbench.agentsWindow` uses), and the directory-excluded shadow compile of the retained smoke sources is 0 errors. |
+| W36.b | `test/smoke/src/areas/agentsWindow/remoteDevContainerFixtures.ts` | 976 | **Yes** | Imported only by `agentsWindow.test.ts`; no other smoke file references it. |
+| W36.c | `test/smoke/src/areas/agentsWindow/fixtures/packagedAgentHost.ts` | 161 | **Yes** | Forked/copied only by `remoteDevContainerFixtures.ts` (L366, L873, L878); no other consumer. |
+| W36.d | `test/smoke/src/areas/agentsWindow/fixtures/tunnelAuthentication/extension.ts` | 43 | **Yes** | Copied only by `remoteDevContainerFixtures.ts` (L690–691). |
+| W36.e | `test/smoke/src/areas/agentsWindow/fixtures/tunnelAuthentication/package.json` | 20 | **Yes** | Copied only by `remoteDevContainerFixtures.ts` (L690–691). |
+| W36.f | `test/automation/src/agentsWindow.ts` | 1125 | **Yes** | The `Workbench.agentsWindow` field/constructor and the `test/automation/src/index.ts` re-export were removed in `u07.a.002`; `grep -rn "agentsWindow\|AgentsWindow" test/automation/src` is zero outside the file's own `[agentsWindow]` log strings. |
+
+**W36 readiness total: 6 files / 3,261 lines.** All compiled/reference consumers are disconnected: `test/smoke` retained sources typecheck 0 errors with the directory excluded, and `test/automation` compiles 0 errors with the helper still present. The physical `git rm` is independent of W35 (no cross-references).
+
+**Post-`git rm` expectation:** `cd test/smoke && npm run compile` becomes 0 errors (in the current worktree it reports exactly the 64 W36.a-internal errors), `cargo check --manifest-path cli/Cargo.toml` stays green, and the generated `test/smoke/out/**` / `test/automation/out/**` copies are ignored build artifacts, not part of the manifest.
+
+**`u07.a.002` closes the “C6 still open after W35” list above:** items 1–6 are executed (server argv/env/redaction schema, `server.main.ts` env bridge, `remoteExtensionHostAgentServer.createServer` parameter, `serverServices.setupServerServices` unused parameter, `serverConnectionToken.test.ts` fixture, `vscode-test-resolver` settings/argv/env emission) plus the additional `src/server-main.ts` minimist string list; item 7 is disconnected and manifest-bound as W36 above. `src/vs/server/**` and `extensions/vscode-test-resolver/**` now have zero `agent-host*` / `agentHostBridge*` / `AGENT_HOST_BRIDGE*` matches.

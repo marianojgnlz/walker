@@ -12,7 +12,6 @@ use std::sync::LazyLock;
 use crate::options::Quality;
 
 pub const CONTROL_PORT: u16 = 31545;
-pub const AGENT_HOST_PORT: u16 = 31546;
 
 /// Protocol version sent to clients. This can be used to indicate new or
 /// changed capabilities that clients may wish to leverage.
@@ -22,11 +21,10 @@ pub const AGENT_HOST_PORT: u16 = 31546;
 ///  3 - The server's connection token is set to a SHA256 hash of the tunnel ID
 ///  4 - The server's msgpack messages are no longer length-prefixed
 ///  5 - The server now exposes an agent host connection
-///  6 - The forwarded agent host port additionally serves a registry-based
-///      endpoint selection WebSocket route (see
-///      `tunnels::agent_host::AGENT_HOST_GATEWAY_SELECT_PATH`); the root
-///      route keeps serving the unchanged v5 direct-reuse behavior, so
-///      older clients that only know the root route are unaffected.
+///  6 - A forwarded port additionally served a registry-based endpoint
+///      selection WebSocket route; the root route keeps serving the
+///      unchanged v5 direct-reuse behavior, so older clients that only know
+///      the root route are unaffected.
 pub const PROTOCOL_VERSION: u32 = 6;
 
 /// Prefix for the tunnel tag that includes the version.
@@ -102,17 +100,6 @@ const NONINTERACTIVE_VAR: &str = "VSCODE_CLI_NONINTERACTIVE";
 pub const DEFAULT_DATA_PARENT_DIR: &str = match option_env!("VSCODE_CLI_DATA_FOLDER_NAME") {
 	Some(n) => n,
 	None => ".vscode-oss",
-};
-
-/// Canonical, machine-wide parent directory used to coordinate the agent
-/// host across CLI invocations. Mirrors the `serverDataFolderName` in
-/// `product.json` so the supervisor log written by `code agent host`
-/// lines up with the directory the SSH `command-shell` entry point
-/// already uses (otherwise local + remote would race on different
-/// directories).
-pub const SERVER_DATA_PARENT_DIR: &str = match option_env!("VSCODE_CLI_SERVER_DATA_FOLDER_NAME") {
-	Some(n) => n,
-	None => ".vscode-server-oss",
 };
 
 pub fn get_default_user_agent() -> String {

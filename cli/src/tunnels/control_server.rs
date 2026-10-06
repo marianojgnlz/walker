@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 use crate::async_pipe::get_socket_rw_stream;
-use crate::commands::agent_host::ActiveAgentHost;
 use crate::constants::PRODUCT_NAME_LONG;
 use crate::log;
 use crate::msgpack_rpc::{new_msgpack_rpc, start_msgpack_rpc, MsgPackCodec, MsgPackSerializer};
@@ -26,7 +25,6 @@ use crate::util::machine::kill_pid;
 use crate::util::os::os_release;
 use crate::util::sync::{new_barrier, Barrier, BarrierOpener};
 
-use futures::future::{BoxFuture, Shared};
 use futures::stream::FuturesUnordered;
 use futures::FutureExt;
 use std::collections::HashMap;
@@ -67,21 +65,6 @@ use super::socket_signal::{
 type HttpRequestsMap = Arc<std::sync::Mutex<HashMap<u32, DelegatedHttpRequest>>>;
 type CodeServerCell = Arc<Mutex<Option<SocketCodeServer>>>;
 
-/// Shared, cloneable future that resolves once the agent host supervisor
-/// is up. The local command-shell server only awaits it when a spawned
-/// server needs the Agent Host bridge.
-pub type SharedActiveAgentHost =
-	Shared<BoxFuture<'static, Result<Arc<ActiveAgentHost>, Arc<AnyError>>>>;
-
-/// Wraps an already-known [`ActiveAgentHost`] into a [`SharedActiveAgentHost`]
-/// that resolves immediately, so callers with an existing supervisor can
-/// hand it to the server bridge without another registry lookup.
-pub fn ready_active_agent_host(active: ActiveAgentHost) -> SharedActiveAgentHost {
-	futures::future::ready(Ok(Arc::new(active)))
-		.boxed()
-		.shared()
-}
-
 struct HandlerContext {
 	/// Log handle for the server
 	log: log::Logger,
@@ -105,9 +88,6 @@ struct HandlerContext {
 	http: Arc<FallbackSimpleHttp>,
 	/// requests being served by the client
 	http_requests: HttpRequestsMap,
-	/// Shared handle to the local Agent Host supervisor, awaited only when
-	/// the server bridge is requested.
-	active_agent_host: Option<SharedActiveAgentHost>,
 }
 
 /// Handler auth state.
@@ -158,7 +138,6 @@ pub struct ServeStreamParams {
 	pub platform: Platform,
 	pub requires_auth: AuthRequired,
 	pub exit_barrier: Barrier<ShutdownSignal>,
-	pub active_agent_host: Option<SharedActiveAgentHost>,
 }
 
 pub async fn serve_stream(
@@ -189,7 +168,6 @@ fn make_socket_rpc(
 	requires_auth: AuthRequired,
 	platform: Platform,
 	http_requests: HttpRequestsMap,
-	active_agent_host: Option<SharedActiveAgentHost>,
 ) -> RpcDispatcher<MsgPackSerializer, HandlerContext> {
 	let server_bridges = ServerMultiplexer::new();
 	let mut rpc = RpcBuilder::new(MsgPackSerializer {}).methods(HandlerContext {
@@ -211,7 +189,6 @@ fn make_socket_rpc(
 			http_delegated,
 		)),
 		http_requests,
-		active_agent_host,
 	});
 
 	rpc.register_sync("ping", |_: EmptyObject, _| Ok(EmptyObject {}));
@@ -390,7 +367,6 @@ async fn process_socket(
 		code_server_args,
 		platform,
 		requires_auth,
-		active_agent_host,
 	} = params;
 
 	let (http_delegated, mut http_rx) = DelegatedSimpleHttp::new(log.clone());
@@ -408,7 +384,6 @@ async fn process_socket(
 		requires_auth,
 		platform,
 		http_requests.clone(),
-		active_agent_host,
 	);
 
 	{
@@ -592,20 +567,6 @@ async fn handle_serve(
 	let mut csa = c.code_server_args.clone();
 	csa.connection_token = params.connection_token.or(csa.connection_token);
 	csa.install_extensions.extend(params.extensions);
-
-	// Mix in the agent-host bridge info when a local command-shell server
-	// needs to spawn. If supervisor startup failed, the renderer still works
-	// without the `agentHostProxy` bridge.
-	if let Some(ah_fut) = c.active_agent_host.clone() {
-		match ah_fut.await {
-			Ok(a) => a.apply_to_bridge(&mut csa),
-			Err(e) => warning!(
-				c.log,
-				"Agent host supervisor unavailable; renderer will not see agentHostProxy: {}",
-				e
-			),
-		}
-	}
 
 	let params_raw = ServerParamsRaw {
 		commit_id: params.commit_id,

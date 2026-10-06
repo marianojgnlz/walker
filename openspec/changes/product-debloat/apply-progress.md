@@ -2718,3 +2718,141 @@ The three approved groups became leaves 4–6 (all under the 400-line authored b
 1. `.eslint-plugin-local/code-translation-remind.ts`: no project key may be hardcoded, no `vs/sessions` branch may remain, and the rule must still report `missing` for an unlisted `contrib`/`services` nls consumer (re-runnable with the `Linter`-API simulation recorded above).
 2. `build/lib/i18n.resources.json`: exactly the `editor` and `workbench` keys, valid JSON, no entry naming `vs/sessions` or `vs/workbench/services/agentHost`.
 3. Lint gate: `node build/eslint.ts <nls-importing workbench files>` must be exit 0; the pre-existing `.eslint-plugin-local/tsconfig.json` failures must not be attributed to this leaf (0 errors reference the edited rule).
+
+## U07.a.001 — Rust CLI Agent Host surface disconnection (2026-10-07)
+
+### Structured status consumed
+
+Parent-derived status: `activeChange: product-debloat`, `artifactStore: openspec`, `applyState: ready`, `nextRecommended: sdd-apply`, `actionContext: {mode: implement, workspace/cwd: /home/marialez/Work/walker, branch: product-debloat (never commit)}`, `taskAccounting: 108 / 66 checked / 42 remaining` (the parent row count is authoritative; this leaf adds the `U07.a.001` child row). Delivery: `feature-branch-chain`, 400 authored lines/leaf, `size:exception` declined by default. Assigned work: the Rust CLI Agent Host surface per the recorded U07 scope — nine `agent_*` command modules, the tunnels agent-host core, the `auth.rs` agent-host namespace — while keeping `command_shell.rs`, `args.rs` (minus agent entries), `context.rs`, `output.rs`, `serve_web.rs` and the generic tunnels core. Allowed edit surfaces are the parent's exact list; every file touched here is inside `cli/**`. No `actionContext` warnings; no new paths were needed.
+
+### Scope executed (dependency-ordered, atomic)
+
+The disconnection is one cohesive compile unit: `command_shell.rs` holds the lazy supervisor future that calls `commands::agent_host::ensure_supervisor_running`, `control_server.rs` imports `commands::agent_host::ActiveAgentHost` for `SharedActiveAgentHost`/`handle_serve`, and `CodeServerArgs` carries the bridge fields that `ActiveAgentHost::apply_to_bridge` filled. Removing any one side without the others cannot compile, and an inert shim is forbidden by the leaf policy. The only separable tail set (auth namespace, `state.rs` log path, agent-only constants/errors/doc text; 121 authored lines) is dependency-ordered *after* the core and was included in the same pass.
+
+- Removed `Commands::Agent`, `AgentHostArgs`, `AgentArgs`, `AgentSubcommand`, `AgentEndpointsArgs`, `AgentRelayArgs`, `AgentDiscoveryArgs`, `AgentPsArgs`, `AgentStopArgs`, `AgentLogsArgs`, `AgentKillArgs` from `args.rs`; removed the nine `pub mod agent*;` declarations from `commands.rs`; removed the agent dispatch arm/imports from `main.rs`.
+- Removed the `command_shell.rs` `SharedActiveAgentHost` construction and the `ServeStreamParams.active_agent_host` field; removed `SharedActiveAgentHost`/`ready_active_agent_host`/`HandlerContext.active_agent_host`/`make_socket_rpc`/`process_socket` plumbing and the `handle_serve` bridge mixing from `control_server.rs`. `serve_stream`, `AuthRequired` and `ServeStreamParams` remain exported and `command-shell` still serves stdin/socket/port streams.
+- Removed `CodeServerArgs.{agent_host_bridge_host,agent_host_bridge_port,agent_host_bridge_connection_token}`, the `--agent-host-bridge-*` argument emission, the `VSCODE_AGENT_HOST_BRIDGE_CONNECTION_TOKEN` env assignment and the now-obsolete bridge test from `code_server.rs`; generic options (`--connection-token{,-file}`, `--without-connection-token`, dirs, grace time, install/uninstall/list/update, `--start-server`) are untouched and now covered by a positive forwarding test.
+- Removed `pub mod agent_host; pub mod agent_host_registry; #[cfg(windows)] mod agent_host_registry_acl_windows; pub mod idle_timeout; pub mod user_data_path;` and the `ready_active_agent_host`/`SharedActiveAgentHost` re-exports from `tunnels.rs`, keeping `code_server`, `paths`, `protocol`, `challenge`, `control_server`, `machine_status`, `server_bridge`, `server_multiplexer`, `shutdown_signal`, `socket_signal`.
+- Removed the `agent-host` credential namespace (`Auth::with_namespace`, namespace-derived filename/keyring prefix, agent-purpose `login_with_scopes`) from `auth.rs`; `Auth`, `Authorization`, `AuthorizationProvider`, `HttpError` and `PROD_FIRST_PARTY_APP_ID` remain, and the `AuthorizationProvider for Auth` impl still uses `get_tunnel_authentication`.
+- Removed now-exclusive agent tails: `state.rs` `agent_host_log_file`/`agent_host_root` (and the unused `SERVER_DATA_PARENT_DIR` import), `constants.rs` `AGENT_HOST_PORT` + `SERVER_DATA_PARENT_DIR` and the dangling `tunnels::agent_host::AGENT_HOST_GATEWAY_SELECT_PATH` reference in the protocol-version history, the eight agent-only `CodeError` variants, and the agent-branded wording of the retained `print_banner_header` doc. Generic `TUNNEL_SERVICE_USER_AGENT`/`get_default_user_agent` behavior is unchanged.
+- Whole-file deletion is parent-owned: the 14 disconnected files are recorded as **W35.a–n (14 files / 9,690 lines)** in `deletion-review.md`; no unlink/stage/commit was performed.
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| U07.a.001 CLI surface + tunnels core | `cli/src/commands/args.rs` (tests), `cli/src/tunnels/code_server.rs` (tests) | Cargo unit (clap parser + argv/env forwarding + cross-module source-boundary) | `cargo test --manifest-path cli/Cargo.toml` **167 lib + 5 bin pass** | ✅ `commands::args::tests` **2 passed / 2 failed** on `!commands.contains("agent")` and `commands.rs still declares pub mod agent;` (code_server source assertion included in the same boundary test) | ✅ focused `commands::args::tests` 4/4; `tunnels::code_server` 2/2; full suite **47 lib + 5 bin pass**; `cargo check` exit 0 | ✅ `default_server_options_produce_no_arguments_or_environment` (default/empty edge) plus exact `command_arguments()`↔`apply_to_command` equality and the parser's `agent ps` → open-path case | ✅ removed dead agent-only tails (8 error variants, `SERVER_DATA_PARENT_DIR`, unused imports/`BoxFuture`+`Shared`, banner doc); full suite re-run green after each step |
+
+**Assertion quality:** the behavioral assertions call production code — `IntegratedCli::try_parse_from` (real clap parser), `CodeServerArgs::command_arguments`, `apply_to_command` → `std::process::Command` args/env. The cross-module checks are the codebase's established source-absence boundary pattern and are paired with the behavioral tests; the versioned `PROTOCOL_VERSION` history is preserved rather than rewritten.
+
+### Commands run and results
+
+| Command | Result |
+| --- | --- |
+| `cargo test --manifest-path cli/Cargo.toml` (baseline, pre-edit) | **exit 0 — 167 lib + 5 bin pass** |
+| `cargo test --manifest-path cli/Cargo.toml --lib commands::args::tests` (RED) | **exit 101 — 2 passed / 2 failed** as above |
+| `cargo test --manifest-path cli/Cargo.toml --lib tunnels::code_server::tests` (RED safety net) | **exit 0 — 2/2 pass** (retained generic forwarding) |
+| `cargo check --manifest-path cli/Cargo.toml` (GREEN + REFACTOR) | **exit 0**; only pre-existing-style warnings: `machine_status::{install_sink,set_stdout_enabled}` now have no production caller (retained generic module + its tests; deliberately not refactored) and the upstream `proc-macro-error2` future-incompat note |
+| `cargo test --manifest-path cli/Cargo.toml` (GREEN + post-REFACTOR) | **exit 0 — 47 lib + 5 bin pass** (109 agent-named tests removed with their modules; all retained module suites unchanged) |
+| `cargo test --manifest-path cli/Cargo.toml --lib commands::args::tests` / `--lib tunnels::code_server` | **exit 0 — 4/4 and 2/2** |
+| `git diff --check` | clean (no whitespace errors) |
+
+No `npm run compile-client` / `typecheck-client` is needed for this leaf: no TS file changed, no generated output was written, and the parent-authorized validation set for this slice is the Cargo pair. Node 24.18.0 was exported for consistency; Cargo 1.98.1 / rustc 1.98.1 used. No installs, no dependency mutation, no staging, no unlink, no commit.
+
+### Measured workload / review boundary
+
+- Authored (executed) delta: **155 additions / 488 deletions = 643 changed lines across 12 files** (`args.rs` 73/222, `code_server.rs` 62/47, `auth.rs` 2/37, `control_server.rs` 0/39, `command_shell.rs` 3/29, `main.rs` 0/27, `state.rs` 1/24, `constants.rs` 4/17, `errors.rs` 0/16, `output.rs` 9/12, `tunnels.rs` 1/9, `commands.rs` 0/9).
+- This exceeds the 400-line leaf budget. It is a deletion-dominated, atomic disconnection: ~135 of the 155 additions are the required regression tests, and the six files that carry the compile coupling (`args.rs` 295, `code_server.rs` 109, `control_server.rs` 39, `command_shell.rs` 32, `main.rs` 27, `commands.rs` 9 = 511) cannot be split into a smaller compiling sequence — removing the core leaves `command_shell`/`control_server`/`ActiveAgentHost` references dangling, and removing the command surface leaves the same consumers on the other side; the only alternative is a forbidden inert shim. The 14 physically deleted files (9,690 lines) are **not** part of this authored count (parent-owned `git rm`). **Recommendation: record this as a coupled deletion-review batch under the existing `size:exception` policy (like U05.c.035 and the five bridge pairs) or grant `size:exception`; no further shrink is possible without deleting tests or faking a compiling half-leaf.**
+
+### Pending physical deletion (parent `git rm`) — W35
+
+`deletion-review.md` section “W35 — Rust CLI Agent Host surface” lists all 14 files with per-file readiness evidence and line counts (9,690 total). None is referenced by any compiled module; the full Cargo suite is green without them. After the parent's `git rm`, re-run `cargo check --manifest-path cli/Cargo.toml` and `cargo test --manifest-path cli/Cargo.toml` to confirm the committed state is still green.
+
+### Remaining tasks (exact persisted rows, unchanged)
+
+- [ ] C6.RED → GREEN: Assert no agent process manager/starter/channel/CLI-supervisor construction, then remove **all `src/vs/platform/agentHost/`, `src/vs/workbench/services/agentHost/`, `src/vs/server/node/agentHostChannel.ts`** and exclusive agent-host scripts/server/CLI registry/supervisor/protocol tails in dependency-order leaves. Keep generic remote/server/IPC/SSH connection security. <!-- sdd-owner: implementation -->
+- [ ] C6.TRIANGULATE → REFACTOR: Exercise retained server/extension-host/SSH/Ports paths and no-agent startup; remove agent-only native/SDK dependencies with P3, test/service fixtures, generated imports and process-info/URL restoration tails. Close T10 credit only after actual source/package deletion. <!-- sdd-owner: implementation -->
+
+The TS trees are already physically gone; C6's remaining scope after this leaf is the parent's W35 deletion plus the TS-side agent-host tails recorded in `deletion-review.md` (server argv/env bridge, `vscode-test-resolver` settings, `test/smoke/src/areas/agentsWindow/**`) which are outside this leaf's `cli/**` surfaces.
+
+### Review focus for the verifier
+
+1. `cargo check`/`cargo test` on the current tree, then on the post-`git rm` tree; confirm `serve-web`, `command-shell` and `ext` still parse and that `code agent ps` is an inert open path (not a hidden dispatcher).
+2. Confirm the retained tunnels core is behaviorally intact: `serve_stream`/`ServeStreamParams`/`AuthRequired` exports, generic `CodeServerArgs` argv/env forwarding (both tests), `machine_status::emit_token_error` still used by `auth.rs`, `AuthorizationProvider for Auth` guarded by the new source assertion.
+3. Confirm the W35 list is exactly the 14 disconnected files and that no retained file references them (`grep -rn "agent_host\|ActiveAgentHost\|with_namespace" cli/src` returns only the args.rs test literals).
+4. Reconcile the size note: if the parent wants ≤400 regardless, the split obstacle above is the recorded evidence against it.
+5. `cli/Cargo.toml`/`Cargo.lock` were intentionally not touched: `ahp`/`ahp-types` now have zero inbound Rust users and join the P2/P3 dependency-tail stage (or a follow-up leaf); `tunnels` is still consumed by `auth.rs` and `tunnels/protocol.rs`.
+
+## u07.a.002 — C6 TS-side Agent Host tails (server argv/env bridge, server wiring, test-resolver, smoke/automation agentsWindow) (2026-10-07)
+
+### Structured status consumed
+
+Parent-derived status: `activeChange: product-debloat`, `artifactStore: openspec`, `applyState: ready`, `nextRecommended: sdd-apply`, `actionContext: {mode: implement, workspace/cwd: /home/marialez/Work/walker, branch: product-debloat (never commit)}`, `taskAccounting: {total: 109, remaining: 41, checked: 68, parent: 0, errors: 0}`; `delivery: feature-branch-chain`, 400 authored lines/leaf. W35 executed (14 Rust files deleted, `cargo check`/`cargo test` green). Assigned work: the seven recorded C6 TS tails. Allowed surfaces were the parent's exact list; two genuinely new paths (`test/smoke/src/main.ts`, `src/server-main.ts`) plus the pre-approved automation-orphan closure (`test/automation/src/{index,workbench}.ts` edits + `test/automation/src/agentsWindow.ts` deletion) were approved mid-pass via `ask_parent` (`approve-smoke-automation-orphan-closure`) and recorded in `parent-authorization.md`. No `actionContext` warnings; strict TDD is off per `openspec/config.yaml`, so this is standard-mode deletion work with RED/GREEN reference evidence.
+
+### Scope executed (dependency-ordered)
+
+**Server side (four tail files + the quick-parse list):**
+- `serverEnvironmentService.ts`: removed the `agentHostBridgeConnectionTokenEnvironmentVariable` export, the `agent-host-bridge-connection-token` redaction branch from `getRedactedServerParsedArgs`, the six `agent-host-*` option descriptions from `serverOptions`, and the six `ServerParsedArgs` fields. Generic `connection-token` redaction and every generic server/remote option are untouched.
+- `server.main.ts`: stopped importing the env-var name, stopped reading/deleting `VSCODE_AGENT_HOST_BRIDGE_CONNECTION_TOKEN`, and dropped the fourth `doCreateServer` argument.
+- `remoteExtensionHostAgentServer.ts`: `createServer(address, args, REMOTE_DATA_FOLDER)` no longer takes `agentHostBridgeConnectionToken`, and `setupServerServices` is called without it.
+- `serverServices.ts`: `setupServerServices(connectionToken, args, REMOTE_DATA_FOLDER, disposables)` — the already-unused `_agentHostBridgeConnectionToken` parameter is gone.
+- `serverConnectionToken.test.ts`: the `getRedactedServerParsedArgs` fixture now pins the retained shape exactly (`connection-token` redacted, `connection-token-file` passed through, original object unchanged).
+- `src/server-main.ts` (new path): removed `'agent-host-port', 'agent-host-path'` from the minimist quick-parse `string` list.
+
+**Test-resolver extension:**
+- `extensions/vscode-test-resolver/src/extension.ts`: removed the bridge env-var constant, the `agentHostPort`/`agentHostBridgePort` config reads, the mutual-exclusion throw, the `--agent-host-port`/`--agent-host-bridge-port` emission, and the `VSCODE_AGENT_HOST_BRIDGE_CONNECTION_TOKEN` env assignment.
+- `extensions/vscode-test-resolver/package.json`: removed the `testresolver.agentHostPort`/`agentHostBridgePort`/`agentHostBridgeConnectionToken` settings. Generic `startupDelay`/`startupError`/`supportPublicPorts` settings and every command/activation entry are untouched.
+
+**Smoke + automation:**
+- `test/smoke/src/main.ts` (new path): removed the `./areas/agentsWindow/agentsWindow.test` import and its `setupAgentsWindowTests(logger, quality)` registration.
+- `test/automation/src/workbench.ts` + `index.ts` (pre-approved): removed the `AgentsWindow` import, the `Workbench.agentsWindow` field, its construction, and the `export * from './agentsWindow'` re-export.
+- Whole-file deletions are parent-owned and recorded as **W36.a–f (6 files / 3,261 lines)** in `deletion-review.md`: the five `test/smoke/src/areas/agentsWindow/**` files + `test/automation/src/agentsWindow.ts`. No unlink/stage/commit was performed.
+
+### Verification evidence
+
+| Command | Result |
+| --- | --- |
+| `npm run compile-client` (after the server/test-resolver edits and again after the smoke/automation edits) | **exit 0** — 0 errors; extensions incl. `vscode-test-resolver` recompiled and `extensions/vscode-test-resolver/out/extension.js` contains **0** `agentHost`/`AGENT_HOST` matches |
+| `npm run typecheck-client` | **exit 0** |
+| `npm run gulp compile-extension:vscode-test-resolver` | **exit 0** (0 errors) |
+| `./scripts/test.sh --run vs/server/test/node/serverConnectionToken.test` | **12 passing** (7 `parseServerConnectionToken`, 3 `requestHasValidConnectionToken`, the `getRedactedServerParsedArgs` test + the suiteSetup check) |
+| `node --test build/lib/test/walkerProduct.test.ts` (from `build/`) | **17/17 pass**, including “desktop startup does not construct or route to Chat/Agent Host windows” and the Agent Host identity absence |
+| `cd test/smoke && npm run compile` | **exit 2 — 64 errors, all inside `src/areas/agentsWindow/agentsWindow.test.ts`** (its own `app.workbench.agentsWindow` uses; W36.a is the parent-owned deletion that removes them). Zero errors in any retained smoke/automation source. |
+| `npx tsc -p /tmp/smoke-tsconfig-shadow.json` (`noEmit`, W36 directory excluded) | **exit 0 — 0 errors** → the retained smoke sources compile clean once W36 is deleted |
+| `cargo check --manifest-path cli/Cargo.toml` | **exit 0** (rust untouched; W35 deletions still green) |
+| Absence greps | `src/vs/server/**`, `extensions/vscode-test-resolver/**`, `test/smoke/src/**` and `test/automation/src/**` have zero `agent-host*` / `agentHostBridge*` / `AGENT_HOST_BRIDGE*` matches outside the W36 files; the only remaining TS `AgentHost*` construction is the T10-retained `AgentHostEditSource` in `editTelemetry` |
+
+### Verification finding — stale retained boundary test (outside this leaf’s surfaces)
+
+`./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` reports **26 passing / 2 failing**: both failures are `ENOENT` reads of files deleted in earlier waves — `contrib/terminalContrib/chatAgentTools/browser/tools/task/{runTaskTool,createAndRunTaskTool}.ts` (C4 chat tree) and `contrib/editTelemetry/browser/telemetry/agentHostEditMarkerService.ts` (U06/U07 wave). These are stale test reads, not regressions from this pass; every C6-relevant assertion in the suite passes. The file is **outside this leaf’s allowed surfaces**, so it is recorded (not edited) — it needs a parent grant or a cleanup leaf before it can be a reliable RED→GREEN gate.
+
+### Workload / review boundary
+
+- Authored (executed) delta: **9 additions / 86 deletions = 95 changed lines across 11 files** (`serverEnvironmentService` 0/19, `vscode-test-resolver/extension.ts` 0/32, `package.json` 0/15, `serverConnectionToken.test.ts` 4/5, `server.main.ts` 3/3, `remoteExtensionHostAgentServer` 2/2, `serverServices` 1/1, `server-main.ts` 1/1, `test/smoke/main.ts` 0/2, `test/automation/workbench.ts` 0/3, `test/automation/index.ts` 0/1). Far inside the 400-line budget; no `size:exception` needed.
+- The W36 physical deletions (6 files / 3,261 lines) are **not** part of this authored count (parent-owned `git rm`).
+
+### Pending physical deletion (parent `git rm`) — W36
+
+`deletion-review.md` section “W36 — Agent Host smoke + automation tails” lists all six files with per-file evidence and line counts (3,261 total). Retained references are disconnected; the retained smoke sources typecheck 0 errors with the directory excluded. After the parent’s `git rm`, re-run `cd test/smoke && npm run compile` (expect 0 errors) and `cargo check --manifest-path cli/Cargo.toml`.
+
+### Persisted task state
+
+- Re-read after this pass: **68 checked / 41 unchecked / 109 rows** — `C6.RED → GREEN` is now marked `- [x]` (its enumerated deletions — the three trees, the exclusive agent-host scripts, this server/CLI-tail pass, and W35 — are complete, and the constructor absence is asserted by the retained `walkerProduct`/`productDebloatChatIntegrations` boundary tests). `C6.TRIANGULATE → REFACTOR` is deliberately left `- [ ]`: its scope still includes the P3 SDK/native dependency removal, W36’s physical deletion, and the remaining process-info/URL-restoration tails (`inspect-agenthost`/`inspect-brk-agenthost` + the caller-less `parseAgentHostDebugPort`, the inert `configurationRegistry` agentHost-sync mechanism, and the editTelemetry `agentHost` category credited to T10).
+
+### Remaining C6 scope (recorded, not executed)
+
+- `C6.TRIANGULATE → REFACTOR` (exact persisted row):
+
+  `- [ ] C6.TRIANGULATE → REFACTOR: Exercise retained server/extension-host/SSH/Ports paths and no-agent startup; remove agent-only native/SDK dependencies with P3, test/service fixtures, generated imports and process-info/URL restoration tails. Close T10 credit only after actual source/package deletion. <!-- sdd-owner: implementation -->`
+
+- Physical W36 deletion (parent) + post-deletion smoke compile.
+- Residual agent-host-exclusive tails outside this leaf’s surfaces: `src/vs/platform/environment/{common/argv.ts,node/argv.ts,node/environmentService.ts}` (`inspect-agenthost`, `inspect-brk-agenthost`, caller-less `parseAgentHostDebugPort`, `agent` subcommand), `src/vs/platform/configuration/common/configurationRegistry.ts` + `src/vs/platform/request/common/request.ts` (agentHost sync mechanism with zero consumers), `src/vs/editor/common/textModelEditSource.ts` + `editTelemetry` (`agentHost` origin/category, T10-retained), `build/azure-pipelines/common/smokeTestAgentHost.ts`, `.github/instructions/agentHostTesting.instructions.md`, and the remaining W34 `.github` files (`sessions-e2e.yml`, `chat-perf.yml`, `detect-agent-host-e2e-changes/**`, `skills/{sessions,agent-host-*}`).
+- P2/P3: agent-SDK/native dependency tails (`ahp`/`ahp-types`, Copilot SDK, `build/agent-sdk/**`) — explicitly “with P3”.
+
+### Review focus for the verifier
+
+1. Server: `createServer`/`setupServerServices` signatures match every caller; `getRedactedServerParsedArgs` still redacts `connection-token` and is still used by `serverServices` logging; no `agent-host-*` option remains parseable and generic `--connection-token{,-file}`/`--without-connection-token` behavior is unchanged (focused suite 12/12).
+2. Test-resolver: the extension still emits `--connection-token`, dev-mode still spawns the server with the same generic args, and the three removed settings cannot be read/pushed anywhere (`grep` zero).
+3. Smoke: `test/smoke/src/main.ts` no longer references the deleted area; the 64 `test/smoke` tsc errors are exactly the W36.a-internal ones and disappear on `git rm`; the retained `browserView`/`utils.ts`/`mock-llm-server.ts` chain is untouched.
+4. Manifest: W36 is exactly six files / 3,261 lines; no retained file references them.
+5. Do not treat the 2/28 stale `productDebloatChatIntegrations` failures as this leaf’s regression — the ENOENT paths were deleted in C4/U06–U07 and the file is outside the granted surfaces.

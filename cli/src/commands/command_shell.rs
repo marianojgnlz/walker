@@ -5,15 +5,12 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::str::FromStr;
-use std::sync::Arc;
 
-use futures::{stream::FuturesUnordered, FutureExt, StreamExt};
+use futures::{stream::FuturesUnordered, StreamExt};
 use sysinfo::Pid;
 
 use crate::tunnels::{
-	serve_stream,
-	shutdown_signal::ShutdownRequest,
-	AuthRequired, ServeStreamParams, SharedActiveAgentHost,
+	serve_stream, shutdown_signal::ShutdownRequest, AuthRequired, ServeStreamParams,
 };
 use crate::util::{
 	errors::{wrap, AnyError, CodeError},
@@ -21,7 +18,7 @@ use crate::util::{
 };
 use crate::{
 	async_pipe::{get_socket_name, listen_socket_rw_stream, AsyncRWAccepter},
-	commands::{agent_host::ensure_supervisor_running, args::CommandShellArgs, CommandContext},
+	commands::{args::CommandShellArgs, CommandContext},
 };
 
 pub async fn command_shell(ctx: CommandContext, args: CommandShellArgs) -> Result<i32, AnyError> {
@@ -30,28 +27,6 @@ pub async fn command_shell(ctx: CommandContext, args: CommandShellArgs) -> Resul
 	if let Some(p) = args.parent_process_id.and_then(|p| Pid::from_str(&p).ok()) {
 		shutdown_reqs.push(ShutdownRequest::ParentProcessKilled(p));
 	}
-
-	// The supervisor is what lets the renderer reach the agent host via
-	// the `agentHostProxy` IPC channel on the spawned VS Code server. This
-	// future is genuinely lazy, exactly like the one built in
-	// `control_server::serve()`: nothing drives it here — a
-	// `command-shell` that nobody connects to must not spawn a standalone
-	// supervisor by itself. It's only driven once `handle_serve` awaits a
-	// clone of it on demand and mixes the bridge endpoint into the
-	// per-request `code_server_args`. On failure the renderer just won't
-	// see `agentHostProxy`; editing and the extension host still work.
-	let active_agent_host: SharedActiveAgentHost = {
-		let paths = ctx.paths.clone();
-		let log = ctx.log.clone();
-		async move {
-			ensure_supervisor_running(&paths, &log)
-				.await
-				.map(Arc::new)
-				.map_err(Arc::new)
-		}
-		.boxed()
-		.shared()
-	};
 
 	let mut params = ServeStreamParams {
 		log: ctx.log,
@@ -63,7 +38,6 @@ pub async fn command_shell(ctx: CommandContext, args: CommandShellArgs) -> Resul
 			.unwrap_or(AuthRequired::VSDA),
 		exit_barrier: ShutdownRequest::create_rx(shutdown_reqs),
 		code_server_args: (&ctx.args).into(),
-		active_agent_host: Some(active_agent_host),
 	};
 
 	args.server_args.apply_to(&mut params.code_server_args);

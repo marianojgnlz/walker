@@ -401,31 +401,12 @@ impl StorageImplementation for FileStorage {
 
 impl Auth {
 	pub fn new(paths: &LauncherPaths, log: log::Logger) -> Auth {
-		Self::with_namespace(paths, log, None)
-	}
-
-	/// Creates an `Auth` instance with an isolated credential namespace.
-	/// Credentials are stored separately from the global CLI credentials,
-	/// so logging in here does not affect tunnel or other global auth.
-	pub fn with_namespace(
-		paths: &LauncherPaths,
-		log: log::Logger,
-		namespace: Option<String>,
-	) -> Auth {
-		let filename = match &namespace {
-			None => "token.json".to_string(),
-			Some(ns) => format!("token-{ns}.json"),
-		};
-		let keyring_prefix = match &namespace {
-			None => "vscode-cli".to_string(),
-			Some(ns) => format!("vscode-cli-{ns}"),
-		};
 		Auth {
 			log,
 			client: reqwest::Client::new(),
-			file_storage_path: paths.root().join(filename),
+			file_storage_path: paths.root().join("token.json"),
 			storage: Arc::new(std::sync::Mutex::new(None)),
-			keyring_prefix,
+			keyring_prefix: "vscode-cli".to_string(),
 			forced_provider: None,
 		}
 	}
@@ -546,22 +527,6 @@ impl Auth {
 			None => self.do_device_code_flow_with_provider(provider).await?,
 		};
 
-		self.store_credentials(credentials.clone());
-		Ok(credentials)
-	}
-
-	/// Runs the device-flow login for a specific provider with custom OAuth
-	/// scopes. Unlike [`login`], this is purpose-built for agent host auth
-	/// where the scopes are dictated by the server's protected resource
-	/// metadata rather than hardcoded defaults.
-	pub async fn login_with_scopes(
-		&self,
-		provider: AuthProvider,
-		scopes: Option<String>,
-	) -> Result<StoredCredential, AnyError> {
-		let credentials = self
-			.do_device_code_flow_with_scopes(provider, scopes)
-			.await?;
 		self.store_credentials(credentials.clone());
 		Ok(credentials)
 	}

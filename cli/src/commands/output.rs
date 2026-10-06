@@ -313,19 +313,16 @@ fn read_pager_key(_term: &Term) -> PagerKey {
 
 // ---- Server banner ----------------------------------------------------------
 
-/// Prints a styled startup header line:
+/// Prints a styled startup header line for a long-running supervisor, e.g.
+/// `My Tool vX.Y.Z  ready in 123ms`.
 ///
-/// ```text
-///   Code Agent Host vX.Y.Z  ready in 123ms
-/// ```
-///
-/// Forces ANSI colors on for the banner regardless of TTY detection: the
-/// `code agent host` supervisor runs detached without a controlling
-/// terminal, but its stdout is captured by the foreground CLI and
-/// re-emitted to the user's real terminal, so we want styling on
-/// the produced text. Modern Windows terminals (Terminal, conhost with
-/// VT enabled, VS Code's integrated terminal) all interpret these
-/// escapes; downgrades happen at the OS level if not.
+/// Forces ANSI colors on for the banner regardless of TTY detection: a
+/// supervisor running detached without a controlling terminal still has its
+/// stdout captured by the foreground CLI and re-emitted to the user's real
+/// terminal, so we want styling on the produced text. Modern Windows
+/// terminals (Terminal, conhost with VT enabled, VS Code's integrated
+/// terminal) all interpret these escapes; downgrades happen at the OS level
+/// if not.
 pub fn print_banner_header(title: &str, elapsed: Duration) {
 	console::set_colors_enabled(true);
 	console::set_colors_enabled_stderr(true);
