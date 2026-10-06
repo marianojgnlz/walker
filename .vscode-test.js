@@ -198,7 +198,7 @@ if (/vscode:\/\/vscode\.(?:github|microsoft)-authentication\//.test(productConfi
 }
 
 const defaultLaunchArgs = process.env.API_TESTS_EXTRA_ARGS?.split(' ') || [
-	'--disable-telemetry', '--disable-experiments', '--skip-welcome', '--skip-release-notes', `--crash-reporter-directory=${__dirname}/.build/crashes`, `--logsPath=${__dirname}/.build/logs/integration-tests`, '--no-cached-data', '--disable-updates', '--use-inmemory-secretstorage', '--disable-extensions', '--disable-workspace-trust'
+	'--disable-telemetry', '--disable-experiments', '--skip-welcome', '--skip-release-notes', `--logsPath=${__dirname}/.build/logs/integration-tests`, '--no-cached-data', '--disable-updates', '--use-inmemory-secretstorage', '--disable-extensions', '--disable-workspace-trust'
 ];
 
 const config = defineConfig(extensions.map(extension => {

@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as dom from '../../../../base/browser/dom.js';
-import { WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from '../../../../base/common/actions.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { MarkdownString } from '../../../../base/common/htmlContent.js';
 import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
@@ -20,7 +19,6 @@ import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { asTextOrError, IRequestService } from '../../../../platform/request/common/request.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkbenchContribution } from '../../../common/contributions.js';
 import { IHostService } from '../../../services/host/browser/host.js';
 import { ShowCurrentReleaseNotesActionId } from '../common/update.js';
@@ -58,7 +56,6 @@ export class PostUpdateWidgetContribution extends Disposable implements IWorkben
 		@IProductService private readonly productService: IProductService,
 		@IRequestService private readonly requestService: IRequestService,
 		@IStorageService private readonly storageService: IStorageService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super();
 
@@ -258,11 +255,6 @@ export class PostUpdateWidgetContribution extends Disposable implements IWorkben
 				}
 
 				disposables.add(dom.addDisposableListener(button, 'click', () => {
-					this.telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>(
-						'workbenchActionExecuted',
-						{ id: commandId, from: 'postUpdateWidget' }
-					);
-
 					void this.commandService.executeCommand(commandId, ...(args ?? []));
 					this.hoverService.hideHover(true);
 				}));

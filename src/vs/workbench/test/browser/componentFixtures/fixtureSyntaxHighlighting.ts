@@ -163,8 +163,6 @@ class FixtureTextMateTokenizerInstance implements IDisposable {
 					result.containsEmbeddedLanguages,
 					undefined,
 					() => false,
-					() => { },
-					false,
 				));
 				store.add(TokenizationRegistry.register(languageId, support));
 			}));

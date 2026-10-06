@@ -14,7 +14,6 @@ import Severity from '../../../../base/common/severity.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { IExtensionsWorkbenchService } from '../../extensions/common/extensions.js';
 import { minimumTranslatedStrings } from './minimalTranslations.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { ILocaleService } from '../../../services/localization/common/locale.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
@@ -31,7 +30,6 @@ class NativeLocalizationWorkbenchContribution extends BaseLocalizationWorkbenchC
 		@IExtensionManagementService private readonly extensionManagementService: IExtensionManagementService,
 		@IExtensionGalleryService private readonly galleryService: IExtensionGalleryService,
 		@IExtensionsWorkbenchService private readonly extensionsWorkbenchService: IExtensionsWorkbenchService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super();
 
@@ -152,21 +150,9 @@ class NativeLocalizationWorkbenchContribution extends BaseLocalizationWorkbenchC
 			}
 		});
 
-		const logUserReaction = (userReaction: string) => {
-			/* __GDPR__
-				"languagePackSuggestion:popup" : {
-					"owner": "TylerLeonhardt",
-					"userReaction" : { "classification": "SystemMetaData", "purpose": "FeatureInsight" },
-					"language": { "classification": "SystemMetaData", "purpose": "FeatureInsight" }
-				}
-			*/
-			this.telemetryService.publicLog('languagePackSuggestion:popup', { userReaction, language: locale });
-		};
-
 		const searchAction = {
 			label: translations.searchMarketplace,
 			run: async () => {
-				logUserReaction('search');
 				await this.extensionsWorkbenchService.openSearch(`tag:lp-${locale}`);
 			}
 		};
@@ -174,7 +160,6 @@ class NativeLocalizationWorkbenchContribution extends BaseLocalizationWorkbenchC
 		const installAndRestartAction = {
 			label: translations.installAndRestart,
 			run: async () => {
-				logUserReaction('installAndRestart');
 				await this.localeService.setLocale({
 					id: locale,
 					label: languageName,
@@ -202,14 +187,10 @@ class NativeLocalizationWorkbenchContribution extends BaseLocalizationWorkbenchC
 						StorageScope.APPLICATION,
 						StorageTarget.USER
 					);
-					logUserReaction('neverShowAgain');
 				}
 			}],
 			{
-				priority: NotificationPriority.OPTIONAL,
-				onCancel: () => {
-					logUserReaction('cancelled');
-				}
+				priority: NotificationPriority.OPTIONAL
 			}
 		);
 	}

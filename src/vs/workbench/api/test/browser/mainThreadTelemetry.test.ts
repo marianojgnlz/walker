@@ -7,7 +7,6 @@ import assert from 'assert';
 import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
 import { CommandsRegistry } from '../../../../platform/commands/common/commands.js';
 import { TelemetryLevel } from '../../../../platform/telemetry/common/telemetry.js';
-import { NullTelemetryService } from '../../../../platform/telemetry/common/telemetryUtils.js';
 import { IExtHostContext } from '../../../services/extensions/common/extHostCustomers.js';
 import { MainThreadTelemetry } from '../../browser/mainThreadTelemetry.js';
 
@@ -31,11 +30,8 @@ suite('MainThreadTelemetry disabled bridge', () => {
 			})
 		} as unknown as IExtHostContext;
 
-		const bridge = new MainThreadTelemetry(context, NullTelemetryService);
+		const bridge = new MainThreadTelemetry(context);
 		try {
-			// Public log calls are accepted for callsite compatibility but reach only the no-op service.
-			bridge.$publicLog('fixture.event', {});
-
 			assert.deepStrictEqual({
 				initializationCalls,
 				levelChangeCalls,

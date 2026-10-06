@@ -20,7 +20,6 @@ import { IInstantiationService } from '../../../../platform/instantiation/common
 import { ILabelService } from '../../../../platform/label/common/label.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { IGalleryMcpServer, IMcpGalleryService, IQueryOptions, IInstallableMcpServer, IGalleryMcpServerConfiguration, mcpAccessConfig, McpAccessValue, IAllowedMcpServersService, IMcpGalleryServerResolveResult, McpGalleryResolveStatus, replaceMcpServerVariableReferences } from '../../../../platform/mcp/common/mcpManagement.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IMcpDevModeConfig, IMcpRemoteServerConfiguration, IMcpServerConfiguration, IMcpServerVariable, IMcpStdioServerConfiguration, McpServerType } from '../../../../platform/mcp/common/mcpPlatformTypes.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { StorageScope } from '../../../../platform/storage/common/storage.js';
@@ -35,7 +34,6 @@ import { IWorkbenchEnvironmentService } from '../../../services/environment/comm
 import { DidUninstallWorkbenchMcpServerEvent, IWorkbenchLocalMcpServer, IWorkbenchMcpManagementService, IWorkbenchMcpServerInstallResult, IWorkbencMcpServerInstallOptions, LocalMcpServerScope, REMOTE_USER_CONFIG_ID, USER_CONFIG_ID, WORKSPACE_CONFIG_ID, WORKSPACE_FOLDER_CONFIG_ID_PREFIX } from '../../../services/mcp/common/mcpWorkbenchManagementService.js';
 import { IRemoteAgentService } from '../../../services/remote/common/remoteAgentService.js';
 import { mcpConfigurationSection } from '../common/mcpConfiguration.js';
-import { McpServerInstallData, McpServerInstallClassification } from '../common/mcpServer.js';
 import { HasInstalledMcpServersContext, IMcpConfigPath, IMcpService, IMcpWorkbenchService, IWorkbenchMcpServer, McpCollectionProvenance, McpCollectionSortOrder, McpServerEnablementState, McpServerInstallState, McpServerEnablementStatus, McpServersGalleryStatusContext } from '../common/mcpTypes.js';
 import { McpResourceFormat, WORKSPACE_ROOT_MCP_COLLECTION_ID_PREFIX, WORKSPACE_ROOT_MCP_CONFIG_FILE } from '../../../../platform/mcp/common/mcpWorkspaceConfiguration.js';
 import { ContributionEnablementState } from '../../../../platform/mcp/common/contributionEnablement.js';
@@ -329,7 +327,6 @@ export class McpWorkbenchService extends Disposable implements IMcpWorkbenchServ
 		@IRemoteAgentService private readonly remoteAgentService: IRemoteAgentService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@ILogService private readonly logService: ILogService,
 		@IExtensionsWorkbenchService private readonly extensionsWorkbenchService: IExtensionsWorkbenchService,
 		@IAllowedMcpServersService private readonly allowedMcpServersService: IAllowedMcpServersService,
@@ -707,11 +704,6 @@ export class McpWorkbenchService extends Disposable implements IMcpWorkbenchServ
 	}
 
 	private async doInstall(server: McpWorkbenchServer, installTask: () => Promise<IWorkbenchLocalMcpServer>): Promise<IWorkbenchMcpServer> {
-		const source = server.gallery ? 'gallery' : 'local';
-		const serverName = server.name;
-		// Check for inputs in installable config or if it comes from handleURL with inputs
-		const hasInputs = !!(server.installable?.inputs && server.installable.inputs.length > 0);
-
 		this.installing.push(server);
 		this._onChange.fire(server);
 
@@ -733,27 +725,8 @@ export class McpWorkbenchService extends Disposable implements IMcpWorkbenchServ
 				this.scheduleRegistrySync();
 			}
 
-			// Track successful installation
-			this.telemetryService.publicLog2<McpServerInstallData, McpServerInstallClassification>('mcp/serverInstall', {
-				serverName,
-				source,
-				scope: result.local?.scope ?? 'unknown',
-				success: true,
-				hasInputs
-			});
-
 			return result;
 		} catch (error) {
-			// Track failed installation
-			this.telemetryService.publicLog2<McpServerInstallData, McpServerInstallClassification>('mcp/serverInstall', {
-				serverName,
-				source,
-				scope: 'unknown',
-				success: false,
-				error: error instanceof Error ? error.message : String(error),
-				hasInputs
-			});
-
 			throw error;
 		} finally {
 			if (this.installing.includes(server)) {

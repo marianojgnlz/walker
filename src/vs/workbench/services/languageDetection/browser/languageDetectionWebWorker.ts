@@ -5,7 +5,6 @@
 
 import type { ModelOperations, ModelResult } from '@vscode/vscode-languagedetection';
 import { importAMDNodeModule } from '../../../../amdX.js';
-import { StopWatch } from '../../../../base/common/stopwatch.js';
 import { IWebWorkerServerRequestHandler, IWebWorkerServer } from '../../../../base/common/worker/webWorker.js';
 import { LanguageDetectionWorkerHost, ILanguageDetectionWorker } from './languageDetectionWorker.protocol.js';
 import { WorkerTextModelSyncServer } from '../../../../editor/common/services/textModelSync/textModelSync.impl.js';
@@ -46,7 +45,6 @@ export class LanguageDetectionWorker implements ILanguageDetectionWorker {
 	public async $detectLanguage(uri: string, langBiases: Record<string, number> | undefined, preferHistory: boolean, supportedLangs?: string[]): Promise<string | undefined> {
 		const languages: string[] = [];
 		const confidences: number[] = [];
-		const stopWatch = new StopWatch();
 		const documentTextSample = this.getTextForDetection(uri);
 		if (!documentTextSample) { return; }
 
@@ -61,10 +59,7 @@ export class LanguageDetectionWorker implements ILanguageDetectionWorker {
 					confidences.push(language.confidence);
 				}
 			}
-			stopWatch.stop();
-
 			if (languages.length) {
-				this._host.$sendTelemetryEvent(languages, confidences, stopWatch.elapsed());
 				return languages[0];
 			}
 			return undefined;

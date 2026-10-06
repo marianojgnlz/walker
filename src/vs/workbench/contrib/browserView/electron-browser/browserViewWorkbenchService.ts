@@ -354,7 +354,6 @@ export class BrowserViewWorkbenchService extends Disposable implements IBrowserV
 						session: createOptions?.session ?? { scope: await this._resolveStorageScope() },
 						initialAudiences: createOptions?.initialAudiences,
 						initialUrl: createOptions ? createOptions.initialUrl : data.url,
-						openSource: createOptions?.openSource
 					}
 				);
 				return this._createModel(info);

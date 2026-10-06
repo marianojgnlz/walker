@@ -13,20 +13,6 @@ export interface ITelemetryData {
 	[key: string]: unknown;
 }
 
-export type WorkbenchActionExecutedClassification = {
-	id: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The identifier of the action that was run.' };
-	from: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The name of the component the action was run from.' };
-	detail?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Optional details about how the action was run, e.g which keybinding was used.' };
-	owner: 'isidorn';
-	comment: 'Provides insight into actions that are executed within the workbench.';
-};
-
-export type WorkbenchActionExecutedEvent = {
-	id: string;
-	from: string;
-	detail?: string;
-};
-
 export interface IAction {
 	readonly id: string;
 	label: string;

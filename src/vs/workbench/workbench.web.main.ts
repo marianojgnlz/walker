@@ -143,9 +143,6 @@ import './contrib/terminal/browser/terminalInstanceService.js';
 // Tasks
 import './contrib/tasks/browser/taskService.js';
 
-// Tags
-import './contrib/tags/browser/workspaceTagsService.js';
-
 // Issues
 import './contrib/issue/browser/issue.contribution.js';
 

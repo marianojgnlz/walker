@@ -228,12 +228,6 @@ export async function main(desc: ProductDescription, args: string[]): Promise<vo
 		parsedArgs.extensionTestsPath = mapFileUri(pathToURI(parsedArgs['extensionTestsPath']).href);
 	}
 
-	const crashReporterDirectory = parsedArgs['crash-reporter-directory'];
-	if (crashReporterDirectory !== undefined && !crashReporterDirectory.match(/^([a-zA-Z]:[\\\/])/)) {
-		console.log(`The crash reporter directory '${crashReporterDirectory}' must be an absolute Windows path (e.g. c:/crashes)`);
-		return;
-	}
-
 	if (cliCommand) {
 		if (parsedArgs['install-extension'] !== undefined || parsedArgs['uninstall-extension'] !== undefined || parsedArgs['list-extensions'] || parsedArgs['update-extensions']) {
 			const cmdLine: string[] = [];

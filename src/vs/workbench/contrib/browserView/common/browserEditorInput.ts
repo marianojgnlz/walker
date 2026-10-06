@@ -10,7 +10,7 @@ import { ThemeIcon } from '../../../../base/common/themables.js';
 import { URI } from '../../../../base/common/uri.js';
 import { generateUuid } from '../../../../base/common/uuid.js';
 import { BrowserViewUri } from '../../../../platform/browserView/common/browserViewUri.js';
-import { BrowserViewSharingState, INavigateOptions, IBrowserEditorViewState, IBrowserViewWorkbenchService, BrowserViewEditorId } from './browserView.js';
+import { BrowserViewSharingState, IBrowserEditorViewState, IBrowserViewWorkbenchService, BrowserViewEditorId } from './browserView.js';
 import { EditorInputCapabilities, GroupIdentifier, IEditorSerializer, IMoveResult, IUntypedEditorInput, Verbosity } from '../../../common/editor.js';
 import { EditorInput } from '../../../common/editor/editorInput.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
@@ -19,8 +19,6 @@ import { localize } from '../../../../nls.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IBrowserViewModel } from '../common/browserView.js';
 import { hasKey } from '../../../../base/common/types.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { logBrowserOpen } from '../../../../platform/browserView/common/browserViewTelemetry.js';
 import { LRUCachedFunction } from '../../../../base/common/cache.js';
 import { Disposable, DisposableStore, IDisposable } from '../../../../base/common/lifecycle.js';
 import { Emitter, Event } from '../../../../base/common/event.js';
@@ -91,7 +89,6 @@ export class BrowserEditorInput extends EditorInput {
 		private _resolveModel: () => Promise<IBrowserViewModel>,
 		@IThemeService private readonly themeService: IThemeService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IBrowserViewWorkbenchService private readonly browserViewWorkbenchService: IBrowserViewWorkbenchService,
 	) {
 		super();
@@ -179,10 +176,10 @@ export class BrowserEditorInput extends EditorInput {
 			: this.browserViewWorkbenchService.isSharingAvailable;
 	}
 
-	navigate(url: string, options?: INavigateOptions): void {
+	navigate(url: string): void {
 		const destination = url.trim();
 		if (this._model) {
-			void this._model.loadURL(destination, options);
+			void this._model.loadURL(destination);
 		} else {
 			this._initialData = {
 				id: this._id,
@@ -325,8 +322,6 @@ export class BrowserEditorInput extends EditorInput {
 	 * This is used during Copy into New Window.
 	 */
 	override copy(): EditorInput {
-		logBrowserOpen(this.telemetryService, 'copyToNewWindow');
-
 		return this.instantiationService.invokeFunction((accessor) => {
 			const browserViewWorkbenchService = accessor.get(IBrowserViewWorkbenchService);
 			return browserViewWorkbenchService.getOrCreateLazy({

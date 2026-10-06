@@ -164,9 +164,9 @@ class ViewModel extends Disposable {
 			/** @description play audio-cue for diff */
 			const currentViewItem = this.currentElement.read(reader);
 			if (currentViewItem?.type === LineType.Deleted) {
-				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineDeleted, { source: 'accessibleDiffViewer.currentElementChanged' });
+				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineDeleted);
 			} else if (currentViewItem?.type === LineType.Added) {
-				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineInserted, { source: 'accessibleDiffViewer.currentElementChanged' });
+				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineInserted);
 			}
 		}));
 

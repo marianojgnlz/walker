@@ -28,7 +28,6 @@ import { EncodedTokenizationResult } from '../../../../../../editor/common/langu
 export interface TextMateModelTokenizerHost {
 	getOrCreateGrammar(languageId: string, encodedLanguageId: LanguageId): Promise<ICreateGrammarResult | null>;
 	setTokensAndStates(versionId: number, tokens: Uint8Array, fontTokens: ISerializedAnnotation<IFontTokenOption>[], stateDeltas: StateDeltas[]): void;
-	reportTokenizationTime(timeMs: number, languageId: string, sourceExtensionId: string | undefined, lineLength: number, isRandomSample: boolean): void;
 }
 
 export class TextMateWorkerTokenizer extends MirrorTextModel {
@@ -98,12 +97,7 @@ export class TextMateWorkerTokenizer extends MirrorTextModel {
 		if (r.grammar) {
 			const tokenizationSupport = new TokenizationSupportWithLineLimit(
 				this._encodedLanguageId,
-				new TextMateTokenizationSupport(r.grammar, r.initialState, false, undefined, () => false,
-					(timeMs, lineLength, isRandomSample) => {
-						this._host.reportTokenizationTime(timeMs, languageId, r.sourceExtensionId, lineLength, isRandomSample);
-					},
-					false
-				),
+				new TextMateTokenizationSupport(r.grammar, r.initialState, false, undefined, () => false),
 				Disposable.None,
 				this._maxTokenizationLineLength
 			);

@@ -13,7 +13,6 @@ import { ILogService } from '../../../../platform/log/common/log.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
 import { INotificationService, IPromptChoice, Severity } from '../../../../platform/notification/common/notification.js';
 import { IWorkbenchContribution, WorkbenchPhase, registerWorkbenchContribution2 } from '../../../common/contributions.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { INativeHostService } from '../../../../platform/native/common/native.js';
 import { URI } from '../../../../base/common/uri.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
@@ -42,7 +41,6 @@ class RemoteConnectionFailureNotificationContribution implements IWorkbenchContr
 		@IRemoteAgentService private readonly _remoteAgentService: IRemoteAgentService,
 		@INotificationService notificationService: INotificationService,
 		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@INativeHostService nativeHostService: INativeHostService,
 		@IRemoteAuthorityResolverService private readonly _remoteAuthorityResolverService: IRemoteAuthorityResolverService,
 		@IOpenerService openerService: IOpenerService,

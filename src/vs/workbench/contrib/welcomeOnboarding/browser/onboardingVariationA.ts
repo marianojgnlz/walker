@@ -24,7 +24,6 @@ import { ConfigurationTarget, IConfigurationService } from '../../../../platform
 import product from '../../../../platform/product/common/product.js';
 import { IFileService } from '../../../../platform/files/common/files.js';
 import { IPathService } from '../../../services/path/common/pathService.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IAccessibilityService } from '../../../../platform/accessibility/common/accessibility.js';
 import {
 	OnboardingStepId,
@@ -37,32 +36,6 @@ import {
 } from '../common/onboardingTypes.js';
 import { IOnboardingService } from '../common/onboardingService.js';
 import { DotnetToolchainStep } from './dotnetToolchainStep.js';
-
-type OnboardingStepViewClassification = {
-	owner: 'cwebster-99';
-	comment: 'Tracks which onboarding step is viewed.';
-	step: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The step identifier.' };
-	stepNumber: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'The 1-based step index.' };
-};
-
-type OnboardingStepViewEvent = {
-	step: string;
-	stepNumber: number;
-};
-
-type OnboardingActionClassification = {
-	owner: 'cwebster-99';
-	comment: 'Tracks actions taken on the onboarding wizard.';
-	action: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The action performed.' };
-	step: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The step the action was performed on.' };
-	argument: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Optional context such as theme id, extension id, or provider.' };
-};
-
-type OnboardingActionEvent = {
-	action: string;
-	step: string;
-	argument: string | undefined;
-};
 
 /**
  * Variation A — Classic Wizard Modal
@@ -120,7 +93,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		@INotificationService private readonly notificationService: INotificationService,
 		@IFileService private readonly fileService: IFileService,
 		@IPathService private readonly pathService: IPathService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IAccessibilityService private readonly accessibilityService: IAccessibilityService,
 		@ICommandService private readonly commandService: ICommandService,
 	) {
@@ -179,7 +151,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		this.subtitleEl = append(this.bodyEl, $('p.onboarding-a-step-subtitle'));
 		this.contentEl = append(this.bodyEl, $('.onboarding-a-step-content'));
 		this._renderStep();
-		this._logStepView();
 
 		// Footer
 		const footer = append(this.card, $('.onboarding-a-footer'));
@@ -201,23 +172,16 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 
 		// Event handlers
 		this.disposables.add(addDisposableListener(this.closeButton, EventType.CLICK, () => {
-			this._logAction('skip');
 			this._dismiss('skip');
 		}));
 		this.disposables.add(addDisposableListener(this.backButton, EventType.CLICK, () => {
-			this._logAction('back');
 			this._prevStep();
 		}));
 		this.disposables.add(addDisposableListener(this.nextButton, EventType.CLICK, () => {
 			if (this._isLastStep()) {
 				this._applyStepSelections(this.steps[this.currentStepIndex]);
-				this._logAction('complete');
 				this._dismiss('complete');
 			} else {
-				const action = this.steps[this.currentStepIndex] === OnboardingStepId.DotnetToolchain
-					? 'continueWithoutSetup'
-					: 'next';
-				this._logAction(action);
 				this._nextStep();
 			}
 		}));
@@ -260,7 +224,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 			return;
 		}
 
-		this._logAction('dismiss', undefined, reason);
 
 		this.overlay.classList.remove('visible');
 		this.overlay.classList.add('exiting');
@@ -292,7 +255,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 			this._renderProgress();
 			this._updateButtonStates();
 			this._focusCurrentStepElement();
-			this._logStepView();
 		}
 	}
 
@@ -313,7 +275,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 			this._renderProgress();
 			this._updateButtonStates();
 			this._focusCurrentStepElement();
-			this._logStepView();
 		}
 	}
 
@@ -523,7 +484,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 				}
 
 				this.stepDisposables.add(addDisposableListener(pill, EventType.CLICK, () => {
-					this._logAction('selectKeymap', undefined, keymap.id);
 					this.selectedKeymapId = keymap.id;
 
 					for (const p of keymapPills) {
@@ -577,7 +537,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 		label.textContent = theme.label;
 
 		this.stepDisposables.add(addDisposableListener(card, EventType.CLICK, () => {
-			this._logAction('selectTheme', undefined, theme.id);
 			this._selectTheme(theme);
 			for (const c of allCards) {
 				c.classList.remove('selected');
@@ -727,7 +686,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 			descEl.textContent = option.description;
 
 			this.stepDisposables.add(addDisposableListener(card, EventType.CLICK, () => {
-				this._logAction('selectAiMode', undefined, option.id);
 				this.selectedAiMode = option.id;
 				for (const c of allCards) {
 					c.classList.toggle('selected', c.dataset.id === option.id);
@@ -856,26 +814,6 @@ export class OnboardingVariationA extends Disposable implements IOnboardingServi
 
 		const computedStyle = getActiveWindow().getComputedStyle(element);
 		return computedStyle.display !== 'none' && computedStyle.visibility !== 'hidden';
-	}
-
-	// =====================================================================
-	// Telemetry
-	// =====================================================================
-
-	private _logStepView(): void {
-		const stepId = this.steps[this.currentStepIndex];
-		this.telemetryService.publicLog2<OnboardingStepViewEvent, OnboardingStepViewClassification>('welcomeOnboarding.stepView', {
-			step: stepId,
-			stepNumber: this.currentStepIndex + 1,
-		});
-	}
-
-	private _logAction(action: string, stepOverride?: OnboardingStepId, argument?: string): void {
-		this.telemetryService.publicLog2<OnboardingActionEvent, OnboardingActionClassification>('welcomeOnboarding.actionExecuted', {
-			action,
-			step: stepOverride ?? this.steps[this.currentStepIndex],
-			argument: argument ?? undefined,
-		});
 	}
 
 	// =====================================================================

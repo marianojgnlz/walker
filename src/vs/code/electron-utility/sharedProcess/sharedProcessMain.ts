@@ -378,7 +378,7 @@ class SharedProcessMain extends Disposable implements IClientConnectionFilter {
 
 		// Playwright
 		const agentNetworkFilterService = this._register(new AgentNetworkFilterService(accessor.get(IConfigurationService)));
-		const playwrightChannel = this._register(new PlaywrightChannel(this.server, accessor.get(IMainProcessService), accessor.get(ILogService), agentNetworkFilterService, accessor.get(ITelemetryService)));
+		const playwrightChannel = this._register(new PlaywrightChannel(this.server, accessor.get(IMainProcessService), accessor.get(ILogService), agentNetworkFilterService));
 		this.server.registerChannel('playwright', playwrightChannel);
 
 		// Local Git

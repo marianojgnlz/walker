@@ -987,13 +987,13 @@ async function playAccessibilitySymbolForChange(change: IChange, accessibilitySi
 	const changeType = getChangeType(change);
 	switch (changeType) {
 		case ChangeType.Add:
-			accessibilitySignalService.playSignal(AccessibilitySignal.diffLineInserted, { allowManyInParallel: true, source: 'quickDiffDecoration' });
+			accessibilitySignalService.playSignal(AccessibilitySignal.diffLineInserted, { allowManyInParallel: true });
 			break;
 		case ChangeType.Delete:
-			accessibilitySignalService.playSignal(AccessibilitySignal.diffLineDeleted, { allowManyInParallel: true, source: 'quickDiffDecoration' });
+			accessibilitySignalService.playSignal(AccessibilitySignal.diffLineDeleted, { allowManyInParallel: true });
 			break;
 		case ChangeType.Modify:
-			accessibilitySignalService.playSignal(AccessibilitySignal.diffLineModified, { allowManyInParallel: true, source: 'quickDiffDecoration' });
+			accessibilitySignalService.playSignal(AccessibilitySignal.diffLineModified, { allowManyInParallel: true });
 			break;
 	}
 }

@@ -16,10 +16,9 @@ import { URI } from '../../../base/common/uri.js';
 import { virtualMachineHint } from '../../../base/node/id.js';
 import { IDirent, Promises as pfs } from '../../../base/node/pfs.js';
 import { listProcesses } from '../../../base/node/ps.js';
-import { IDiagnosticsService, IMachineInfo, IMainProcessDiagnostics, IRemoteDiagnosticError, IRemoteDiagnosticInfo, isRemoteDiagnosticError, IWorkspaceInformation, PerformanceInfo, SystemInfo, WorkspaceStatItem, WorkspaceStats } from '../common/diagnostics.js';
+import { IDiagnosticsService, IMachineInfo, IMainProcessDiagnostics, IRemoteDiagnosticError, IRemoteDiagnosticInfo, isRemoteDiagnosticError, PerformanceInfo, SystemInfo, WorkspaceStatItem, WorkspaceStats } from '../common/diagnostics.js';
 import { ByteSize } from '../../files/common/files.js';
 import { IProductService } from '../../product/common/productService.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { IWorkspace } from '../../workspace/common/workspace.js';
 
 interface ConfigFilePatterns {
@@ -252,7 +251,6 @@ export class DiagnosticsService implements IDiagnosticsService {
 	declare readonly _serviceBrand: undefined;
 
 	constructor(
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IProductService private readonly productService: IProductService
 	) { }
 
@@ -578,88 +576,5 @@ export class DiagnosticsService implements IDiagnosticsService {
 			} catch { }
 		}
 		return { extensions: [...items] };
-	}
-
-	public async reportWorkspaceStats(workspace: IWorkspaceInformation): Promise<void> {
-		for (const { uri } of workspace.folders) {
-			const folderUri = URI.revive(uri);
-			if (folderUri.scheme !== Schemas.file) {
-				continue;
-			}
-
-			const folder = folderUri.fsPath;
-			try {
-				const stats = await collectWorkspaceStats(folder, ['node_modules', '.git']);
-				type WorkspaceStatsClassification = {
-					owner: 'lramos15';
-					comment: 'Metadata related to the workspace';
-					'workspace.id': { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A UUID given to a workspace to identify it.' };
-					rendererSessionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The ID of the session' };
-				};
-				type WorkspaceStatsEvent = {
-					'workspace.id': string | undefined;
-					rendererSessionId: string;
-				};
-				this.telemetryService.publicLog2<WorkspaceStatsEvent, WorkspaceStatsClassification>('workspace.stats', {
-					'workspace.id': workspace.telemetryId,
-					rendererSessionId: workspace.rendererSessionId
-				});
-				type WorkspaceStatsFileClassification = {
-					owner: 'lramos15';
-					comment: 'Helps us gain insights into what type of files are being used in a workspace';
-					rendererSessionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The ID of the session.' };
-					type: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The type of file' };
-					count: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'How many types of that file are present' };
-				};
-				type WorkspaceStatsFileEvent = {
-					rendererSessionId: string;
-					type: string;
-					count: number;
-				};
-				stats.fileTypes.forEach(e => {
-					if (e.name === NO_EXT_KEY) {
-						return;
-					}
-					this.telemetryService.publicLog2<WorkspaceStatsFileEvent, WorkspaceStatsFileClassification>('workspace.stats.file', {
-						rendererSessionId: workspace.rendererSessionId,
-						type: e.name,
-						count: e.count
-					});
-				});
-				stats.launchConfigFiles.forEach(e => {
-					this.telemetryService.publicLog2<WorkspaceStatsFileEvent, WorkspaceStatsFileClassification>('workspace.stats.launchConfigFile', {
-						rendererSessionId: workspace.rendererSessionId,
-						type: e.name,
-						count: e.count
-					});
-				});
-				stats.configFiles.forEach(e => {
-					this.telemetryService.publicLog2<WorkspaceStatsFileEvent, WorkspaceStatsFileClassification>('workspace.stats.configFiles', {
-						rendererSessionId: workspace.rendererSessionId,
-						type: e.name,
-						count: e.count
-					});
-				});
-
-				// Workspace stats metadata
-				type WorkspaceStatsMetadataClassification = {
-					owner: 'jrieken';
-					comment: 'Metadata about workspace metadata collection';
-					duration: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'How did it take to make workspace stats' };
-					reachedLimit: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Did making workspace stats reach its limits' };
-					fileCount: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'How many files did workspace stats discover' };
-					readdirCount: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'How many readdir call were needed' };
-				};
-				type WorkspaceStatsMetadata = {
-					duration: number;
-					reachedLimit: boolean;
-					fileCount: number;
-					readdirCount: number;
-				};
-				this.telemetryService.publicLog2<WorkspaceStatsMetadata, WorkspaceStatsMetadataClassification>('workspace.stats.metadata', { duration: stats.totalScanTime, reachedLimit: stats.maxFilesReached, fileCount: stats.fileCount, readdirCount: stats.totalReaddirCount });
-			} catch {
-				// Report nothing if collecting metadata fails.
-			}
-		}
 	}
 }

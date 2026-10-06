@@ -20,7 +20,6 @@ import { Iterable } from '../../../../base/common/iterator.js';
 import { KeyCode } from '../../../../base/common/keyCodes.js';
 import { DisposableStore, dispose, type IDisposable, MutableDisposable } from '../../../../base/common/lifecycle.js';
 import * as platform from '../../../../base/common/platform.js';
-import { StopWatch } from '../../../../base/common/stopwatch.js';
 import { ThemeIcon } from '../../../../base/common/themables.js';
 import { URI } from '../../../../base/common/uri.js';
 import { ILanguageService } from '../../../../editor/common/languages/language.js';
@@ -39,7 +38,6 @@ import { IProductService } from '../../../../platform/product/common/productServ
 import { IEditorProgressService, IProgressRunner } from '../../../../platform/progress/common/progress.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { defaultToggleStyles } from '../../../../platform/theme/browser/defaultStyles.js';
 import { asCssVariable, editorForeground } from '../../../../platform/theme/common/colorRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
@@ -55,7 +53,7 @@ import { SettingsEditor2Input } from '../../../services/preferences/common/prefe
 import { nullRange, Settings2EditorModel } from '../../../services/preferences/common/preferencesModels.js';
 import { IUserDataProfileService } from '../../../services/userDataProfile/common/userDataProfile.js';
 import { SuggestEnabledInputWithHistory } from '../../codeEditor/browser/suggestEnabledInput/suggestEnabledInput.js';
-import { ADVANCED_SETTING_TAG, CONTEXT_AI_SETTING_RESULTS_AVAILABLE, CONTEXT_SETTINGS_EDITOR, CONTEXT_SETTINGS_FIRST_ROW_FOCUS, CONTEXT_SETTINGS_ROW_FOCUS, CONTEXT_SETTINGS_SEARCH_FOCUS, CONTEXT_TOC_ROW_FOCUS, EMBEDDINGS_SEARCH_PROVIDER_NAME, ENABLE_LANGUAGE_FILTER, EXP_ASSIGNMENT_SETTING_TAG, EXTENSION_FETCH_TIMEOUT_MS, EXTENSION_SETTING_TAG, FEATURE_SETTING_TAG, FILTER_MODEL_SEARCH_PROVIDER_NAME, getExperimentalExtensionToggleData, ID_SETTING_TAG, IPreferencesSearchService, ISearchProvider, LANGUAGE_SETTING_TAG, LLM_RANKED_SEARCH_PROVIDER_NAME, MODIFIED_SETTING_TAG, POLICY_SETTING_TAG, REQUIRE_TRUSTED_WORKSPACE_SETTING_TAG, SETTINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS, SETTINGS_EDITOR_COMMAND_SHOW_AI_RESULTS, SETTINGS_EDITOR_COMMAND_SUGGEST_FILTERS, SETTINGS_EDITOR_COMMAND_TOGGLE_AI_SEARCH, STRING_MATCH_SEARCH_PROVIDER_NAME, TF_IDF_SEARCH_PROVIDER_NAME, WorkbenchSettingsEditorSettings, WORKSPACE_TRUST_SETTING_TAG } from '../common/preferences.js';
+import { ADVANCED_SETTING_TAG, CONTEXT_AI_SETTING_RESULTS_AVAILABLE, CONTEXT_SETTINGS_EDITOR, CONTEXT_SETTINGS_FIRST_ROW_FOCUS, CONTEXT_SETTINGS_ROW_FOCUS, CONTEXT_SETTINGS_SEARCH_FOCUS, CONTEXT_TOC_ROW_FOCUS, EMBEDDINGS_SEARCH_PROVIDER_NAME, ENABLE_LANGUAGE_FILTER, EXP_ASSIGNMENT_SETTING_TAG, EXTENSION_FETCH_TIMEOUT_MS, EXTENSION_SETTING_TAG, FEATURE_SETTING_TAG, FILTER_MODEL_SEARCH_PROVIDER_NAME, getExperimentalExtensionToggleData, ID_SETTING_TAG, IPreferencesSearchService, ISearchProvider, LANGUAGE_SETTING_TAG, MODIFIED_SETTING_TAG, POLICY_SETTING_TAG, REQUIRE_TRUSTED_WORKSPACE_SETTING_TAG, SETTINGS_EDITOR_COMMAND_CLEAR_SEARCH_RESULTS, SETTINGS_EDITOR_COMMAND_SHOW_AI_RESULTS, SETTINGS_EDITOR_COMMAND_SUGGEST_FILTERS, SETTINGS_EDITOR_COMMAND_TOGGLE_AI_SEARCH, STRING_MATCH_SEARCH_PROVIDER_NAME, TF_IDF_SEARCH_PROVIDER_NAME, WorkbenchSettingsEditorSettings, WORKSPACE_TRUST_SETTING_TAG } from '../common/preferences.js';
 import { settingsHeaderBorder, settingsSashBorder, settingsTextInputBorder } from '../common/settingsEditorColorRegistry.js';
 import './media/settingsEditor2.css';
 import { preferencesAiResultsIcon, preferencesClearInputIcon, preferencesFilterIcon } from './preferencesIcons.js';
@@ -257,7 +255,6 @@ export class SettingsEditor2 extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IWorkbenchConfigurationService private readonly configurationService: IWorkbenchConfigurationService,
 		@ITextResourceConfigurationService textResourceConfigurationService: ITextResourceConfigurationService,
 		@IThemeService themeService: IThemeService,
@@ -1303,81 +1300,8 @@ export class SettingsEditor2 extends EditorPane {
 				this.renderTree(key, isManualReset);
 				this.pendingSettingUpdate = null;
 
-				const reportModifiedProps = {
-					key,
-					query,
-					searchResults: this.searchResultModel?.getUniqueSearchResults() ?? null,
-					rawResults: this.searchResultModel?.getRawResults() ?? null,
-					showConfiguredOnly: !!this.viewState.tagFilters && this.viewState.tagFilters.has(MODIFIED_SETTING_TAG),
-					isReset: typeof value === 'undefined',
-					settingsTarget: this.settingsTargetsWidget.settingsTarget as SettingsTarget
-				};
-				return this.reportModifiedSetting(reportModifiedProps);
+				return;
 			});
-	}
-
-	private reportModifiedSetting(props: { key: string; query: string; searchResults: ISearchResult | null; rawResults: ISearchResult[] | null; showConfiguredOnly: boolean; isReset: boolean; settingsTarget: SettingsTarget }): void {
-		type SettingsEditorModifiedSettingEvent = {
-			key: string;
-			groupId: string | undefined;
-			providerName: string | undefined;
-			nlpIndex: number | undefined;
-			displayIndex: number | undefined;
-			showConfiguredOnly: boolean;
-			isReset: boolean;
-			target: string;
-		};
-		type SettingsEditorModifiedSettingClassification = {
-			key: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The setting that is being modified.' };
-			groupId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Whether the setting is from the local search or remote search provider, if applicable.' };
-			providerName: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The name of the search provider, if applicable.' };
-			nlpIndex: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The index of the setting in the remote search provider results, if applicable.' };
-			displayIndex: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The index of the setting in the combined search results, if applicable.' };
-			showConfiguredOnly: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Whether the user is in the modified view, which shows configured settings only.' };
-			isReset: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Identifies whether a setting was reset to its default value.' };
-			target: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The scope of the setting, such as user or workspace.' };
-			owner: 'rzhao271';
-			comment: 'Event emitted when the user modifies a setting in the Settings editor';
-		};
-
-		let groupId: string | undefined = undefined;
-		let providerName: string | undefined = undefined;
-		let nlpIndex: number | undefined = undefined;
-		let displayIndex: number | undefined = undefined;
-		if (props.searchResults) {
-			displayIndex = props.searchResults.filterMatches.findIndex(m => m.setting.key === props.key);
-
-			if (this.searchResultModel) {
-				providerName = props.searchResults.filterMatches.find(m => m.setting.key === props.key)?.providerName;
-				const rawResults = this.searchResultModel.getRawResults();
-				if (rawResults[SearchResultIdx.Local] && displayIndex >= 0) {
-					const settingInLocalResults = rawResults[SearchResultIdx.Local].filterMatches.some(m => m.setting.key === props.key);
-					groupId = settingInLocalResults ? 'local' : 'remote';
-				}
-				if (rawResults[SearchResultIdx.Remote]) {
-					const _nlpIndex = rawResults[SearchResultIdx.Remote].filterMatches.findIndex(m => m.setting.key === props.key);
-					nlpIndex = _nlpIndex >= 0 ? _nlpIndex : undefined;
-				}
-			}
-		}
-
-		const reportedTarget = props.settingsTarget === ConfigurationTarget.USER_LOCAL ? 'user' :
-			props.settingsTarget === ConfigurationTarget.USER_REMOTE ? 'user_remote' :
-				props.settingsTarget === ConfigurationTarget.WORKSPACE ? 'workspace' :
-					'folder';
-
-		const data = {
-			key: props.key,
-			groupId,
-			providerName,
-			nlpIndex,
-			displayIndex,
-			showConfiguredOnly: props.showConfiguredOnly,
-			isReset: props.isReset,
-			target: reportedTarget
-		};
-
-		this.telemetryService.publicLog2<SettingsEditorModifiedSettingEvent, SettingsEditorModifiedSettingClassification>('settingsEditor.settingModified', data);
 	}
 
 	private scheduleRefresh(element: HTMLElement, key = ''): void {
@@ -2078,18 +2002,10 @@ export class SettingsEditor2 extends EditorPane {
 			return null;
 		}
 
-		const stopWatch = new StopWatch(false);
 		const result = await aiSearchProvider.getLLMRankedResults(token);
-		stopWatch.stop();
 
 		if (token.isCancellationRequested) {
 			return null;
-		}
-
-		// Only log the elapsed time if there are actual results.
-		if (result && result.filterMatches.length > 0) {
-			const elapsed = stopWatch.elapsed();
-			this.logSearchPerformance(LLM_RANKED_SEARCH_PROVIDER_NAME, elapsed);
 		}
 
 		this.searchResultModel!.setResult(SearchResultIdx.AiSelected, result);
@@ -2097,9 +2013,7 @@ export class SettingsEditor2 extends EditorPane {
 	}
 
 	private async searchWithProvider(type: SearchResultIdx, searchProvider: ISearchProvider, providerName: string, token: CancellationToken): Promise<ISearchResult | null> {
-		const stopWatch = new StopWatch(false);
 		const result = await this._searchPreferencesModel(this.defaultSettingsEditorModel, searchProvider, token);
-		stopWatch.stop();
 
 		if (token.isCancellationRequested) {
 			// Handle cancellation like this because cancellation is lost inside the search provider due to async/await
@@ -2111,32 +2025,9 @@ export class SettingsEditor2 extends EditorPane {
 			result.filterMatches = result.filterMatches.filter(match => this.shouldShowSetting(match.setting));
 		}
 
-		// Only log the elapsed time if there are actual results.
-		if (result && result.filterMatches.length > 0) {
-			const elapsed = stopWatch.elapsed();
-			this.logSearchPerformance(providerName, elapsed);
-		}
-
 		this.searchResultModel ??= this.instantiationService.createInstance(SearchResultModel, this.viewState, this.settingsOrderByTocIndex, this.workspaceTrustManagementService.isWorkspaceTrusted());
 		this.searchResultModel.setResult(type, result);
 		return result;
-	}
-
-	private logSearchPerformance(providerName: string, elapsed: number): void {
-		type SettingsEditorSearchPerformanceEvent = {
-			providerName: string | undefined;
-			elapsedMs: number;
-		};
-		type SettingsEditorSearchPerformanceClassification = {
-			providerName: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The name of the search provider, if applicable.' };
-			elapsedMs: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The time taken to perform the search, in milliseconds.' };
-			owner: 'rzhao271';
-			comment: 'Event emitted when the Settings editor calls a search provider to search for a setting';
-		};
-		this.telemetryService.publicLog2<SettingsEditorSearchPerformanceEvent, SettingsEditorSearchPerformanceClassification>('settingsEditor.searchPerformance', {
-			providerName,
-			elapsedMs: elapsed,
-		});
 	}
 
 	private renderResultCountMessages(showAiResultsMessage: boolean) {

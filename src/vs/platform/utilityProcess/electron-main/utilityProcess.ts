@@ -12,7 +12,6 @@ import { timeout } from '../../../base/common/async.js';
 import { FileAccess } from '../../../base/common/network.js';
 import { IWindowsMainService } from '../../windows/electron-main/windows.js';
 import Severity from '../../../base/common/severity.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { ILifecycleMainService } from '../../lifecycle/electron-main/lifecycleMainService.js';
 import { removeDangerousEnvVariables } from '../../../base/common/processes.js';
 import { deepClone } from '../../../base/common/objects.js';
@@ -185,7 +184,6 @@ export class UtilityProcess extends Disposable {
 
 	constructor(
 		@ILogService private readonly logService: ILogService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@ILifecycleMainService protected readonly lifecycleMainService: ILifecycleMainService
 	) {
 		super();
@@ -347,24 +345,6 @@ export class UtilityProcess extends Disposable {
 				this.log(`crashed with code ${details.exitCode} and reason '${details.reason}'`, Severity.Error);
 
 				// Telemetry
-				type UtilityProcessCrashClassification = {
-					type: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The type of utility process to understand the origin of the crash better.' };
-					reason: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The reason of the utility process crash to understand the nature of the crash better.' };
-					code: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The exit code of the utility process to understand the nature of the crash better' };
-					owner: 'bpasero';
-					comment: 'Provides insight into reasons the utility process crashed.';
-				};
-				type UtilityProcessCrashEvent = {
-					type: string;
-					reason: string;
-					code: number;
-				};
-				this.telemetryService.publicLog2<UtilityProcessCrashEvent, UtilityProcessCrashClassification>('utilityprocesscrash', {
-					type: configuration.type,
-					reason: details.reason,
-					code: details.exitCode
-				});
-
 				// Event
 				this._onCrash.fire({ pid: this.processPid!, code: details.exitCode, reason: details.reason });
 
@@ -467,10 +447,9 @@ export class WindowUtilityProcess extends UtilityProcess {
 	constructor(
 		@ILogService logService: ILogService,
 		@IWindowsMainService private readonly windowsMainService: IWindowsMainService,
-		@ITelemetryService telemetryService: ITelemetryService,
 		@ILifecycleMainService lifecycleMainService: ILifecycleMainService
 	) {
-		super(logService, telemetryService, lifecycleMainService);
+		super(logService, lifecycleMainService);
 	}
 
 	override start(configuration: IWindowUtilityProcessConfiguration): boolean {

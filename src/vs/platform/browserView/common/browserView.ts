@@ -10,7 +10,6 @@ import { URI, UriComponents } from '../../../base/common/uri.js';
 import { localize } from '../../../nls.js';
 import { ITunnelProxyInfo } from '../../tunnel/common/tunnelProxy.js';
 import { IPermissionCategoryState, ISerializedBrowserPermissionsSnapshot, IBrowserDeviceCandidate, BrowserDeviceType, PermissionCategory } from './browserPermissions.js';
-import type { IntegratedBrowserOpenSource } from './browserViewTelemetry.js';
 
 const commandPrefix = 'workbench.action.browser';
 export enum BrowserViewCommandId {
@@ -305,7 +304,6 @@ export interface IBrowserViewCreationContext {
 export interface IBrowserViewCreateOptions extends IBrowserViewCreationContext {
 	readonly associatedResource?: UriComponents;
 	readonly initialUrl?: string;
-	readonly openSource?: IntegratedBrowserOpenSource;
 }
 
 export function isBrowserViewAssociatedResourceNavigation(associatedResource: URI, target: string): boolean {

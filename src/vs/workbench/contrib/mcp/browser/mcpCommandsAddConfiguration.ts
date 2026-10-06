@@ -24,7 +24,6 @@ import { IGalleryMcpServerConfiguration, RegistryType } from '../../../../platfo
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IQuickInputService, IQuickPickItem, QuickPickInput } from '../../../../platform/quickinput/common/quickInput.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { isWorkspaceFolder, IWorkspaceContextService, IWorkspaceFolder, WorkbenchState } from '../../../../platform/workspace/common/workspace.js';
 import { IFileDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
@@ -99,27 +98,6 @@ type ValidatePackageResult =
 	{ state: 'ok'; publisher: string; name?: string; version?: string }
 	| { state: 'error'; error: string; helpUri?: string; helpUriLabel?: string };
 
-type AddServerData = {
-	packageType: string;
-};
-type AddServerClassification = {
-	owner: 'digitarald';
-	comment: 'Generic details for adding a new MCP server';
-	packageType: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The type of MCP server package' };
-};
-type AddServerCompletedData = {
-	packageType: string;
-	serverType: string | undefined;
-	target: string;
-};
-type AddServerCompletedClassification = {
-	owner: 'digitarald';
-	comment: 'Generic details for successfully adding model-assisted MCP server';
-	packageType: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The type of MCP server package' };
-	serverType: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The type of MCP server' };
-	target: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The target of the MCP server configuration' };
-};
-
 type AssistedServerConfiguration = {
 	type?: 'assisted';
 	name?: string;
@@ -146,7 +124,6 @@ export class McpAddConfigurationCommand {
 		@IEditorService private readonly _editorService: IEditorService,
 		@IFileService private readonly _fileService: IFileService,
 		@INotificationService private readonly _notificationService: INotificationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@IMcpService private readonly _mcpService: IMcpService,
 		@ILabelService private readonly _label: ILabelService,
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
@@ -233,10 +210,6 @@ export class McpAddConfigurationCommand {
 			return undefined;
 		}
 
-		this._telemetryService.publicLog2<AddServerData, AddServerClassification>('mcp.addserver', {
-			packageType: 'stdio'
-		});
-
 		// Split command into command and args, handling quotes
 		const parts = command.match(/(?:[^\s"]+|"[^"]*")+/g)!;
 		return {
@@ -257,10 +230,6 @@ export class McpAddConfigurationCommand {
 		if (!url) {
 			return undefined;
 		}
-
-		this._telemetryService.publicLog2<AddServerData, AddServerClassification>('mcp.addserver', {
-			packageType: 'sse'
-		});
 
 		return { url, type: McpServerType.REMOTE };
 	}
@@ -347,10 +316,6 @@ export class McpAddConfigurationCommand {
 		loadingQuickPick.ignoreFocusOut = true;
 
 		const packageType = this.getPackageType(type);
-
-		this._telemetryService.publicLog2<AddServerData, AddServerClassification>('mcp.addserver', {
-			packageType: packageType!
-		});
 
 		this._commandService.executeCommand<ValidatePackageResult>(
 			AddConfigurationCopilotCommand.ValidatePackage,
@@ -541,15 +506,6 @@ export class McpAddConfigurationCommand {
 			for (const [key, value] of Object.entries(inputValues)) {
 				await this._mcpRegistry.setSavedInput(key, (isWorkspaceFolder(target) ? ConfigurationTarget.WORKSPACE_FOLDER : target) ?? ConfigurationTarget.WORKSPACE, value);
 			}
-		}
-
-		const packageType = this.getPackageType(serverType);
-		if (packageType) {
-			this._telemetryService.publicLog2<AddServerCompletedData, AddServerCompletedClassification>('mcp.addserver.completed', {
-				packageType,
-				serverType: config.type,
-				target: target === ConfigurationTarget.WORKSPACE ? 'workspace' : 'user'
-			});
 		}
 
 		this.showOnceDiscovered(installed);

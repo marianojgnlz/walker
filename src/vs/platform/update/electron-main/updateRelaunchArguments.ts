@@ -24,8 +24,6 @@ const RELAUNCH_STRING_ARGUMENTS: readonly (keyof NativeParsedArgs)[] = [
 	'agent-plugins-dir',
 	// Localization
 	'locale',
-	// Diagnostics
-	'crash-reporter-directory',
 	// Secret storage
 	'password-store',
 	// Proxy
@@ -87,7 +85,6 @@ const RELAUNCH_PATH_ARGUMENTS: ReadonlySet<keyof NativeParsedArgs> = new Set([
 	'agents-user-data-dir',
 	'agents-extensions-dir',
 	'agent-plugins-dir',
-	'crash-reporter-directory',
 	'trace-startup-file',
 ]);
 

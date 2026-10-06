@@ -70,7 +70,7 @@ suite('Markdown Setting Renderer Test', () => {
 		contextMenuService = <IContextMenuService>{};
 		Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerConfiguration(configuration);
 		// eslint-disable-next-line local/code-no-any-casts
-		settingRenderer = new SimpleSettingRenderer(configurationService, contextMenuService, preferencesService, { publicLog2: () => { } } as any, { writeText: async () => { } } as any);
+		settingRenderer = new SimpleSettingRenderer(configurationService, contextMenuService, preferencesService, { writeText: async () => { } } as any);
 	});
 
 	suiteTeardown(() => {

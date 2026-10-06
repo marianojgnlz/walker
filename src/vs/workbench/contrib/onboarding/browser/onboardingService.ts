@@ -11,14 +11,13 @@ import { autorun } from '../../../../base/common/observable.js';
 import { mainWindow } from '../../../../base/browser/window.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { ILifecycleService } from '../../../services/lifecycle/common/lifecycle.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { IWorkbenchAssignmentService } from '../../../services/assignment/common/assignmentService.js';
 import { Memento } from '../../../common/memento.js';
 import { onboardingPresentationRegistry } from '../common/onboardingPresentation.js';
 import { onboardingScenarioRegistry } from '../common/onboardingRegistry.js';
-import { IOnboardingRunResult, IOnboardingScenario, ONBOARDING_ASSIGNMENT_CONTEXT_PREFIX, OnboardingOutcome } from '../common/onboardingScenario.js';
+import { IOnboardingScenario, ONBOARDING_ASSIGNMENT_CONTEXT_PREFIX, OnboardingOutcome } from '../common/onboardingScenario.js';
 import { isOnboardingDeveloperModeEnabled, IOnboardingScenarioService, ONBOARDING_DEVELOPER_MODE_CONFIG, ONBOARDING_ENABLED_CONFIG } from '../common/onboardingScenarioService.js';
 
 /** Persisted "shown" state for a single scenario. */
@@ -90,7 +89,6 @@ export class OnboardingScenarioService extends Disposable implements IOnboarding
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@ILifecycleService private readonly lifecycleService: ILifecycleService,
 		@IWorkbenchAssignmentService private readonly assignmentService: IWorkbenchAssignmentService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 	) {
 		super();
 
@@ -389,88 +387,17 @@ export class OnboardingScenarioService extends Disposable implements IOnboarding
 
 		const abort = new Emitter<void>();
 		this._activeAbort = abort;
-		const startTime = Date.now();
-		let didReportShown = false;
 		try {
 			const result = await presentation.run(scenario, {
 				targetWindow: mainWindow,
-				onAbort: abort.event,
-				onDidShow: () => {
-					if (!didReportShown) {
-						didReportShown = true;
-						this._reportShown(scenario);
-					}
-				}
+				onAbort: abort.event
 			});
 			this._recordOutcome(this._seenKey(scenario), result.outcome);
-			// Only emit outcome telemetry when a tour was genuinely displayed; a degenerate
-			// run that rendered nothing (no steps / all steps skipped) must not pollute metrics.
-			if (result.shown) {
-				this._reportOutcome(scenario, result, Date.now() - startTime);
-			}
 			return result.outcome;
 		} finally {
 			this._activeAbort = undefined;
 			abort.dispose();
 		}
-	}
-
-	/** Emit an impression when a presentation has rendered visible onboarding UI. */
-	private _reportShown(scenario: IOnboardingScenario): void {
-		const experimentState = scenario.experiment ? this._experimentStates.get(scenario.id) : undefined;
-
-		type OnboardingScenarioShownEvent = {
-			scenarioId: string;
-			experimentActive: boolean;
-			experimentAssignmentContextId: string | undefined;
-		};
-		type OnboardingScenarioShownClassification = {
-			owner: 'benibenj';
-			comment: 'Reports a rendered onboarding tour impression. The scenario and experiment assignment identifiers are bounded product categories, not user content.';
-			scenarioId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The stable identifier of the onboarding scenario that rendered.' };
-			experimentActive: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Whether a valid experiment treatment selected the rendered scenario.' };
-			experimentAssignmentContextId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The bounded experiment assignment-context identifier for the rendered scenario, when active.' };
-		};
-		this.telemetryService.publicLog2<OnboardingScenarioShownEvent, OnboardingScenarioShownClassification>('onboarding.scenarioShown', {
-			scenarioId: scenario.id,
-			experimentActive: experimentState?.active === true,
-			experimentAssignmentContextId: experimentState?.active ? experimentState.assignmentContextId : undefined,
-		});
-	}
-
-	/** Emit per-tour telemetry. Only called when a tour was actually shown. */
-	private _reportOutcome(scenario: IOnboardingScenario, result: IOnboardingRunResult, durationMs: number): void {
-		const experimentActive = !!scenario.experiment && this._experimentStates.get(scenario.id)?.active === true;
-
-		type OnboardingScenarioOutcomeEvent = {
-			scenarioId: string;
-			outcome: string;
-			dismissReason: string;
-			lastStepIndex: number;
-			stepCount: number;
-			durationMs: number;
-			experimentActive: boolean;
-		};
-		type OnboardingScenarioOutcomeClassification = {
-			owner: 'benibenj';
-			comment: 'Reports how a user progressed through an onboarding tour to evaluate onboarding effectiveness.';
-			scenarioId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The id of the onboarding scenario that ran.' };
-			outcome: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'How the tour ended: completed, skipped, dismissed or aborted.' };
-			dismissReason: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The concrete action that ended the tour, e.g. skipButton, escapeKey, targetClick, completed or aborted.' };
-			lastStepIndex: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'The furthest 0-based step index the user reached.' };
-			stepCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'The total number of steps in the tour.' };
-			durationMs: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; isMeasurement: true; comment: 'How long the tour was on screen, in milliseconds.' };
-			experimentActive: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Whether an active experiment drove this run.' };
-		};
-		this.telemetryService.publicLog2<OnboardingScenarioOutcomeEvent, OnboardingScenarioOutcomeClassification>('onboarding.scenarioOutcome', {
-			scenarioId: scenario.id,
-			outcome: result.outcome,
-			dismissReason: result.dismissReason,
-			lastStepIndex: result.lastStepIndex,
-			stepCount: result.stepCount,
-			durationMs,
-			experimentActive
-		});
 	}
 
 	//#endregion

@@ -747,11 +747,11 @@ export class DiffEditorWidget extends DelegatingEditor implements IDiffEditor {
 		this._goTo(diff);
 
 		if (diff.lineRangeMapping.modified.isEmpty) {
-			this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineDeleted, { source: 'diffEditor.goToDiff' });
+			this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineDeleted);
 		} else if (diff.lineRangeMapping.original.isEmpty) {
-			this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineInserted, { source: 'diffEditor.goToDiff' });
+			this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineInserted);
 		} else if (diff) {
-			this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineModified, { source: 'diffEditor.goToDiff' });
+			this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineModified);
 		}
 	}
 
@@ -837,11 +837,11 @@ export class DiffEditorWidget extends DelegatingEditor implements IDiffEditor {
 		if (e?.reason === CursorChangeReason.Explicit) {
 			const diff = this._diffModel.get()?.diff.get()?.mappings.find(m => isModifiedEditor ? m.lineRangeMapping.modified.contains(e.position.lineNumber) : m.lineRangeMapping.original.contains(e.position.lineNumber));
 			if (diff?.lineRangeMapping.modified.isEmpty) {
-				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineDeleted, { source: 'diffEditor.cursorPositionChanged' });
+				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineDeleted);
 			} else if (diff?.lineRangeMapping.original.isEmpty) {
-				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineInserted, { source: 'diffEditor.cursorPositionChanged' });
+				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineInserted);
 			} else if (diff) {
-				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineModified, { source: 'diffEditor.cursorPositionChanged' });
+				this._accessibilitySignalService.playSignal(AccessibilitySignal.diffLineModified);
 			}
 		}
 	}

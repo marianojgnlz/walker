@@ -19,7 +19,6 @@ export interface IDiagnosticsService {
 	getSystemInfo(mainProcessInfo: IMainProcessDiagnostics, remoteInfo: (IRemoteDiagnosticInfo | IRemoteDiagnosticError)[]): Promise<SystemInfo>;
 	getDiagnostics(mainProcessInfo: IMainProcessDiagnostics, remoteInfo: (IRemoteDiagnosticInfo | IRemoteDiagnosticError)[]): Promise<string>;
 	getWorkspaceFileExtensions(workspace: IWorkspace): Promise<{ extensions: string[] }>;
-	reportWorkspaceStats(workspace: IWorkspaceInformation): Promise<void>;
 }
 
 export interface IMachineInfo {
@@ -88,11 +87,6 @@ export interface PerformanceInfo {
 	workspaceInfo?: string;
 }
 
-export interface IWorkspaceInformation extends IWorkspace {
-	telemetryId: string | undefined;
-	rendererSessionId: string;
-}
-
 export function isRemoteDiagnosticError(x: unknown): x is IRemoteDiagnosticError {
 	const candidate = x as IRemoteDiagnosticError | undefined;
 	return !!candidate?.hostName && !!candidate?.errorMessage;
@@ -124,8 +118,6 @@ export class NullDiagnosticsService implements IDiagnosticsService {
 	async getWorkspaceFileExtensions(workspace: IWorkspace): Promise<{ extensions: string[] }> {
 		return { extensions: [] };
 	}
-
-	async reportWorkspaceStats(workspace: IWorkspaceInformation): Promise<void> { }
 
 }
 

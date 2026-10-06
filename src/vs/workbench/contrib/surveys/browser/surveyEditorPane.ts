@@ -14,7 +14,6 @@ import { onUnexpectedError } from '../../../../base/common/errors.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { localize } from '../../../../nls.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { EditorPane } from '../../../browser/parts/editor/editorPane.js';
 import { IEditorGroup } from '../../../services/editor/common/editorGroupsService.js';
@@ -39,7 +38,6 @@ export class SurveyEditorPane extends EditorPane {
 
 	constructor(
 		group: IEditorGroup,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
 		@IEditorService private readonly editorService: IEditorService,
@@ -227,67 +225,6 @@ export class SurveyEditorPane extends EditorPane {
 	}
 
 	private handleSubmit(container: HTMLElement, survey: ISurveyDefinition): void {
-		// Snapshot answers at submit time
-		const answersSnapshot: Record<string, string[]> = {};
-		for (const [key, value] of this.answers) {
-			answersSnapshot[key] = [...value];
-		}
-
-		// Build telemetry from question telemetryKey declarations
-		let score = -1;
-		let primaryBenefit = '';
-		let primaryFriction = '';
-		let programmingExperience = -1;
-
-		for (const question of survey.questions) {
-			if (!question.telemetryKey) {
-				continue;
-			}
-			const answer = answersSnapshot[question.id]?.[0] ?? '';
-			if (question.asMeasurement) {
-				const index = answer ? question.options.findIndex(o => o.id === answer) : -1;
-				switch (question.telemetryKey) {
-					case 'score': score = index; break;
-					case 'programmingExperience': programmingExperience = index; break;
-				}
-			} else {
-				switch (question.telemetryKey) {
-					case 'primaryBenefit': primaryBenefit = answer; break;
-					case 'primaryFriction': primaryFriction = answer; break;
-				}
-			}
-		}
-
-		// Get the source from the input (what feature triggered the survey)
-		const source = (this.input as SurveyEditorInput)?.source ?? '';
-
-		type SurveySubmitEvent = {
-			surveyId: string;
-			source: string;
-			score: number;
-			primaryBenefit: string;
-			primaryFriction: string;
-			programmingExperience: number;
-		};
-		type SurveySubmitClassification = {
-			surveyId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The survey identifier.' };
-			source: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The feature or attribution category associated with the survey (e.g. completions, agents, churn).' };
-			score: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Primary score as option index (e.g. PMF disappointment 0-4, NPS 0-10). -1 if not answered.' };
-			primaryBenefit: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The primary value driver option ID selected by the user, empty if not applicable.' };
-			primaryFriction: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The primary friction point option ID selected by the user, empty if not applicable.' };
-			programmingExperience: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Programming experience bracket as option index (0=<3yr, 1=3-5yr, 2=6-9yr, 3=10-19yr, 4=20+yr). -1 if not answered.' };
-			owner: 'digitarald';
-			comment: 'Tracks in-product survey submissions. Fields are populated based on the survey definition telemetryKey mappings.';
-		};
-		this.telemetryService.publicLog2<SurveySubmitEvent, SurveySubmitClassification>('survey/submit', {
-			surveyId: survey.id,
-			source,
-			score,
-			primaryBenefit,
-			primaryFriction,
-			programmingExperience,
-		});
-
 		const submittedInput = this.input;
 		this.showSuccess(container, submittedInput);
 	}

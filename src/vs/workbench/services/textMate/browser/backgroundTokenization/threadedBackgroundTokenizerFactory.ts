@@ -15,7 +15,6 @@ import { IConfigurationService } from '../../../../../platform/configuration/com
 import { IEnvironmentService } from '../../../../../platform/environment/common/environment.js';
 import { IExtensionResourceLoaderService } from '../../../../../platform/extensionResourceLoader/common/extensionResourceLoader.js';
 import { INotificationService } from '../../../../../platform/notification/common/notification.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { ICreateData, StateDeltas, TextMateTokenizationWorker } from './worker/textMateTokenizationWorker.worker.js';
 import { TextMateWorkerHost } from './worker/textMateWorkerHost.js';
 import { TextMateWorkerTokenizerController } from './textMateWorkerTokenizerController.js';
@@ -40,14 +39,12 @@ export class ThreadedBackgroundTokenizerFactory implements IDisposable {
 	private _grammarDefinitions: IValidGrammarDefinition[] = [];
 
 	constructor(
-		private readonly _reportTokenizationTime: (timeMs: number, languageId: string, sourceExtensionId: string | undefined, lineLength: number, isRandomSample: boolean) => void,
 		private readonly _shouldTokenizeAsync: () => boolean,
 		@IExtensionResourceLoaderService private readonly _extensionResourceLoaderService: IExtensionResourceLoaderService,
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
 		@ILanguageService private readonly _languageService: ILanguageService,
 		@IEnvironmentService private readonly _environmentService: IEnvironmentService,
 		@INotificationService private readonly _notificationService: INotificationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@IWebWorkerService private readonly _webWorkerService: IWebWorkerService,
 	) {
 	}
@@ -103,7 +100,6 @@ export class ThreadedBackgroundTokenizerFactory implements IDisposable {
 					name: 'Async Tokenization Token Mismatch',
 				});
 
-				this._telemetryService.publicLog2<{}, { owner: 'hediet'; comment: 'Used to see if async tokenization is bug-free' }>('asyncTokenizationMismatchingTokens', {});
 			},
 		};
 	}
@@ -159,9 +155,6 @@ export class ThreadedBackgroundTokenizerFactory implements IDisposable {
 				if (controller) {
 					controller.setTokensAndStates(controllerId, versionId, tokens, fontTokens, lineEndStateDeltas);
 				}
-			},
-			$reportTokenizationTime: (timeMs: number, languageId: string, sourceExtensionId: string | undefined, lineLength: number, isRandomSample: boolean): void => {
-				this._reportTokenizationTime(timeMs, languageId, sourceExtensionId, lineLength, isRandomSample);
 			}
 		});
 		await worker.proxy.$init(createData);

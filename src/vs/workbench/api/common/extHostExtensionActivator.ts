@@ -27,13 +27,6 @@ export interface IExtensionAPI {
 	// _extensionAPIBrand: any;
 }
 
-export type ExtensionActivationTimesFragment = {
-	startup?: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Activation occurred during startup' };
-	codeLoadingTime?: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Time it took to load the extension\'s code' };
-	activateCallTime?: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Time it took to call activate' };
-	activateResolvedTime?: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'Time it took for async-activation to finish' };
-};
-
 export class ExtensionActivationTimes {
 
 	public static readonly NONE = new ExtensionActivationTimes(false, -1, -1, -1);

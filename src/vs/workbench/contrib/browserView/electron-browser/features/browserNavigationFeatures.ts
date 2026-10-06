@@ -212,7 +212,7 @@ class BrowserNavigationBar extends Disposable {
 			label: localize('browser.searchFor', "{0} - {1} Search", text, getBrowserSearchEngineLabel(engineId)),
 			iconClass: ThemeIcon.asClassName(Codicon.search),
 			buttons: [configureEngineButton],
-			apply: input => input.navigate(buildSearchUrl(text, engineId), { source: 'searchInput' }),
+			apply: input => input.navigate(buildSearchUrl(text, engineId)),
 		};
 		switch (resolveAddressBarInputType(text)) {
 			case 'url':

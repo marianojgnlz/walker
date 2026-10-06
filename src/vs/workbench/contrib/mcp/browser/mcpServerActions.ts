@@ -16,7 +16,6 @@ import { Location } from '../../../../editor/common/languages.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IContextMenuService } from '../../../../platform/contextview/browser/contextView.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { errorIcon, infoIcon, manageExtensionIcon, trustIcon, warningIcon } from '../../extensions/browser/extensionsIcons.js';
 import { McpCommandIds } from '../common/mcpCommandIds.js';
@@ -249,7 +248,6 @@ export class InstallAction extends McpServerAction {
 	constructor(
 		private readonly open: boolean,
 		@IMcpWorkbenchService private readonly mcpWorkbenchService: IMcpWorkbenchService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IMcpService private readonly mcpService: IMcpService,
 	) {
 		super('extensions.install', localize('install', "Install"), InstallAction.CLASS, false);
@@ -279,16 +277,6 @@ export class InstallAction extends McpServerAction {
 			alert(localize('mcpServerInstallation', "Installing MCP Server {0} started. An editor is now open with more details on this MCP Server", this.mcpServer.label));
 		}
 
-		type McpServerInstallClassification = {
-			owner: 'sandy081';
-			comment: 'Used to understand if the action to install the MCP server is used.';
-			name?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The gallery name of the MCP server being installed' };
-		};
-		type McpServerInstall = {
-			name?: string;
-		};
-		this.telemetryService.publicLog2<McpServerInstall, McpServerInstallClassification>('mcp:action:install', { name: this.mcpServer.gallery?.name });
-
 		const installed = await this.mcpWorkbenchService.install(this.mcpServer);
 
 		await startServerByFilter(this.mcpService, s => {
@@ -307,7 +295,6 @@ export class InstallInWorkspaceAction extends McpServerAction {
 		@IMcpWorkbenchService private readonly mcpWorkbenchService: IMcpWorkbenchService,
 		@IWorkspaceContextService private readonly workspaceService: IWorkspaceContextService,
 		@IQuickInputService private readonly quickInputService: IQuickInputService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IMcpService private readonly mcpService: IMcpService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 	) {
@@ -355,16 +342,6 @@ export class InstallInWorkspaceAction extends McpServerAction {
 			}
 		}
 
-		type McpServerInstallClassification = {
-			owner: 'sandy081';
-			comment: 'Used to understand if the action to install the MCP server is used.';
-			name?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The gallery name of the MCP server being installed' };
-		};
-		type McpServerInstall = {
-			name?: string;
-		};
-		this.telemetryService.publicLog2<McpServerInstall, McpServerInstallClassification>('mcp:action:install:workspace', { name: this.mcpServer.gallery?.name });
-
 		const installed = await this.mcpWorkbenchService.install(this.mcpServer, { target, workspaceConfig });
 		await startServerByFilter(this.mcpService, s => {
 			return s.definition.id === installed.id;
@@ -407,7 +384,6 @@ export class InstallInRemoteAction extends McpServerAction {
 		private readonly open: boolean,
 		@IMcpWorkbenchService private readonly mcpWorkbenchService: IMcpWorkbenchService,
 		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@ILabelService private readonly labelService: ILabelService,
 		@IMcpService private readonly mcpService: IMcpService,
 	) {
@@ -447,16 +423,6 @@ export class InstallInRemoteAction extends McpServerAction {
 			this.mcpWorkbenchService.open(this.mcpServer);
 			alert(localize('mcpServerInstallation', "Installing MCP Server {0} started. An editor is now open with more details on this MCP Server", this.mcpServer.label));
 		}
-
-		type McpServerInstallClassification = {
-			owner: 'sandy081';
-			comment: 'Used to understand if the action to install the MCP server is used.';
-			name?: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The gallery name of the MCP server being installed' };
-		};
-		type McpServerInstall = {
-			name?: string;
-		};
-		this.telemetryService.publicLog2<McpServerInstall, McpServerInstallClassification>('mcp:action:install:remote', { name: this.mcpServer.gallery?.name });
 
 		const installed = await this.mcpWorkbenchService.install(this.mcpServer, { target: ConfigurationTarget.USER_REMOTE });
 		await startServerByFilter(this.mcpService, s => {

@@ -20,7 +20,6 @@ import { IProductService } from '../../product/common/productService.js';
 import { IRequestService } from '../../request/common/request.js';
 import { StorageScope, StorageTarget } from '../../storage/common/storage.js';
 import { IApplicationStorageMainService } from '../../storage/electron-main/storageMainService.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { AvailableForDownload, DisablementReason, IUpdate, IUpdateService, State, StateType, UpdateType } from '../common/update.js';
 
 const LAST_KNOWN_VERSION_STORAGE_KEY = 'abstractUpdateService/lastKnownVersion';
@@ -70,12 +69,6 @@ export function getUpdateRequestHeaders(productVersion: string): Record<string, 
 
 	return undefined;
 }
-
-export type UpdateErrorClassification = {
-	owner: 'joaomoreno';
-	messageHash: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The hash of the error message.' };
-	comment: 'This is used to know how often VS Code updates have failed.';
-};
 
 /**
  * States representing in-flight or pending update work that takes time to tear down when updates
@@ -167,7 +160,6 @@ export abstract class AbstractUpdateService extends Disposable implements IUpdat
 		@IRequestService protected requestService: IRequestService,
 		@ILogService protected logService: ILogService,
 		@IProductService protected readonly productService: IProductService,
-		@ITelemetryService protected readonly telemetryService: ITelemetryService,
 		@IApplicationStorageMainService protected readonly applicationStorageMainService: IApplicationStorageMainService,
 		@IMeteredConnectionService protected readonly meteredConnectionService: IMeteredConnectionService,
 		protected readonly supportsUpdateOverwrite: boolean,
@@ -408,38 +400,6 @@ export abstract class AbstractUpdateService extends Disposable implements IUpdat
 		if (!from) {
 			return;
 		}
-
-		type VersionChangeEvent = {
-			fromVersion: string | undefined;
-			fromCommit: string | undefined;
-			fromVersionTime: number | undefined;
-			toVersion: string;
-			toCommit: string | undefined;
-			timeToUpdateMs: number | undefined;
-			updateMode: string | undefined;
-		};
-
-		type VersionChangeClassification = {
-			owner: 'dmitriv';
-			comment: 'Fired when VS Code detects a version change on startup.';
-			fromVersion: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The previous version of VS Code.' };
-			fromCommit: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The commit hash of the previous version.' };
-			fromVersionTime: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Timestamp when the previous version was first detected.' };
-			toVersion: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The current version of VS Code.' };
-			toCommit: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The commit hash of the current version.' };
-			timeToUpdateMs: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Milliseconds between the previous version install and this version install.' };
-			updateMode: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The update mode configured by the user.' };
-		};
-
-		this.telemetryService.publicLog2<VersionChangeEvent, VersionChangeClassification>('update:versionChanged', {
-			fromVersion: from.version,
-			fromCommit: from.commit,
-			fromVersionTime: from.timestamp,
-			toVersion: to.version,
-			toCommit: to.commit,
-			timeToUpdateMs: to.timestamp - from.timestamp,
-			updateMode: this.configurationService.getValue<string>('update.mode'),
-		});
 	}
 
 	private getProductQuality(updateMode: string): string | undefined {

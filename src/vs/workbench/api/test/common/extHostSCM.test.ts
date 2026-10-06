@@ -10,7 +10,7 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/c
 import { NullLogService } from '../../../../platform/log/common/log.js';
 import { ExtensionIdentifier } from '../../../../platform/extensions/common/extensions.js';
 import { nullExtensionDescription } from '../../../services/extensions/common/extensions.js';
-import { MainContext, MainThreadSCMShape, MainThreadTelemetryShape } from '../../common/extHost.protocol.js';
+import { MainContext, MainThreadSCMShape } from '../../common/extHost.protocol.js';
 import { ArgumentProcessor, ExtHostCommands } from '../../common/extHostCommands.js';
 import { ExtHostDocuments } from '../../common/extHostDocuments.js';
 import { ExtHostSCM } from '../../common/extHostSCM.js';
@@ -24,9 +24,6 @@ suite('ExtHostSCM', () => {
 		rpcProtocol.set(MainContext.MainThreadSCM, new class extends mock<MainThreadSCMShape>() {
 			override async $registerSourceControl(): Promise<void> { }
 			override async $unregisterSourceControl(): Promise<void> { }
-		});
-		rpcProtocol.set(MainContext.MainThreadTelemetry, new class extends mock<MainThreadTelemetryShape>() {
-			override $publicLog2(): void { }
 		});
 
 		const commands = new class extends mock<ExtHostCommands>() {

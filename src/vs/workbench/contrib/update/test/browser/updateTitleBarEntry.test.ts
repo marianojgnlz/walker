@@ -20,7 +20,6 @@ import { ContextKeyExpression } from '../../../../../platform/contextkey/common/
 import { IHoverService } from '../../../../../platform/hover/browser/hover.js';
 import { MockContextKeyService } from '../../../../../platform/keybinding/test/common/mockKeybindingService.js';
 import { IProductService } from '../../../../../platform/product/common/productService.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IUpdateService, State } from '../../../../../platform/update/common/update.js';
 import { InEditorZenModeContext } from '../../../../common/contextkeys.js';
 import { getAdditionalUpdateTitleBarMenuWhen, UpdateTitleBarEntry } from '../../browser/updateTitleBarEntry.js';
@@ -85,7 +84,6 @@ suite('UpdateTitleBarEntry', () => {
 			() => { },
 			commandService,
 			hoverService,
-			new class extends mock<ITelemetryService>() { },
 			new class extends mock<IUpdateService>() {
 				override readonly onStateChange = Event.None;
 				override readonly state = State.Uninitialized;

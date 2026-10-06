@@ -28,7 +28,6 @@ import { dirname } from '../../../../base/common/path.js';
 import { coalesce } from '../../../../base/common/arrays.js';
 import { IViewsService } from '../../../services/views/common/viewsService.js';
 import { localize, localize2 } from '../../../../nls.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { checkGlobFileExists } from '../../../services/extensions/common/workspaceContains.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
 import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
@@ -156,7 +155,6 @@ export class WalkthroughsService extends Disposable implements IWalkthroughsServ
 		@IExtensionManagementService private readonly extensionManagementService: IExtensionManagementService,
 		@IHostService private readonly hostService: IHostService,
 		@IViewsService private readonly viewsService: IViewsService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IWorkbenchAssignmentService private readonly tasExperimentService: IWorkbenchAssignmentService,
 		@IWorkbenchLayoutService private readonly layoutService: IWorkbenchLayoutService,
 		@IEditorService private readonly editorService: IEditorService
@@ -432,19 +430,6 @@ export class WalkthroughsService extends Disposable implements IWalkthroughsServ
 
 		const hadLastFoucs = await this.hostService.hadLastFocus();
 		if (hadLastFoucs && sectionToOpen && this.configurationService.getValue<string>('workbench.welcomePage.walkthroughs.openOnInstall')) {
-			type GettingStartedAutoOpenClassification = {
-				owner: 'lramos15';
-				comment: 'When a walkthrough is opened upon extension installation';
-				id: {
-					classification: 'PublicNonPersonalData'; purpose: 'FeatureInsight';
-					owner: 'lramos15';
-					comment: 'Used to understand what walkthroughs are consulted most frequently';
-				};
-			};
-			type GettingStartedAutoOpenEvent = {
-				id: string;
-			};
-			this.telemetryService.publicLog2<GettingStartedAutoOpenEvent, GettingStartedAutoOpenClassification>('gettingStarted.didAutoOpenWalkthrough', { id: sectionToOpen });
 			const activeEditor = this.editorService.activeEditor;
 			if (activeEditor instanceof GettingStartedInput) {
 				this.commandService.executeCommand('workbench.action.keepEditor');

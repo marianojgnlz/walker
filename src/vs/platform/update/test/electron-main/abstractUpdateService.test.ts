@@ -19,7 +19,6 @@ import { IMeteredConnectionService } from '../../../meteredConnection/common/met
 import { IProductService } from '../../../product/common/productService.js';
 import { IRequestService } from '../../../request/common/request.js';
 import { IApplicationStorageMainService } from '../../../storage/electron-main/storageMainService.js';
-import { NullTelemetryService } from '../../../telemetry/common/telemetryUtils.js';
 import { DisablementReason, IUpdate, State, StateType } from '../../common/update.js';
 import { AbstractUpdateService, IUpdateURLOptions } from '../../electron-main/abstractUpdateService.js';
 
@@ -191,7 +190,6 @@ suite('AbstractUpdateService', () => {
 			requestService,
 			store.add(new NullLogService()),
 			productService,
-			NullTelemetryService,
 			applicationStorageMainService,
 			meteredConnectionService,
 			options?.supportsUpdateOverwrite ?? false

@@ -15,7 +15,6 @@ import { IOpenerService, OpenOptions } from '../../../../platform/opener/common/
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { IStorageService } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkspaceTrustManagementService } from '../../../../platform/workspace/common/workspaceTrust.js';
 import { IWorkbenchContribution } from '../../../common/contributions.js';
 import { ITrustedDomainService } from './trustedDomainService.js';
@@ -33,7 +32,6 @@ export class OpenerValidatorContributions implements IWorkbenchContribution {
 		@IQuickInputService private readonly _quickInputService: IQuickInputService,
 		@IEditorService private readonly _editorService: IEditorService,
 		@IClipboardService private readonly _clipboardService: IClipboardService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
 		@IWorkspaceTrustManagementService private readonly _workspaceTrustService: IWorkspaceTrustManagementService,
@@ -111,7 +109,6 @@ export class OpenerValidatorContributions implements IWorkbenchContribution {
 								this._quickInputService,
 								this._storageService,
 								this._editorService,
-								this._telemetryService,
 							);
 							// Trust all domains
 							if (pickedDomains.indexOf('*') !== -1) {

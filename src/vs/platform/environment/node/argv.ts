@@ -165,8 +165,6 @@ export const OPTIONS: OptionDescriptions<Required<NativeParsedArgs>> = {
 	'use-inmemory-secretstorage': { type: 'boolean', deprecates: ['disable-keytar'] },
 	'password-store': { type: 'string' },
 	'disable-workspace-trust': { type: 'boolean' },
-	'crash-reporter-directory': { type: 'string' },
-	'crash-reporter-id': { type: 'string' },
 	'skip-add-to-recently-opened': { type: 'boolean' },
 	'open-url': { type: 'boolean' },
 	'file-write': { type: 'boolean' },

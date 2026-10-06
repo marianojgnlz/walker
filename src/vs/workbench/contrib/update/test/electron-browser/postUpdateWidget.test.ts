@@ -19,7 +19,6 @@ import { IOpenerService } from '../../../../../platform/opener/common/opener.js'
 import { IProductService } from '../../../../../platform/product/common/productService.js';
 import { IRequestService } from '../../../../../platform/request/common/request.js';
 import { IStorageService } from '../../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../../platform/telemetry/common/telemetry.js';
 import { IHostService } from '../../../../services/host/browser/host.js';
 import { PostUpdateWidgetContribution } from '../../browser/postUpdateWidget.js';
 
@@ -68,7 +67,6 @@ suite('PostUpdateWidgetContribution (Electron)', () => {
 				}
 				override store(): void { }
 			},
-			new class extends mock<ITelemetryService>() { },
 		));
 		return requestService;
 	}

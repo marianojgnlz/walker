@@ -45,10 +45,6 @@ export interface INativeWorkbenchEnvironmentService extends IBrowserWorkbenchEnv
 	readonly execPath: string;
 	readonly backupPath?: string;
 
-	// --- Development
-	readonly crashReporterDirectory?: string;
-	readonly crashReporterId?: string;
-
 	// --- Editors to --wait
 	readonly filesToWait?: IPathsToWaitFor;
 }

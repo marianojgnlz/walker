@@ -26,7 +26,6 @@ import { IInstantiationService } from '../../../../platform/instantiation/common
 import { ILogService } from '../../../../platform/log/common/log.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IProgressService, ProgressLocation } from '../../../../platform/progress/common/progress.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkbenchEnvironmentService } from '../../environment/common/environmentService.js';
 import { ExtensionMessageCollector, IExtensionPointUser } from '../../extensions/common/extensionsRegistry.js';
 import { ITextMateTokenizationService } from './textMateTokenizationFeature.js';
@@ -41,7 +40,6 @@ import type { IGrammar, IOnigLib, IRawTheme } from 'vscode-textmate';
 import { IFontTokenOptions } from '../../../../platform/theme/common/themeService.js';
 
 export class TextMateTokenizationFeature extends Disposable implements ITextMateTokenizationService {
-	private static reportTokenizationTimeCounter = { sync: 0, async: 0 };
 	public _serviceBrand: undefined;
 
 	private readonly _styleElement: HTMLStyleElement;
@@ -69,7 +67,6 @@ export class TextMateTokenizationFeature extends Disposable implements ITextMate
 		@IProgressService private readonly _progressService: IProgressService,
 		@IWorkbenchEnvironmentService private readonly _environmentService: IWorkbenchEnvironmentService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 	) {
 		super();
 		this._createdModes = [];
@@ -84,7 +81,6 @@ export class TextMateTokenizationFeature extends Disposable implements ITextMate
 		this._currentTokenFontMap = null;
 		this._threadedBackgroundTokenizerFactory = this._instantiationService.createInstance(
 			ThreadedBackgroundTokenizerFactory,
-			(timeMs, languageId, sourceExtensionId, lineLength, isRandomSample) => this._reportTokenizationTime(timeMs, languageId, sourceExtensionId, lineLength, true, isRandomSample),
 			() => this.getAsyncTokenizationEnabled(),
 		);
 		this._vscodeOniguruma = null;
@@ -315,10 +311,6 @@ export class TextMateTokenizationFeature extends Disposable implements ITextMate
 				r.containsEmbeddedLanguages,
 				(textModel, tokenStore) => this._threadedBackgroundTokenizerFactory.createBackgroundTokenizer(textModel, tokenStore, maxTokenizationLineLength),
 				() => this.getAsyncTokenizationVerification(),
-				(timeMs, lineLength, isRandomSample) => {
-					this._reportTokenizationTime(timeMs, languageId, r.sourceExtensionId, lineLength, false, isRandomSample);
-				},
-				true,
 			));
 			store.add(tokenization.onDidEncounterLanguage((encodedLanguageId) => {
 				if (!this._encounteredLanguages[encodedLanguageId]) {
@@ -415,51 +407,6 @@ export class TextMateTokenizationFeature extends Disposable implements ITextMate
 		}
 	}
 
-	private _reportTokenizationTime(timeMs: number, languageId: string, sourceExtensionId: string | undefined, lineLength: number, fromWorker: boolean, isRandomSample: boolean): void {
-		const key = fromWorker ? 'async' : 'sync';
-
-		// 50 events per hour (one event has a low probability)
-		if (TextMateTokenizationFeature.reportTokenizationTimeCounter[key] > 50) {
-			// Don't flood telemetry with too many events
-			return;
-		}
-		if (TextMateTokenizationFeature.reportTokenizationTimeCounter[key] === 0) {
-			setTimeout(() => {
-				TextMateTokenizationFeature.reportTokenizationTimeCounter[key] = 0;
-			}, 1000 * 60 * 60);
-		}
-		TextMateTokenizationFeature.reportTokenizationTimeCounter[key]++;
-
-		this._telemetryService.publicLog2<{
-			timeMs: number;
-			languageId: string;
-			lineLength: number;
-			fromWorker: boolean;
-			sourceExtensionId: string | undefined;
-			isRandomSample: boolean;
-			tokenizationSetting: number;
-		}, {
-			owner: 'hediet';
-
-			timeMs: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'To understand how long it took to tokenize a random line' };
-			languageId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'To relate the performance to the language' };
-			lineLength: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'To relate the performance to the line length' };
-			fromWorker: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'To figure out if this line was tokenized sync or async' };
-			sourceExtensionId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'To figure out which extension contributed the grammar' };
-			isRandomSample: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'To figure out if this is a random sample or measured because of some other condition.' };
-			tokenizationSetting: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'To understand if the user has async tokenization enabled. 0=sync, 1=async, 2=verification' };
-
-			comment: 'This event gives insight about the performance certain grammars.';
-		}>('editor.tokenizedLine', {
-			timeMs,
-			languageId,
-			lineLength,
-			fromWorker,
-			sourceExtensionId,
-			isRandomSample,
-			tokenizationSetting: this.getAsyncTokenizationEnabled() ? (this.getAsyncTokenizationVerification() ? 2 : 1) : 0,
-		});
-	}
 }
 
 function toColorMap(colorMap: string[]): Color[] {

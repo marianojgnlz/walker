@@ -16,8 +16,6 @@ import { IWindowsMainService } from '../../windows/electron-main/windows.js';
 import { BrowserSession } from './browserSession.js';
 import { IApplicationStorageMainService } from '../../storage/electron-main/storageMainService.js';
 import { IPermissionCategoryState } from '../common/browserPermissions.js';
-import { IntegratedBrowserOpenSource, logBrowserOpen } from '../common/browserViewTelemetry.js';
-import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { localize } from '../../../nls.js';
 import { INativeHostMainService } from '../../native/electron-main/nativeHostMainService.js';
 import { htmlAttributeEncodeValue } from '../../../base/common/strings.js';
@@ -71,7 +69,6 @@ export class BrowserViewMainService extends Disposable implements IBrowserViewMa
 		@IEnvironmentMainService private readonly environmentMainService: IEnvironmentMainService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IWindowsMainService private readonly windowsMainService: IWindowsMainService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@INativeHostMainService private readonly nativeHostMainService: INativeHostMainService,
 		@IApplicationStorageMainService private readonly applicationStorageMainService: IApplicationStorageMainService,
 		@ILogService private readonly logService: ILogService,
@@ -99,7 +96,7 @@ export class BrowserViewMainService extends Disposable implements IBrowserViewMa
 	}
 
 	async createTarget(url: string, context: IBrowserViewCreationContext): Promise<BrowserView> {
-		return this.openNew(url, context, { preserveFocus: true }, 'cdpCreated');
+		return this.openNew(url, context, { preserveFocus: true });
 	}
 
 	private _resolveBrowserSession(id: string, hostWindowId: number, selector: BrowserViewSessionSelector): BrowserSession {
@@ -514,9 +511,6 @@ export class BrowserViewMainService extends Disposable implements IBrowserViewMa
 				this.logService.error(`[BrowserViewMainService] Failed to load initial URL for browser view ${id}`, error);
 			});
 		}
-		if (options.openSource) {
-			logBrowserOpen(this.telemetryService, options.openSource);
-		}
 		this._onDidCreateBrowserView.fire({
 			info: this._getViewInfo(view),
 			initialUrl: options.initialUrl,
@@ -549,10 +543,9 @@ export class BrowserViewMainService extends Disposable implements IBrowserViewMa
 		url: string,
 		context: IBrowserViewCreationContext,
 		editorOpenRequest: IBrowserViewEditorOpenOptions | undefined,
-		source: IntegratedBrowserOpenSource,
 	): Promise<BrowserView> {
 		const targetId = generateUuid();
-		const view = this._createBrowserView(targetId, { ...context, initialUrl: url || undefined, openSource: source }, editorOpenRequest);
+		const view = this._createBrowserView(targetId, { ...context, initialUrl: url || undefined }, editorOpenRequest);
 		return view;
 	}
 
@@ -580,7 +573,7 @@ export class BrowserViewMainService extends Disposable implements IBrowserViewMa
 						host: view.host,
 						owner: view.owner,
 						session: view.session.id,
-					}, { preserveFocus: true, background: true }, 'browserLinkBackground');
+					}, { preserveFocus: true, background: true });
 				}
 			}));
 			menu.append(new MenuItem({
@@ -610,7 +603,7 @@ export class BrowserViewMainService extends Disposable implements IBrowserViewMa
 						host: view.host,
 						owner: view.owner,
 						session: view.session.id,
-					}, { preserveFocus: true, background: true }, 'browserLinkBackground');
+					}, { preserveFocus: true, background: true });
 				}
 			}));
 			menu.append(new MenuItem({

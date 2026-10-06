@@ -12,7 +12,6 @@ import * as nls from '../../../../nls.js';
 import { IClipboardService } from '../../../../platform/clipboard/common/clipboardService.js';
 import { ConfigurationTarget, IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IContextMenuService } from '../../../../platform/contextview/browser/contextView.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IPreferencesService, ISetting } from '../../../services/preferences/common/preferences.js';
 import { settingKeyToDisplayFormat } from '../../preferences/browser/settingsTreeModels.js';
 
@@ -28,7 +27,6 @@ export class SimpleSettingRenderer {
 		@IConfigurationService private readonly _configurationService: IConfigurationService,
 		@IContextMenuService private readonly _contextMenuService: IContextMenuService,
 		@IPreferencesService private readonly _preferencesService: IPreferencesService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@IClipboardService private readonly _clipboardService: IClipboardService,
 	) {
 		this.codeSettingAnchorRegex = new RegExp(`^<a (href)=".*code.*://settings/([^\\s"]+)"(?:\\s*codesetting="([^"]+)")?>`);
@@ -297,17 +295,6 @@ export class SimpleSettingRenderer {
 
 	async updateSetting(uri: URI, x: number, y: number) {
 		if (uri.scheme === Schemas.codeSetting) {
-			type ReleaseNotesSettingUsedClassification = {
-				owner: 'alexr00';
-				comment: 'Used to understand if the action to update settings from the release notes is used.';
-				settingId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The id of the setting that was clicked on in the release notes' };
-			};
-			type ReleaseNotesSettingUsed = {
-				settingId: string;
-			};
-			this._telemetryService.publicLog2<ReleaseNotesSettingUsed, ReleaseNotesSettingUsedClassification>('releaseNotesSettingAction', {
-				settingId: uri.authority
-			});
 			return this.showContextMenu(uri, x, y);
 		}
 	}

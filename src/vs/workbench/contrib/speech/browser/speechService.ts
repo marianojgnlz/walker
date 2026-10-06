@@ -12,7 +12,6 @@ import { ILogService } from '../../../../platform/log/common/log.js';
 import { IHostService } from '../../../services/host/browser/host.js';
 import { DeferredPromise } from '../../../../base/common/async.js';
 import { ISpeechService, ISpeechProvider, HasSpeechProvider, ISpeechToTextSession, SpeechToTextInProgress, KeywordRecognitionStatus, SpeechToTextStatus, speechLanguageConfigToLanguage, SPEECH_LANGUAGE_CONFIG, ITextToSpeechSession, TextToSpeechInProgress, TextToSpeechStatus } from '../common/speechService.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { ExtensionsRegistry } from '../../../services/extensions/common/extensionsRegistry.js';
 import { IExtensionService } from '../../../services/extensions/common/extensions.js';
@@ -64,7 +63,6 @@ export class SpeechService extends Disposable implements ISpeechService {
 		@ILogService private readonly logService: ILogService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IHostService private readonly hostService: IHostService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IExtensionService private readonly extensionService: IExtensionService
 	) {
@@ -148,11 +146,6 @@ export class SpeechService extends Disposable implements ISpeechService {
 		const language = speechLanguageConfigToLanguage(this.configurationService.getValue<unknown>(SPEECH_LANGUAGE_CONFIG));
 		const session = provider.createSpeechToTextSession(token, typeof language === 'string' ? { language } : undefined);
 
-		const sessionStart = Date.now();
-		let sessionRecognized = false;
-		let sessionError = false;
-		let sessionContentLength = 0;
-
 		const disposables = new DisposableStore();
 
 		const onSessionStoppedOrCanceled = () => {
@@ -161,33 +154,6 @@ export class SpeechService extends Disposable implements ISpeechService {
 				this.speechToTextInProgress.reset();
 			}
 			this._onDidEndSpeechToTextSession.fire();
-
-			type SpeechToTextSessionClassification = {
-				owner: 'bpasero';
-				comment: 'An event that fires when a speech to text session is created';
-				context: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Context of the session.' };
-				sessionDuration: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Duration of the session.' };
-				sessionRecognized: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'If speech was recognized.' };
-				sessionError: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'If speech resulted in error.' };
-				sessionContentLength: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Length of the recognized text.' };
-				sessionLanguage: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Configured language for the session.' };
-			};
-			type SpeechToTextSessionEvent = {
-				context: string;
-				sessionDuration: number;
-				sessionRecognized: boolean;
-				sessionError: boolean;
-				sessionContentLength: number;
-				sessionLanguage: string;
-			};
-			this.telemetryService.publicLog2<SpeechToTextSessionEvent, SpeechToTextSessionClassification>('speechToTextSession', {
-				context,
-				sessionDuration: Date.now() - sessionStart,
-				sessionRecognized,
-				sessionError,
-				sessionContentLength,
-				sessionLanguage: language
-			});
 
 			disposables.dispose();
 		};
@@ -204,20 +170,11 @@ export class SpeechService extends Disposable implements ISpeechService {
 					this.speechToTextInProgress.set(true);
 					this._onDidStartSpeechToTextSession.fire();
 					break;
-				case SpeechToTextStatus.Recognizing:
-					sessionRecognized = true;
-					break;
-				case SpeechToTextStatus.Recognized:
-					if (typeof e.text === 'string') {
-						sessionContentLength += e.text.length;
-					}
-					break;
 				case SpeechToTextStatus.Stopped:
 					onSessionStoppedOrCanceled();
 					break;
 				case SpeechToTextStatus.Error:
 					this.logService.error(`Speech provider error in speech to text session: ${e.text}`);
-					sessionError = true;
 					break;
 			}
 		}));
@@ -261,9 +218,6 @@ export class SpeechService extends Disposable implements ISpeechService {
 		const language = speechLanguageConfigToLanguage(this.configurationService.getValue<unknown>(SPEECH_LANGUAGE_CONFIG));
 		const session = provider.createTextToSpeechSession(token, typeof language === 'string' ? { language } : undefined);
 
-		const sessionStart = Date.now();
-		let sessionError = false;
-
 		const disposables = new DisposableStore();
 
 		const onSessionStoppedOrCanceled = (dispose: boolean) => {
@@ -272,27 +226,6 @@ export class SpeechService extends Disposable implements ISpeechService {
 				this.textToSpeechInProgress.reset();
 			}
 			this._onDidEndTextToSpeechSession.fire();
-
-			type TextToSpeechSessionClassification = {
-				owner: 'bpasero';
-				comment: 'An event that fires when a text to speech session is created';
-				context: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Context of the session.' };
-				sessionDuration: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Duration of the session.' };
-				sessionError: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'If speech resulted in error.' };
-				sessionLanguage: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Configured language for the session.' };
-			};
-			type TextToSpeechSessionEvent = {
-				context: string;
-				sessionDuration: number;
-				sessionError: boolean;
-				sessionLanguage: string;
-			};
-			this.telemetryService.publicLog2<TextToSpeechSessionEvent, TextToSpeechSessionClassification>('textToSpeechSession', {
-				context,
-				sessionDuration: Date.now() - sessionStart,
-				sessionError,
-				sessionLanguage: language
-			});
 
 			if (dispose) {
 				disposables.dispose();
@@ -316,7 +249,6 @@ export class SpeechService extends Disposable implements ISpeechService {
 					break;
 				case TextToSpeechStatus.Error:
 					this.logService.error(`Speech provider error in text to speech session: ${e.text}`);
-					sessionError = true;
 					break;
 			}
 		}));
@@ -383,18 +315,6 @@ export class SpeechService extends Disposable implements ISpeechService {
 		} finally {
 			disposables.dispose();
 		}
-
-		type KeywordRecognitionClassification = {
-			owner: 'bpasero';
-			comment: 'An event that fires when a speech keyword detection is started';
-			keywordRecognized: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'If the keyword was recognized.' };
-		};
-		type KeywordRecognitionEvent = {
-			keywordRecognized: boolean;
-		};
-		this.telemetryService.publicLog2<KeywordRecognitionEvent, KeywordRecognitionClassification>('keywordRecognition', {
-			keywordRecognized: status === KeywordRecognitionStatus.Recognized
-		});
 
 		return status;
 	}

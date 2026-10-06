@@ -17,9 +17,6 @@ import { CURRENT_PROFILE_CONTEXT, HAS_PROFILES_CONTEXT, IUserDataProfileImportEx
 import { IQuickInputService, IQuickPickItem } from '../../../../platform/quickinput/common/quickInput.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { URI } from '../../../../base/common/uri.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
-import { IWorkspaceTagsService } from '../../tags/common/workspaceTags.js';
 import { Categories } from '../../../../platform/action/common/actionCommonCategories.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
@@ -51,13 +48,10 @@ export class UserDataProfilesWorkbenchContribution extends Disposable implements
 		@IUserDataProfileService private readonly userDataProfileService: IUserDataProfileService,
 		@IUserDataProfilesService private readonly userDataProfilesService: IUserDataProfilesService,
 		@IUserDataProfileManagementService private readonly userDataProfileManagementService: IUserDataProfileManagementService,
-		@ITelemetryService private readonly telemetryService: ITelemetryService,
-		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
-		@IWorkspaceTagsService private readonly workspaceTagsService: IWorkspaceTagsService,
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IEditorService private readonly editorService: IEditorService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
-		@ILifecycleService private readonly lifecycleService: ILifecycleService,
+		@ILifecycleService lifecycleService: ILifecycleService,
 		@IURLService private readonly urlService: IURLService,
 		@IBrowserWorkbenchEnvironmentService environmentService: IBrowserWorkbenchEnvironmentService
 	) {
@@ -82,8 +76,6 @@ export class UserDataProfilesWorkbenchContribution extends Disposable implements
 		if (isWeb) {
 			lifecycleService.when(LifecyclePhase.Eventually).then(() => userDataProfilesService.cleanUp());
 		}
-
-		this.reportWorkspaceProfileInfo();
 
 		if (environmentService.options?.profileToPreview) {
 			lifecycleService.when(LifecyclePhase.Restored).then(() => this.handleURL(URI.revive(environmentService.options!.profileToPreview!)));
@@ -538,38 +530,5 @@ export class UserDataProfilesWorkbenchContribution extends Disposable implements
 				return accessor.get(IOpenerService).open(URI.parse('https://aka.ms/vscode-profiles-help'));
 			}
 		}));
-	}
-
-	private async reportWorkspaceProfileInfo(): Promise<void> {
-		await this.lifecycleService.when(LifecyclePhase.Eventually);
-
-		type UserProfilesCountClassification = {
-			owner: 'sandy081';
-			comment: 'Report the number of user profiles excluding the default profile';
-			count: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The number of user profiles excluding the default profile' };
-		};
-		type UserProfilesCountEvent = {
-			count: number;
-		};
-		const count = this.userDataProfilesService.profiles.filter(p => !p.isInternal).length - 1;
-		if (count > 0) {
-			this.telemetryService.publicLog2<UserProfilesCountEvent, UserProfilesCountClassification>('profiles:count', { count });
-		}
-
-		const workspaceId = await this.workspaceTagsService.getTelemetryWorkspaceId(this.workspaceContextService.getWorkspace(), this.workspaceContextService.getWorkbenchState());
-		type WorkspaceProfileInfoClassification = {
-			owner: 'sandy081';
-			comment: 'Report profile information of the current workspace';
-			workspaceId: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'A UUID given to a workspace to identify it.' };
-			defaultProfile: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Whether the profile of the workspace is default or not.' };
-		};
-		type WorkspaceProfileInfoEvent = {
-			workspaceId: string | undefined;
-			defaultProfile: boolean;
-		};
-		this.telemetryService.publicLog2<WorkspaceProfileInfoEvent, WorkspaceProfileInfoClassification>('workspaceProfileInfo', {
-			workspaceId,
-			defaultProfile: this.userDataProfileService.currentProfile.isDefault
-		});
 	}
 }

@@ -28,7 +28,6 @@ import { ILogger, ILoggerService } from '../../../../platform/log/common/log.js'
 import { INotificationService, IPromptChoice, Severity } from '../../../../platform/notification/common/notification.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
-import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
 import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
@@ -47,68 +46,6 @@ import { ContributionEnablementState, IEnablementModel } from '../../../../platf
 import { MCP } from './modelContextProtocol.js';
 import { McpApps } from './modelContextProtocolApps.js';
 import { UriTemplate } from '../../../../base/common/uriTemplate.js';
-
-type ServerBootData = {
-	supportsLogging: boolean;
-	supportsPrompts: boolean;
-	supportsResources: boolean;
-	toolCount: number;
-	serverName: string;
-	serverVersion: string;
-};
-type ServerBootClassification = {
-	owner: 'connor4312';
-	comment: 'Details the capabilities of the MCP server';
-	supportsLogging: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Whether the server supports logging' };
-	supportsPrompts: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Whether the server supports prompts' };
-	supportsResources: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Whether the server supports resource' };
-	toolCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'The number of tools the server advertises' };
-	serverName: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The name of the MCP server' };
-	serverVersion: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The version of the MCP server' };
-};
-
-type ElicitationTelemetryData = {
-	serverName: string;
-	serverVersion: string;
-};
-
-type ElicitationTelemetryClassification = {
-	owner: 'connor4312';
-	comment: 'Triggered when elictation is requested';
-	serverName: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The name of the MCP server' };
-	serverVersion: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The version of the MCP server' };
-};
-
-export type McpServerInstallData = {
-	serverName: string;
-	source: 'gallery' | 'local';
-	scope: string;
-	success: boolean;
-	error?: string;
-	hasInputs: boolean;
-};
-
-export type McpServerInstallClassification = {
-	owner: 'connor4312';
-	comment: 'MCP server installation event tracking';
-	serverName: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The name of the MCP server being installed' };
-	source: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Installation source (gallery or local)' };
-	scope: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'Installation scope (user, workspace, etc.)' };
-	success: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Whether installation succeeded' };
-	error?: { classification: 'CallstackOrException'; purpose: 'FeatureInsight'; comment: 'Error message if installation failed' };
-	hasInputs: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Whether the server requires input configuration' };
-};
-
-type ServerBootState = {
-	state: string;
-	time: number;
-};
-type ServerBootStateClassification = {
-	owner: 'connor4312';
-	comment: 'Details the capabilities of the MCP server';
-	state: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; comment: 'The server outcome' };
-	time: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Duration in milliseconds to reach that state' };
-};
 
 type StoredMcpPrompt = MCP.Prompt & { _icons: StoredMcpIcons };
 
@@ -511,7 +448,6 @@ export class McpServer extends Disposable implements IMcpServer {
 		@IExtensionService private readonly _extensionService: IExtensionService,
 		@ILoggerService private readonly _loggerService: ILoggerService,
 		@IOutputService private readonly _outputService: IOutputService,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 		@ICommandService private readonly _commandService: ICommandService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
 		@IDialogService private readonly _dialogService: IDialogService,
@@ -823,7 +759,6 @@ export class McpServer extends Disposable implements IMcpServer {
 
 			this._potentialSandboxBlocks.length = 0;
 
-			const start = Date.now();
 			let state = await connection.start({
 				createMessageRequestHandler: (params, token) => this._samplingService.sample({
 					isDuringToolCall: this.runningToolCalls.size > 0,
@@ -831,14 +766,6 @@ export class McpServer extends Disposable implements IMcpServer {
 					params,
 				}, token).then(r => r.sample),
 				elicitationRequestHandler: async (req, token) => {
-					const serverInfo = connection.handler.get()?.serverInfo;
-					if (serverInfo) {
-						this._telemetryService.publicLog2<ElicitationTelemetryData, ElicitationTelemetryClassification>('mcp.elicitationRequested', {
-							serverName: serverInfo.name,
-							serverVersion: serverInfo.version,
-						});
-					}
-
 					const r = await this._elicitationService.elicit(this, Iterable.first(this.runningToolCalls), req, token || CancellationToken.None);
 					r.dispose();
 					return r.value;
@@ -849,11 +776,6 @@ export class McpServer extends Disposable implements IMcpServer {
 			if (policyBlock) {
 				return policyBlock;
 			}
-
-			this._telemetryService.publicLog2<ServerBootState, ServerBootStateClassification>('mcp/serverBootState', {
-				state: McpConnectionState.toKindString(state.state),
-				time: Date.now() - start,
-			});
 
 			// MCP servers that need auth can 'start' but will stop with an interaction-needed
 			// error they first make a request. In this case, wait until the handler fully
@@ -1233,18 +1155,7 @@ export class McpServer extends Disposable implements IMcpServer {
 		transaction(tx => {
 			this._setServerMetadata(cacheNonce, { serverInfo: handler.serverInfo, instructions: handler.serverInstructions, capabilities: handler.capabilities }, tx);
 			updatePrompts(tx);
-			const toolUpdate = updateTools(tx);
-
-			toolUpdate.then(tools => {
-				this._telemetryService.publicLog2<ServerBootData, ServerBootClassification>('mcp/serverBoot', {
-					supportsLogging: !!handler.capabilities.logging,
-					supportsPrompts: !!handler.capabilities.prompts,
-					supportsResources: !!handler.capabilities.resources,
-					toolCount: tools.data.length,
-					serverName: handler.serverInfo.name,
-					serverVersion: handler.serverInfo.version,
-				});
-			});
+			updateTools(tx);
 		});
 	}
 }

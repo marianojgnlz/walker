@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Disposable } from '../../../base/common/lifecycle.js';
-import { ClassifiedEvent, IGDPRProperty, OmitMetadata, StrictPropertyCheck } from '../../../platform/telemetry/common/gdprTypings.js';
-import { ITelemetryService, TelemetryLevel, ITelemetryData } from '../../../platform/telemetry/common/telemetry.js';
+import { TelemetryLevel } from '../../../platform/telemetry/common/telemetry.js';
 import { extHostNamedCustomer, IExtHostContext } from '../../services/extensions/common/extHostCustomers.js';
 import { ExtHostContext, ExtHostTelemetryShape, MainContext, MainThreadTelemetryShape } from '../common/extHost.protocol.js';
 
@@ -15,22 +14,14 @@ export class MainThreadTelemetry extends Disposable implements MainThreadTelemet
 
 	constructor(
 		extHostContext: IExtHostContext,
-		@ITelemetryService private readonly _telemetryService: ITelemetryService,
 	) {
 		super();
 
 		this._proxy = extHostContext.getProxy(ExtHostContext.ExtHostTelemetry);
 
 		// Reporting is removed: the extension host is always initialized disabled and
-		// configuration changes can never announce enablement.
+		// configuration changes can never announce enablement. No event payload can
+		// reach a reporting service from this bridge.
 		this._proxy.$initializeTelemetryLevel(TelemetryLevel.NONE, false, undefined);
-	}
-
-	$publicLog(eventName: string, data: ITelemetryData = Object.create(null)): void {
-		this._telemetryService.publicLog(eventName, data);
-	}
-
-	$publicLog2<E extends ClassifiedEvent<OmitMetadata<T>> = never, T extends IGDPRProperty = never>(eventName: string, data?: StrictPropertyCheck<T, E>): void {
-		this.$publicLog(eventName, data);
 	}
 }

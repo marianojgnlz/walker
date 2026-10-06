@@ -321,19 +321,12 @@ suite('Product debloat process startup', () => {
 			'src/vs/workbench/contrib/scm/browser/scmViewPaneContainer.ts',
 			'src/vs/workbench/contrib/testing/browser/testingViewPaneContainer.ts',
 			'src/vs/workbench/services/views/browser/viewsService.ts',
-		]) {
-			assert.doesNotMatch(readRepoFile(relativePath), /ITelemetryService|telemetryService/, relativePath);
-		}
-
-		// Producers inside the hierarchy keep their own injection; none of them may receive it from a base class.
-		for (const relativePath of [
+			// Former self-injecting producers, pruned in the T12 pass.
 			'src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts',
 			'src/vs/workbench/contrib/preferences/browser/settingsEditor2.ts',
 			'src/vs/workbench/contrib/surveys/browser/surveyEditorPane.ts',
 		]) {
-			const source = readRepoFile(relativePath);
-			assert.doesNotMatch(source, /super\([^)]*telemetryService/s, relativePath);
-			assert.match(source, /@ITelemetryService private readonly telemetryService: ITelemetryService,/, relativePath);
+			assert.doesNotMatch(readRepoFile(relativePath), /ITelemetryService|telemetryService/, relativePath);
 		}
 	});
 
@@ -674,5 +667,137 @@ suite('Product debloat process startup', () => {
 		]) {
 			assert.doesNotMatch(readRepoFile(relativePath), /showTelemetryNotice|showTelemetryOptOut|telemetryOptOutShown|buildTelemetryFooter/, relativePath);
 		}
+	});
+
+	test('T12 residual producers carry no telemetry service, event or payload tokens', () => {
+		// Every path below was matched by the pass-6 T12 root scan and had its
+		// producer removed in pass 7: no `ITelemetryService` injection, `publicLog*`
+		// event, `__GDPR__` fragment or `TelemetryTrustedValue` wrapper remains.
+		const prunedProducers = [
+			// API layer
+			'src/vs/workbench/api/browser/mainThreadTelemetry.ts',
+			'src/vs/workbench/api/common/extHostApiDeprecationService.ts',
+			'src/vs/workbench/api/common/extHostCommands.ts',
+			'src/vs/workbench/api/common/extHostDebugService.ts',
+			'src/vs/workbench/api/common/extHostExtensionService.ts',
+			'src/vs/workbench/api/common/extHostRequireInterceptor.ts',
+			'src/vs/workbench/api/common/extHostSCM.ts',
+			'src/vs/workbench/api/common/extHostWorkspace.ts',
+			'src/vs/workbench/api/node/proxyResolver.ts',
+			// Platform
+			'src/vs/platform/accessibilitySignal/browser/accessibilitySignalService.ts',
+			'src/vs/platform/browserView/electron-main/browserView.ts',
+			'src/vs/platform/browserView/electron-main/browserViewMainService.ts',
+			'src/vs/platform/browserView/node/playwrightChannel.ts',
+			'src/vs/platform/browserView/node/playwrightService.ts',
+			'src/vs/platform/diagnostics/node/diagnosticsService.ts',
+			'src/vs/platform/diagnostics/common/diagnostics.ts',
+			'src/vs/platform/extensions/electron-main/extensionHostStarter.ts',
+			'src/vs/platform/profiling/common/profilingTelemetrySpec.ts',
+			'src/vs/platform/profiling/electron-browser/profileAnalysisWorkerService.ts',
+			'src/vs/platform/update/electron-main/abstractUpdateService.ts',
+			'src/vs/platform/update/electron-main/updateService.darwin.ts',
+			'src/vs/platform/update/electron-main/updateService.linux.ts',
+			'src/vs/platform/update/electron-main/updateService.win32.ts',
+			'src/vs/platform/utilityProcess/electron-main/utilityProcess.ts',
+			'src/vs/platform/utilityProcess/electron-main/utilityProcessWorkerMainService.ts',
+			'src/vs/platform/windows/electron-main/windowImpl.ts',
+			// Workbench contributions
+			'src/vs/workbench/contrib/browserView/common/browserEditorInput.ts',
+			'src/vs/workbench/contrib/browserView/common/browserView.ts',
+			'src/vs/workbench/contrib/browserView/electron-browser/browserView.contribution.ts',
+			'src/vs/workbench/contrib/browserView/electron-browser/features/browserTabManagementFeatures.ts',
+			'src/vs/workbench/contrib/codeEditor/browser/emptyTextEditorHint/emptyTextEditorHint.ts',
+			'src/vs/workbench/contrib/localization/electron-browser/localization.contribution.ts',
+			'src/vs/workbench/contrib/markdown/browser/markdownSettingRenderer.ts',
+			'src/vs/workbench/contrib/mcp/browser/mcpCommandsAddConfiguration.ts',
+			'src/vs/workbench/contrib/mcp/browser/mcpServerActions.ts',
+			'src/vs/workbench/contrib/mcp/browser/mcpWorkbenchService.ts',
+			'src/vs/workbench/contrib/mcp/common/mcpServer.ts',
+			'src/vs/workbench/contrib/onboarding/browser/onboardingService.ts',
+			'src/vs/workbench/contrib/performance/browser/startupTimings.ts',
+			'src/vs/workbench/contrib/performance/electron-browser/startupTimings.ts',
+			'src/vs/workbench/contrib/preferences/browser/settingsEditor2.ts',
+			'src/vs/workbench/contrib/preferences/browser/settingsTree.ts',
+			'src/vs/workbench/contrib/share/browser/shareService.ts',
+			'src/vs/workbench/contrib/speech/browser/speechService.ts',
+			'src/vs/workbench/contrib/surveys/browser/languageSurveys.contribution.ts',
+			'src/vs/workbench/contrib/surveys/browser/nps.contribution.ts',
+			'src/vs/workbench/contrib/surveys/browser/surveyEditorPane.ts',
+			'src/vs/workbench/contrib/update/browser/postUpdateWidget.ts',
+			'src/vs/workbench/contrib/update/browser/updateTitleBarEntry.ts',
+			'src/vs/workbench/contrib/url/browser/trustedDomains.ts',
+			'src/vs/workbench/contrib/url/browser/trustedDomainsValidator.ts',
+			'src/vs/workbench/contrib/userDataProfile/browser/userDataProfile.ts',
+			'src/vs/workbench/contrib/userDataProfile/browser/userDataProfilesEditorModel.ts',
+			'src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStarted.ts',
+			'src/vs/workbench/contrib/welcomeGettingStarted/browser/gettingStartedService.ts',
+			'src/vs/workbench/contrib/welcomeOnboarding/browser/onboardingVariationA.ts',
+			// Workbench services
+			'src/vs/workbench/services/accessibility/electron-browser/accessibilityService.ts',
+			'src/vs/workbench/services/languageDetection/browser/languageDetectionWorkerServiceImpl.ts',
+			'src/vs/workbench/services/languageDetection/browser/languageDetectionWebWorker.ts',
+			'src/vs/workbench/services/languageDetection/common/languageDetectionWorkerService.ts',
+			'src/vs/workbench/services/remote/electron-browser/remoteAgentService.ts',
+			'src/vs/workbench/services/textMate/browser/tokenizationSupport/textMateTokenizationSupport.ts',
+			'src/vs/workbench/services/textMate/browser/textMateTokenizationFeatureImpl.ts',
+		];
+		for (const relativePath of prunedProducers) {
+			assert.doesNotMatch(readRepoFile(relativePath), /ITelemetryService|publicLog|__GDPR__|TelemetryTrustedValue/, relativePath);
+		}
+
+		// `contrib/tags` was a telemetry-only tree and is disconnected from both
+		// entrypoints; the emptied files are recorded in the parent W46 manifest.
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/workbench.desktop.main.ts'), /contrib\/tags\//);
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/workbench.web.main.ts'), /contrib\/tags\//);
+		for (const relativePath of [
+			'src/vs/workbench/contrib/tags/browser/workspaceTagsService.ts',
+			'src/vs/workbench/contrib/tags/common/workspaceTags.ts',
+			'src/vs/workbench/contrib/tags/common/javaWorkspaceTags.ts',
+			'src/vs/workbench/contrib/tags/electron-browser/workspaceTags.ts',
+			'src/vs/workbench/contrib/tags/electron-browser/workspaceTagsService.ts',
+			'src/vs/workbench/contrib/tags/electron-browser/tags.contribution.ts',
+		]) {
+			// W46 whole-file deletion candidate: the guard stays green once the parent removes it.
+			if (repoFileExists(relativePath)) {
+				assert.doesNotMatch(readRepoFile(relativePath), /ITelemetryService|publicLog|__GDPR__|TelemetryTrustedValue/, relativePath);
+			}
+		}
+
+		// Retained no-op/infrastructure modules keep their minimal public shape.
+		assert.match(readRepoFile('src/vs/platform/telemetry/common/telemetry.ts'), /export interface ITelemetryService/);
+		assert.match(readRepoFile('src/vs/platform/telemetry/common/telemetryUtils.ts'), /export class NullTelemetryServiceShape/);
+		assert.match(readRepoFile('src/vs/editor/standalone/browser/standaloneServices.ts'), /class StandaloneTelemetryService/);
+		assert.match(readRepoFile('src/vs/code/electron-main/telemetryServiceRegistration.ts'), /registerMainTelemetryService/);
+		assert.match(readRepoFile('src/vs/workbench/services/telemetry/browser/telemetryService.ts'), /NullTelemetryServiceShape/);
+	});
+
+	test('crash-reporter argv tail and T12 retained API facade are settled', () => {
+		// The crash-reporter argv/getter/help/validation tail is gone.
+		const argv = readRepoFile('src/vs/platform/environment/common/argv.ts');
+		assert.doesNotMatch(argv, /crash-reporter-directory|crash-reporter-id/);
+		const argvNode = readRepoFile('src/vs/platform/environment/node/argv.ts');
+		assert.doesNotMatch(argvNode, /crash-reporter-directory|crash-reporter-id/);
+		const environmentService = readRepoFile('src/vs/platform/environment/common/environmentService.ts');
+		assert.doesNotMatch(environmentService, /crashReporterId|crashReporterDirectory/);
+		assert.doesNotMatch(readRepoFile('src/vs/server/node/server.cli.ts'), /crash-reporter-directory/);
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/electron-browser/desktop.contribution.ts'), /crash-reporter-id|enable-crash-reporter/);
+		assert.doesNotMatch(readRepoFile('scripts/test.bat'), /crash-reporter-directory/);
+		assert.doesNotMatch(readRepoFile('.vscode-test.js'), /crash-reporter-directory/);
+		assert.doesNotMatch(readRepoFile('.vscode/launch.json'), /crash-reporter-directory/);
+
+		// Retained: the extension-host `telemetryInfo` init data still feeds the public
+		// `vscode.env.machineId`/`sessionId`/`devDeviceId`/`isNewAppInstall` API facade.
+		for (const relativePath of [
+			'src/vs/workbench/services/extensions/browser/webWorkerExtensionHost.ts',
+			'src/vs/workbench/services/extensions/common/remoteExtensionHost.ts',
+			'src/vs/workbench/services/extensions/electron-browser/localProcessExtensionHost.ts',
+		]) {
+			assert.match(readRepoFile(relativePath), /telemetryInfo: \{/, relativePath);
+		}
+		const apiImpl = readRepoFile('src/vs/workbench/api/common/extHost.api.impl.ts');
+		assert.match(apiImpl, /initData\.telemetryInfo\.machineId/);
+		assert.match(apiImpl, /initData\.telemetryInfo\.sessionId/);
+		assert.match(apiImpl, /TelemetryTrustedValue: TelemetryTrustedValue/);
 	});
 });

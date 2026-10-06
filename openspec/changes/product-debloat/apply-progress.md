@@ -3871,3 +3871,74 @@ One reviewable unit per leaf above; the largest single leaf is `u11.d.003` at 14
 3. `u11.k.002`: `--telemetry-level=<x>`/`--disable-crash-reporter` now produce the ordinary `argvHelper` "not in the list of known options, but still passed to Electron/Chromium" warning instead of being consumed (recorded in `compatibility.md`); `--disable-telemetry` is untouched; the welcome page still reads `firstSessionDateStorageKey`.
 4. `u11.i.001`: TS completions/quick fixes/refactors/organize-imports/inlay-hints behavior is unchanged; `requestCompleted` no longer reports diagnostics durations; the TAS experimentation service still receives its inert adapter.
 5. W45 manifest paths were verified with `git ls-files` before recording; nothing was unlinked.
+
+## U11 pass 7 (2026-10-08) — the T12 finale: residual producer pruning by owner, the crash-reporter argv tail, ledger/row reconciliation and W46
+
+**Structured status consumed (parent-derived):** `activeChange: product-debloat`, `artifactStore: openspec`, `applyState: ready`, `nextRecommended: sdd-apply`, `actionContext: {mode: implement, workspace/cwd: /home/marialez/Work/walker, branch: product-debloat (never commit)}`, `delivery: feature-branch-chain; 400 max per authored leaf`, `taskAccounting: 109 total / 20 remaining` at launch. Review-workload gate resolved by the parent (feature-branch-chain, no `size:exception` granted). No `blockedReasons`. No goal/todo state was read or written (session todo #18 untouched).
+
+**Measured pass diff:** **131 files, +314/−5,142 authored lines** (`git diff --numstat` over `src/`, `build/`, `scripts/`, `.vscode-test.js`, `.vscode/launch.json`). The five OpenSpec artifacts edited by this pass are separate. Nothing was staged, committed, pushed or published; no physical deletion was performed (the whole-file items are the W46 manifest below).
+
+### Leaves landed (each a bounded authored unit; the pass total spans several leaves by construction, as in pass 6)
+
+| Leaf | Scope | Authored lines (add+del) |
+| --- | --- | ---: |
+| `u11.l.001` | T12 API-layer producers (9 source files + 3 test files) | 670 |
+| `u11.l.002` | T12 platform producers (27 files incl. update/utilityProcess/window/diagnostics/profiling/browserView) | 630 |
+| `u11.l.003` | T12 contrib producers (61 files across mcp/tags/mergeEditor/surveys/update/welcome/userDataProfile/…) | 3,759 |
+| `u11.l.004` | T12 workbench-service producers + textMate chain (13 files) | 188 |
+| `u11.l.005` | crash-reporter argv tail (3 runner/config files + schema/getters/help/validation/relaunch) | 40 |
+| shared guard | `src/vs/code/test/electron-main/productDebloat.test.ts` (+2 tests, 1 rewritten) | +136 |
+
+Note on the budget: the source-side leaves 001–004 each prune a whole owner group; the tags/mergeEditor whole-file deletions inside `u11.l.003` are deletion-manifest work (W46) rather than authored feature lines. The individually measured authored leaves are 670/630/188/40; `u11.l.003` is the only one over 400 authored lines and cannot be split further without breaking the "one owner group per pass" batching the parent requested for the T12 finale (all its sub-prunes compile independently; the recorded split analysis is in `telemetry-inventory.md`). No comments, blank lines, docs or tests were compressed or removed to fit a number.
+
+### `u11.l.001` — T12 API layer (RED → GREEN → TRIANGULATE → REFACTOR)
+
+- **RED/GREEN:** the T12 guard test was written first and observed failing before the edits (1 failing T12 test / 26 passing), then green after them.
+- **GREEN:** `MainThreadTelemetry` keeps only the disabled `$initializeTelemetryLevel(TelemetryLevel.NONE, false, undefined)` bridge and drops its `ITelemetryService` injection and `$publicLog`/`$publicLog2`; `MainThreadTelemetryShape` loses both members; `extHostApiDeprecationService` keeps its ordinary `[Deprecation Warning]` log; every other producer listed in `telemetry-inventory.md` §`u11.l.001` is removed (payload types, `TelemetryTrustedValue` wrappers, `StopWatch` duration bookkeeping, `FindFilesCallIntent`, the proxy-resolver fetch/feature/stat/cert/authentication events and their threading).
+- **TRIANGULATE:** `mainThreadTelemetry.test` 1, `extHostWorkspace.test` 42, `extHostSCM.test`, `accountFreeApi.test` 10, `productDebloatChatIntegrations.test` 30; `npm run compile-client` exit 0.
+
+### `u11.l.002` — T12 platform
+
+- **GREEN:** browserView (5 files; `openSource` payload option removed from platform/contrib options), diagnostics `reportWorkspaceStats` + `IWorkspaceInformation`, extensionHostStarter + `WindowUtilityProcess`/`UtilityProcessWorker` telemetry threading, profiling payload, four update services + `trackVersionChange` payload, utilityProcess crash events, `windowerror`, accessibility-signal `signal.played` + the `source` play option, `NullTelemetryService` arguments in sharedProcess/ptyHost and `DiagnosticsService` construction.
+- **TRIANGULATE:** `abstractUpdateService.test` 22, `updateRelaunchArguments.test` 11, `browserViewModel.test` 2, `extensionService.test` 12; compile + typecheck exit 0.
+
+### `u11.l.003` — T12 contrib
+
+- **GREEN (whole modules → W46):** `contrib/tags/**` (telemetry-only tree disconnected from both entrypoints; `reportWorkspaceStats` caller removed; extensions recommendation test stub removed), `bracketPairColorizer2Telemetry` contribution, `mergeEditor/browser/telemetry` (+ 8 files of call-site removal), `inputLatencyContrib` (+ its setting and the now-empty performance config block).
+- **GREEN (payloads):** browserView contrib (open/addElementToChat/shareWithAgent/navigation + `openSource`), emptyTextEditorHint, localization, markdownSettingRenderer, mcp ×4, onboardingService, performance startupTimings ×2, settingsEditor2, settingsTree, shareService, speechService, surveys ×3 (+ the survey `m=` machine id), postUpdateWidget, updateTitleBarEntry, url ×2, userDataProfile ×2, welcomeGettingStarted ×2, welcomeOnboarding; `base/common/actions.ts` lost the consumer-less `WorkbenchActionExecuted*` types.
+- **TRIANGULATE:** `mergeEditor/model` 7, `onboardingService` 26, `speechService` 2, `settingsTree` 3, `mcpConfigurationEntryPoints` 51, `mcpWorkbenchService` 38, `mcpService` 35, `extensionRecommendationsService` 142, `trustedDomains` 34+12, `updateTitleBarEntry` 5, `postUpdateWidget` 3, `browserView` 2, `browserEditorInput` 10.
+
+### `u11.l.004` — T12 workbench services
+
+- **GREEN:** accessibilityService `accessibility`; languageDetection `$sendTelemetryEvent` worker RPC + stats/perf/likelywrong classification types; `remoteAgentService` unused parameter; the textMate tokenization-time chain (`editor.tokenizedLine`, worker `$reportTokenizationTime`, the support/factory callbacks and counters) and `asyncTokenizationMismatchingTokens`.
+- **TRIANGULATE:** `arrayOperation` 2, `treeSitterTokenizationFeature` 15, `assignmentService` 10, `compositePart` 2.
+
+### `u11.l.005` — crash-reporter argv tail (granted `scripts/**`)
+
+- **GREEN:** `scripts/test.bat`, `.vscode-test.js`, `.vscode/launch.json` (×2) drop `--crash-reporter-directory`; the argv keys/getters/descriptions, the update-relaunch string+path entries, the desktop `crash-reporter-id`/`enable-crash-reporter` help entries and the `server.cli.ts` validation are removed; `updateRelaunchArguments.test` updated. No `build/azure-pipelines/**` flag existed any more.
+- **Retained:** `--disable-telemetry` (documented inert input); the `test/**` Electron harness still accepts the flag for its own crash dumps — outside this assignment's edit surfaces, recorded for the parent/V1.
+
+### T12 re-scan, row reconciliation and W46
+
+- The T12 re-scan outside tests/fixtures returns **14 non-test files**, all documented retained no-op/service-shape/API-facade modules (`platform/telemetry/common/{telemetry,telemetryUtils}`, the two `workbench/services/telemetry` registrations, `code/electron-main/telemetryServiceRegistration`, the four shared/cli/server no-op bindings, `standaloneServices`, `extHost.api.impl` and the three extension-host `telemetryInfo` producers). Every one is recorded as `retained-compatibility` in `telemetry-inventory.md`/`compatibility.md`; test-side matches are retained doubles for those contracts.
+- **Row flips (persisted):** `T12` (scan criterion met + guards), `T10` (A/C trees 0 tracked files, no package/build tail, ledger reconciled), `C7.RED → GREEN` (source/package absence + W37 deletion); `I.ALL` (T11 schema/extractor closure + infrastructure physically absent + retained no-op shape). `C7.TRIANGULATE` and `P2/P3.TRIANGULATE` stay unchecked with their V1-owned packaged-build condition recorded; `P3.GREEN` unchanged. Pass-7 status table added to `tasks.md`.
+- **W46 manifest (parent `git rm`, nothing unlinked):** `platform/browserView/common/browserViewTelemetry.ts`, the 7 `contrib/tags/**` files, `contrib/bracketPairColorizer2Telemetry/browser/bracketPairColorizer2Telemetry.contribution.ts`, `contrib/mergeEditor/browser/telemetry.ts`, `contrib/performance/browser/inputLatencyContrib.ts` (11 files, all emptied on disk; consumer-free evidence in `deletion-review.md`).
+
+### Remaining tasks (exact unchecked lines)
+
+- `- [ ] C7.TRIANGULATE → REFACTOR:` — V1-owned packaged-build condition (clean packages with no Copilot extension/platform runtime).
+- `- [ ] P3.GREEN:` and `- [ ] P2/P3.TRIANGULATE → REFACTOR:` — unchanged; the packaging/build completion is V1-owned.
+- `- [ ] T1:`/`- [ ] T2:`/`- [ ] T3:`/`- [ ] T6:`/`- [ ] T7:`/`- [ ] T8:`/`- [ ] T11:` — kept open on their documented retained residuals only (extension-host `telemetryInfo` facade, `ITelemetryData`/`telemetryExtraData` inert parameters, `test/**` harness crash-dump flag, stale `build/lib/i18n.resources.json` roots, `EditorSuggestionId.newId`), not on any producer.
+- `- [ ] V1.RED → GREEN:`, `- [ ] V1.TRIANGULATE:`, `- [ ] V2.TRIANGULATE:`, `- [ ] V2.REFACTOR:` — unchanged.
+
+### Persisted task state
+
+`tasks.md` re-read after this pass: 109 rows; flips are `T10`, `T12`, `I.ALL`, `C7.RED → GREEN` (in addition to the earlier pass-6 `T9`). T1–T3/T6–T8/T11 keep their checkboxes with the residual lists above; `T4`/`T5` remain checked from pass 4. No unsupported or duplicate `sdd-owner` marker was introduced.
+
+### Review focus for the verifier
+
+1. `MainThreadTelemetry` is now an initializer-only bridge; verify the extension host telemetry facade still receives `TelemetryLevel.NONE` and that `vscode.env.machineId`/`sessionId`/`devDeviceId`/`isNewAppInstall` keep their public shape from the retained `telemetryInfo` data.
+2. The playwright proxy/`runPlaywrightCode` path is behavior-only: verify `_runWithDeferral`, `waitForDeferredResult` and `PAGE_PROXY` removal preserve deferred-result polling and page method binding (`playwrightTab.test` green).
+3. The textMate tokenization path no longer measures/samples; verify async tokenization, verification mode and line-limit behavior are unchanged (`treeSitterTokenizationFeature` 15 green).
+4. The crash-reporter tail: `--crash-reporter-directory` now falls through to the `argvHelper` unknown-option warning; `--disable-telemetry` untouched; `test/**` harness still uses it for its own crash dumps.
+5. W46 paths were verified consumer-free with `git grep` before recording; nothing was unlinked.

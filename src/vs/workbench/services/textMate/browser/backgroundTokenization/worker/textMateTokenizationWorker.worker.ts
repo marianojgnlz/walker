@@ -114,9 +114,6 @@ export class TextMateTokenizationWorker implements IWebWorkerServerRequestHandle
 			setTokensAndStates(versionId: number, tokens: Uint8Array, fontTokens: ISerializedAnnotation<IFontTokenOption>[], stateDeltas: StateDeltas[]): void {
 				that._host.$setTokensAndStates(data.controllerId, versionId, tokens, fontTokens, stateDeltas);
 			},
-			reportTokenizationTime(timeMs: number, languageId: string, sourceExtensionId: string | undefined, lineLength: number, isRandomSample: boolean): void {
-				that._host.$reportTokenizationTime(timeMs, languageId, sourceExtensionId, lineLength, isRandomSample);
-			},
 		}, data.languageId, data.encodedLanguageId, data.maxTokenizationLineLength));
 	}
 

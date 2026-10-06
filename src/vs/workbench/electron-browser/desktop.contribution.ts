@@ -413,14 +413,6 @@ import product from '../../platform/product/common/product.js';
 				type: 'string',
 				markdownDescription: localize('argv.forceColorProfile', 'Allows to override the color profile to use. If you experience colors appear badly, try to set this to `srgb` and restart.')
 			},
-			'enable-crash-reporter': {
-				type: 'boolean',
-				markdownDescription: localize('argv.enableCrashReporter', 'Allows to disable crash reporting, should restart the app if the value is changed.')
-			},
-			'crash-reporter-id': {
-				type: 'string',
-				markdownDescription: localize('argv.crashReporterId', 'Unique id used for correlating crash reports sent from this app instance.')
-			},
 			'enable-proposed-api': {
 				type: 'array',
 				description: localize('argv.enebleProposedApi', "Enable proposed APIs for a list of extension ids (such as \`vscode.git\`). Proposed APIs are unstable and subject to breaking without warning at any time. This should only be set for extension development and testing purposes."),

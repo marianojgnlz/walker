@@ -20,7 +20,7 @@ import { DebugVisualizationType, IAdapterDescriptor, IConfig, IDebugAdapter, IDe
 import { convertToDAPaths, convertToVSCPaths, isDebuggerMainContribution } from '../../contrib/debug/common/debugUtils.js';
 import { ExtensionDescriptionRegistry } from '../../services/extensions/common/extensionDescriptionRegistry.js';
 import { Dto } from '../../services/extensions/common/proxyIdentifier.js';
-import { DebugSessionUUID, ExtHostDebugServiceShape, IBreakpointsDeltaDto, IDebugSessionDto, IFunctionBreakpointDto, ISourceMultiBreakpointDto, IStackFrameFocusDto, IThreadFocusDto, MainContext, MainThreadDebugServiceShape, MainThreadTelemetryShape } from './extHost.protocol.js';
+import { DebugSessionUUID, ExtHostDebugServiceShape, IBreakpointsDeltaDto, IDebugSessionDto, IFunctionBreakpointDto, ISourceMultiBreakpointDto, IStackFrameFocusDto, IThreadFocusDto, MainContext, MainThreadDebugServiceShape } from './extHost.protocol.js';
 import { IExtHostCommands } from './extHostCommands.js';
 import { IExtHostConfiguration } from './extHostConfiguration.js';
 import { IExtHostEditorTabs } from './extHostEditorTabs.js';
@@ -116,8 +116,6 @@ export abstract class ExtHostDebugServiceBase extends DisposableCls implements I
 	private readonly _visualizers = new Map<number, { v: vscode.DebugVisualization; provider: vscode.DebugVisualizationProvider; extensionId: string }>();
 	private _visualizerIdCounter = 0;
 
-	private _telemetryProxy: MainThreadTelemetryShape;
-
 	constructor(
 		@IExtHostRpcService extHostRpcService: IExtHostRpcService,
 		@IExtHostWorkspace protected readonly _workspaceService: IExtHostWorkspace,
@@ -163,8 +161,6 @@ export abstract class ExtHostDebugServiceBase extends DisposableCls implements I
 			}));
 			this.registerAllDebugTypes(extensionRegistry);
 		});
-
-		this._telemetryProxy = extHostRpcService.getProxy(MainContext.MainThreadTelemetry);
 	}
 
 	public async $getVisualizerTreeItem(treeId: string, element: IDebugVisualizationContext): Promise<IDebugVisualizationTreeItem | undefined> {
@@ -669,15 +665,7 @@ export abstract class ExtHostDebugServiceBase extends DisposableCls implements I
 						}
 
 						// DA -> VS Code
-						try {
-							// Try to catch details for #233167
-							message = convertToVSCPaths(message, true);
-						} catch (e) {
-							// eslint-disable-next-line local/code-no-any-casts
-							const type = message.type + '_' + ((message as any).command ?? (message as any).event ?? '');
-							this._telemetryProxy.$publicLog2<DebugProtocolMessageErrorEvent, DebugProtocolMessageErrorClassification>('debugProtocolMessageError', { type, from: session.type });
-							throw e;
-						}
+						message = convertToVSCPaths(message, true);
 
 						mythis._debugServiceProxy.$acceptDAMessage(debugAdapterHandle, message);
 					}
@@ -1304,16 +1292,3 @@ export class WorkerExtHostDebugService extends ExtHostDebugServiceBase {
 		super(extHostRpcService, workspaceService, extensionService, configurationService, editorTabs, variableResolver, commands, testing);
 	}
 }
-
-// Collecting info for #233167 specifically
-type DebugProtocolMessageErrorClassification = {
-	from: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The type of the debug adapter that the event is from.' };
-	type: { classification: 'SystemMetaData'; purpose: 'PerformanceAndHealth'; comment: 'The type of the event that was malformed.' };
-	owner: 'roblourens';
-	comment: 'Sent to collect details about misbehaving debug extensions.';
-};
-
-type DebugProtocolMessageErrorEvent = {
-	from: string;
-	type: string;
-};
