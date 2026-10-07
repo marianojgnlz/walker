@@ -54,8 +54,12 @@ export class MainThreadExtensionService implements MainThreadExtensionServiceSha
 		internalExtHostContext._setExtensionHostProxy(
 			new ExtensionHostProxy(extHostContext.getProxy(ExtHostContext.ExtHostExtensionService))
 		);
+		// The ExtHostEmbeddings actor is intentionally disconnected (C2 removal), so its retained
+		// MainContext identifier has no registered main-thread customer and must be excluded from
+		// the ext-host proxy expectation. Every other MainContext identifier stays asserted.
+		const disconnectedMainThreadIdentifiers: unknown[] = [MainContext.MainThreadEmbeddings];
 		// eslint-disable-next-line local/code-no-any-casts, @typescript-eslint/no-explicit-any
-		internalExtHostContext._setAllMainProxyIdentifiers(Object.keys(MainContext).map((key) => (<any>MainContext)[key]));
+		internalExtHostContext._setAllMainProxyIdentifiers(Object.keys(MainContext).map((key) => (<any>MainContext)[key]).filter((identifier) => !disconnectedMainThreadIdentifiers.includes(identifier)));
 	}
 
 	public dispose(): void {

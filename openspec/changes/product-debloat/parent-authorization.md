@@ -681,3 +681,7 @@ Scope (round-5 remediation, 2026-10-07): remove ONLY the unreachable `isCompleti
 
 ### Round-5 remediation ratifications (2026-10-08)
 RATIFIED (coupled-batch precedent; recorded split analyses — no splitting below 400 without non-compiling halves): the issue-reporter leaf (~585 lines, one coupled signature change across ten files) and the telemetry leaf (~385 lines).
+
+### Close-gate decisions (2026-10-08, user-approved)
+- RECONCILIATION APPROVED (proof-backed stale-checkbox reconciliation per the round-6 disposition): the 8 closure-ready rows (C5.RED, C5.TRIANGULATE, T1, T2, T3, T6, T7, T8) close on the verifier's proof (producers physically gone; only documented no-op/API-facade contracts remain per the T12 scan). T11 closes with the `test/**` crash-dump argv residual ACCEPTED as a documented test-harness input.
+- V-EVIDENCE APPROACHED LIVE on Linux: fresh-from-HEAD desktop+REH rebuild + live anonymous Open VSX browse/install smoke + packaged profile smokes + Git/SSH remote smokes against a local remote; macOS/Windows checks recorded as explicit platform gaps.
