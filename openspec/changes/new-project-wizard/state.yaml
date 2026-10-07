@@ -1,0 +1,42 @@
+change: new-project-wizard
+phase: plan
+artifact_store: openspec
+preflight:
+  execution: auto
+  artifact_store: openspec
+  delivery_strategy: ask-on-risk
+  review_budget_lines: 400
+  chain_strategy: feature-branch-chain
+  size_exception: not accepted
+artifacts:
+  proposal: true
+  specs: true
+  design: true
+  tasks: true
+tasks_progress:
+  completed: []
+  pending: []
+last_updated: 2026-10-08
+plan:
+  status: complete
+  scope_gate: PASS
+  review_budget_lines: 400
+  estimated_changed_lines: 1000-1600
+  budget_risk: Medium
+  decision_needed_before_apply: false
+  chained_prs_recommended: true
+  chain_strategy: feature-branch-chain
+  evidence: "SDK 10.0.401 templates/options and Welcome/toolchain surfaces supplied by parent addendum; no implementation tests run during planning."
+scope_gate:
+  result: PASS
+  reason: "Re-evaluated 2026-10-08 by the parent: the evidence gaps are closed (SDK 10.0.401 template list + options captured; Welcome/recents surfaces located; toolchain contracts mapped — see the proposal's Evidence addendum). No scope conflict; the user-approved contract is unchanged."
+decisions:
+  - "Add project-creation as a new capability; amend welcome-onboarding for the Welcome entry and recents surface."
+  - "Consume the canonical dotnet-toolchain resolver and wizard-adapter contracts rather than introducing SDK discovery."
+  - "Support the approved templates and expose only options actually offered by the active SDK templates."
+  - "Reuse canonical recent-workspace tracking and preserve existing history; do not create parallel recents storage."
+  - "Keep project creation account-free, telemetry-free, and local-template-only with no network template acquisition."
+  - "Place the wizard in src/vs/workbench/contrib/projectWizard as a core workbench contribution; route Welcome, File menu, and command palette to one command, while using the toolchain extension only through its adapter/command boundary."
+  - "Use per-template dotnet new help discovery and dry-run validation; emit only selected SDK template options and invoke the verified executable with structured arguments."
+  - "Reuse IRecentlyOpened and canonical workspace open/window behavior; do not create parallel recent storage."
+  - "Workload forecast is 1,000–1,600 changed lines; use feature-branch-chain at a 400-line leaf budget with no size exception."
