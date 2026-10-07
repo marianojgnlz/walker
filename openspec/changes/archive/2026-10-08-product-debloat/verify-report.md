@@ -1,5 +1,130 @@
 ```yaml
 schema: sdd.verify-result/v1
+evidence_revision: sha256:e4bbdb87c896082f41ac032349efc7ce954df6b09bd04714a955afde1d575514
+verdict: pass
+blockers: 0
+critical_findings: 0
+requirements: 15/18
+scenarios: 34/38
+test_command: npm test --prefix build
+test_exit_code: 0
+test_output_hash: sha256:ec5b494d1aa8e15637f06fe536a75bff902c326376ca44c51cffb76cf5de715a
+build_command: npm run compile-client
+build_exit_code: 0
+build_output_hash: sha256:ee17a63c9266e693eb5c6943f3d6cf9190502b5dcc7aa64ff21b5e9e98c1c46e
+```
+
+# Verification — milestone round 7: final whole-change completion verdict
+
+## Verdict and executive summary
+
+**PASS for whole-change completion; the change is ready for sync and archive.** Every archive gate this verifier tracks is now closed: all 109 implementation rows are checked with owner markers and zero malformed syntax; the twelve rows open at round 6 trace to explicit, user-approved close-gate decisions (nine proof-backed reconciliations including the T11 `test/**` acceptance) or to the live-evidence pass that flipped the three V rows with an honest gap ledger. The V-evidence survived independent spot-checking: both packages are stamped `71759d4897c…`, my own fresh scans reproduce zero hits for all 24 debloat markers across the desktop loose tree, extensions, the full in-place ASAR, and the REH tree; the live Open VSX lifecycle, profile-sentinel SHA-256 records, and Git/SSH workflows all match their captured logs. The round-6 Git-suite blocker is resolved: the `MainThreadEmbeddings` disconnected-actor exclusion is verified in source, guard tests, and the shipped bundle, and the integration command now exits 0 (Git 60 passing plus two intentionally skipped cases, Git Base 14 passing). The repository incident is fully recovered and independently confirmed. Coverage: 15/18 requirements and 34/38 scenarios fully substantiated; the four unsubstantiated scenarios are live workflows outside this environment's reach (github.com over OS credentials twice, SSH remote workspace, non-account port forwarding), recorded as gaps exactly as the task rows require rather than inferred. The remaining follow-ups (signature-verification decision, dead dev-tunnels dependencies, macOS/Windows smokes) are precisely scoped below and none is hidden.
+
+## Structured status and actionContext
+
+Consumed exclusively the parent-supplied round-7 status: `activeChange=product-debloat`, `artifactStore=openspec`, artifacts through verify rounds 1–6 done, sync missing, accounting 109/109/0, `nextRecommended=sdd-verify` (final verdict round), workspace `/home/marialez/Work/walker`, branch `product-debloat` at HEAD `4708d72c922` — confirmed by observed `git show --stat HEAD` (subject "product-debloat V-evidence: live Linux evidence complete, 109/109 rows, ext-host defect fixed"; 6 files, +337/−13, containing the four evidence artifacts plus the 5/−1 `mainThreadExtensionService.ts` fix). All targets resolve inside the authoritative workspace; sibling package trees were used read-only as authorized. The only authored write is this report. `openspec/config.yaml` declares `strict_tdd: false`.
+
+## V-evidence spot-checks (independent, this round)
+
+- **Package stamps.** Both `../VSCode-linux-x64/resources/app/product.json` and `../vscode-reh-linux-x64/product.json` parse to `commit=71759d4897cefb3ddb409a9b64285fcb0598db80`, `version=1.140.0`, `nameShort=Walker`, `applicationName=walker`, Open VSX `serviceUrl`, and none of `defaultChatAgent`/`sessionsWindowAllowedExtensions`/`agentsTelemetryAppName`. Stamp nuance resolved: the only commit after the stamp is `4708d72c922` itself, whose sole source change is the ext-host fix — and the shipped desktop bundle contains that fix (`disconnectedMainThreadIdentifiers` observed in `workbench.desktop.main.js`), so the packages correspond to the final source content.
+- **Fresh-package marker scans (my own implementation, no extraction).** Zero hits for all 24 markers — `defaultChatAgent`, `vscode.editorChat.start`, `ICustomEndpointTelemetryService`, `TelemetryLogGroup`, `validateTelemetryData`, `crashReporter.start`, `ElectronAgentHostStarter`, `AgentHostProcessManager`, `agentHostChannel`, `vs/platform/agentHost`, `agentHostProfile`, `EditorChatFollowUp`, `copilotChatExtensionId`, `AuthorizationProvider`, `githubAccessToken`, `IIssueSubmissionHost`, `getCustomTelemetryEndpoint`, `NullEndpointTelemetryService`, `submitToGitHub`, `getPrivateIssueUrl`, `internalGithubButton`, `uploadIssueDataFile`, `extractIssueData`, `IGitHubUploadService` — across desktop loose `out/` (44 js/map files), desktop `extensions/` (511), all 3,365 js/map entries of the 5,921-entry in-place `node_modules.asar` header walk, and REH `out/` (7 files). This matches the recorded fresh-stamp scan table.
+- **`github.copilot-chat`**: exactly 3 hits, all in desktop `.js.map` files (the generic deprecation-redirect example), zero in shipped `.js` and zero in the ASAR — as recorded. `vs/sessions`: one inert hit, a sourcesContent comment inside `workbench.desktop.main.css.map`; no code reference, REH clean.
+- **Dev-tunnels residual confirmed as scoped.** The desktop ASAR carries 567 entries under five `@microsoft/dev-tunnels-*` packages; REH ships none; no production importer exists in the tree — the disclosed dead-dependency follow-up, present exactly where the evidence says.
+- **REH dependency roots.** My root-shape traversal counts 110 package roots with 0 absent from `remote/package-lock.json`, 0 version mismatches, and no Copilot/Anthropic/Codex/Koffi/dev-tunnels roots. The ±1 against the recorded 111 figure is scanner-methodology variance on an already-documented count history; the substantive guarantee (lock parity, no forbidden roots) is independently confirmed.
+- **Live Open VSX logs.** `07-openvsx-install-csharp.log` shows the default-path termination for both extensions with `Signature verification was not executed.`; `08-openvsx-install-csharp-noverify.log` shows both installs succeeding (`ms-dotnettools.vscode-dotnet-runtime` v3.2.0, `muhammad-sammy.csharp` v2.145.21-g154a82fd27); `13-provider-gap.log` shows HTTP 404 for `ms-dotnettools/csdevkit`, `github/copilot`, `github/copilot-chat`, `ms-dotnettools/csharp` and HTTP 200/MIT for `ms-dotnettools/vscode-dotnet-runtime` — the recorded lifecycle and provider gap reproduce from the captured evidence.
+- **Profile smoke sentinels.** `22-legacy-post-checks.log` records before/after SHA-256 equality for all eight sentinels (`.ssh/id_sentinel`, `known_hosts`, `.gitconfig`, repo sentinel, unrelated-secret sentinel, `settings.json`, `argv.json`, workspace sentinel), all eight orphaned `state.vscdb` rows still present, the injected legacy full-reporting settings/argv content, and zero crash/telemetry directories or endpoint markers — consistent with this round's zero `crashReporter.start`/telemetry-marker scans.
+- **Git/SSH.** `29-integration-git.log` and the recorded file/SSH transport logs show clone/commit/push/branch/pull/fetch green on `file://` and loopback `ssh://127.0.0.1:2222` with throwaway keys, and the packaged Git extension performing UI fetch/pull/fetch-all with externally verified hash movement. Re-execution of the smoke scripts was not authorized this round; log-level verification is recorded here instead.
+
+## The ext-host defect fix (the round-6 blocker resolved)
+
+`src/vs/workbench/api/browser/mainThreadExtensionService.ts:57–62` (observed) excludes `MainContext.MainThreadEmbeddings` from the `_setAllMainProxyIdentifiers` expectation list, mirroring the ext-host `disconnectedChatApiContexts` pattern; the change is the 5/−1 in commit `4708d72c922`. The guard that forbids the simpler repair is real: `accountFreeApi.test.ts:180–202` places `mainThreadEmbeddings` in the disconnected-customer list and asserts `extensionHost.contribution.ts` absence of each `import './<customer>.js'` (observed at line 202). The packaged desktop bundle contains the shipped filter. The previously failing command now passes freshly: `./scripts/test-integration.sh --suite 'git,git-base'` exited 0 with Git 60 passing / 2 pending and Git Base 14 passing (observed; hash below). This round accepts the evidence pass's reclassification: the earlier identical error was a product defect in the packaged extension host, not an environment gap, and it is fixed at the recorded location.
+
+## Task accounting, reconciliation, and review workload
+
+- **Accounting independently re-derived**: 109 total, 109 `- [x]`, 0 `- [ ]`, 0 malformed checkbox syntaxes, 109 `sdd-owner: implementation` markers (regex audit of `tasks.md`). Matches the parent status exactly. No unchecked implementation task remains, so the CRITICAL completeness gate is clear.
+- **Reconciliation traceability**: `parent-authorization.md` "Close-gate decisions (2026-10-08, user-approved)" approves the eight closure-ready rows on the round-6 proof, closes T11 with the `test/**` crash-dump argv residual accepted as a documented test-harness input, and records the V-evidence approach with macOS/Windows as explicit platform gaps. The three V rows carry their evidence in `implementation-evidence.md`'s final section with the gap ledger (signature verification, platform smokes, github.com live access, remote-workspace forwarding, UI profile switching, OS-keychain secrets, dev-tunnels residual).
+- **Review workload**: delivery remains `feature-branch-chain` with no `size:exception`; the V-evidence pass was evidence-only except the ratified 5/−1 fix. All previously oversized coupled batches carry explicit parent ratifications (round-5 remediation ratifications, 2026-10-08). No unratified review-budget violation remains; no scope creep outside the granted surfaces was observed.
+
+## Whole-change per-criterion verdicts (recomputed from the four retrieved specs)
+
+Heading counts re-derived this round: accounts-removal 5 requirements / 11 scenarios; chat-agent-removal 4/7; protected-boundaries 5/12; telemetry-removal 4/8 — 18/38 total.
+
+| Requirement (spec) | Scenarios | Verdict and basis |
+| --- | --- | --- |
+| No account or sign-in entrypoints (accounts) | 2/2 | Live packaged palette absence on fresh and legacy profiles; old `walker://` callback URLs inert; source-level absence guards. |
+| Removal of account-dependent cloud capabilities (accounts) | 1/2 | Legacy enrollment inert live; the github.com-remote-with-OS-credentials scenario remains a recorded live-access gap. |
+| Inert public authentication compatibility (accounts) | 3/3 | `accountFreeApi` 10/10 fresh (passive, forced/registration, dynamic challenge); facade guards. |
+| No gallery account fallback (accounts) | 2/2 | `extensionGalleryService` 39/39 fresh; live anonymous lifecycle triggered no sign-in or alternate provider. |
+| Non-destructive orphaned account state (accounts) | 2/2 | Eight orphaned rows intact after two legacy restarts; eight sentinels SHA-256 unchanged; obsolete links absent from palette results. |
+| No chat or agent product surfaces (chat) | 1/1 | Fresh and legacy-state packaged starts show no chat/agent/Agents-Window surface; stored agent state restored nothing. |
+| Removal of chat and agent source/runtime graph (chat) | 2/2 | My scans: zero Agent Host/Copilot markers in both packages; packaging succeeds without any Copilot shim/copy path. |
+| No functional extension chat or language-model bridge (chat) | 2/2 | Removed-capability facades unit-covered; ordinary extensions activate in the fixed packaged ext host and Git UI operates. |
+| Preserve only feature-neutral shared behavior (chat) | 2/2 | Ripgrep/target-selection fixtures inside the green build suite; cross-tree cleanups guard-asserted; live Search/SCM/terminal/editor function. |
+| No telemetry or crash-reporting infrastructure (telemetry) | 2/2 | Zero infrastructure markers across every packaged context (this round's scans); legacy profile produced no telemetry log/network/crash artifacts; bundled extensions ran reporter-free. |
+| Legacy enablement is powerless (telemetry) | 2/2 | Old level-all settings and injected argv produced nothing live; public enablement guard-asserted false; ext-host facade disabled. |
+| Infrastructure cutoff followed by complete owned pruning (telemetry) | 2/2 | T12 closure reproduced at HEAD (round 6) and re-confirmed by this round's zero-marker scans plus the 109/109 reconciliation. |
+| Minimal no-op extension telemetry compatibility (telemetry) | 2/2 | `nullTelemetryService` 2/2 fresh; sender counters zero; minimized 39-line no-op shape guard-tested. |
+| Plain Git operations and OS credentials (protected) | 2/3 | File + loopback-SSH workflows live with the packaged Git extension; the github.com-URL scenario remains a recorded live-access gap. |
+| Working anonymous extension acquisition (protected) | 4/4 | Live anonymous install-with-dependency/update/uninstall/VSIX; C# acquisition recorded (ID/version/license); 404 provider gap documented; the restricted-operation case recorded as a failure without provider substitution. |
+| Preserve local user state without destructive migration (protected) | 1/1 | Copied mixed-state profile survived restarts intact and inert; local profile/settings machinery unit-boundary 33/33; UI profile switching remains a recorded, non-blocking sub-step gap. |
+| Preserve generic remote and port-forwarding infrastructure (protected) | 0/2 | SSH remote workspace and port forwarding lack any available remote endpoint infrastructure; recorded as gaps per the record-don't-infer rule; tunnel unit 3/3 and generic `serve_web` token logic verified intact. |
+| Preserve ordinary IDE diagnostics and established local setup (protected) | 2/2 | Ordinary error surfacing observed live (the signature-verification message) with no telemetry emission; Search 2 results; .NET toolchain activation account-free; personalization preserved. |
+
+**Requirement total: 15/18 fully complete. Scenario total: 34/38.** The four open scenarios (github.com without GitHub integration; github.com plain remote; key-based remote workspace; non-account port forwarding) are exclusively live-workflow scenarios whose absence is caused by this machine's network scope and missing remote infrastructure — precisely the conditions the task rows instruct to record rather than fabricate.
+
+## Documented residuals and follow-ups (precisely scoped, none hidden)
+
+1. **Signature verification (parent decision requested).** `@vscode/vsce-sign` is absent from the packaged app and the root manifests, so default-path gallery installs exit non-zero with `Signature verification was not executed.`; the documented per-profile workaround `"extensions.verifySignature": false` completes the full lifecycle. The choice (ship the module vs. accept the workaround) is recorded for the parent; no spec scenario requires default-path verification success.
+2. **Dead dev-tunnels dependency.** Five `@microsoft/dev-tunnels-*` packages (567 ASAR entries observed) plus the stale `bundle-dev-tunnels-web` script survive in the desktop package with no production importer; bounded follow-up requiring lock-regeneration authorization.
+3. **macOS/Windows native smokes** unperformed (Linux-only host); the exact unperformed package recipes and checks are enumerated in `implementation-evidence.md`; the target-filter fixtures run inside the green build suite.
+4. **The four environment-gated scenarios** above, carried into sync as recorded gaps.
+5. **T11 test-harness crash-dump argv** accepted as a documented input by the close-gate decision.
+6. **Inert cosmetics** verified to exist exactly as disclosed: the css.map `vs/sessions` sourcesContent comment, `standaloneStrings.ts` inline-chat string, relauncher unification setting entry, `DisabledByUnification` enum member, consumer-less `uploadFileViaMobileApi`, and upload-progress CSS.
+
+## Repository-incident recovery confirmation (all observed this round)
+
+`git status --porcelain` shows only untracked `.pi/` before and after the full command battery. `git branch -a` lists no `feature-a` locally or remotely; `git ls-remote --heads origin` returns only `dotnet-toolchain` and `main` (so `product-debloat` was never pushed and the stray remote branch is gone). `git merge-base --is-ancestor a0c64c3f4be product-debloat` is negative — the accidental "second commit" is outside the branch history. The reflog reproduces the recorded sequence (commit on the branch → checkout `feature-a` → checkout `main` → checkout `product-debloat` → `reset` to `71759d4897c` → the V-evidence commit). Local config carries no `user.*` or `branch.feature-a.*` entries (recovery unsets confirmed); the recovery log tail shows the final status matching the pre-incident state plus the fix.
+
+## Commands and observed results
+
+Environment: Node v24.18.0 via the authorized PATH export; repository cwd; outputs captured under `/tmp/walker-verify-r7/`; hashes are SHA-256 of full raw log bytes. No dependency install, unapproved command, or tracked mutation occurred; `git status --porcelain` after the battery shows only the pre-existing untracked `.pi/`.
+
+| Exact command | Observed result | Output SHA-256 |
+| --- | --- | --- |
+| `npm run compile-client` | exit 0; zero errors | `ee17a63c9266e693eb5c6943f3d6cf9190502b5dcc7aa64ff21b5e9e98c1c46e` |
+| `npm run typecheck-client` | exit 0; no diagnostics | `25d4a10e7654a35ff6e5fdac546a1fda4b39982f72b3424969ab4195e914b8a5` |
+| `npm run gulp compile-extensions` | exit 0; 40 "0 errors" tsconfig summaries | `554749499c9949062c6ca8579bd30a71c1d2da99272d3ad5c7baabf23e078feb` |
+| `npm test --prefix build` | exit 0; **498 tests / 498 pass / 0 fail** | `ec5b494d1aa8e15637f06fe536a75bff902c326376ca44c51cffb76cf5de715a` |
+| `cargo check --manifest-path cli/Cargo.toml` | exit 0 (pre-existing `proc-macro-error2` future-incompat warning only) | `01233034977eb7eef04a048ac65cebadcebf9e11d9586b8bce2a700258e1d130` |
+| `cargo test --manifest-path cli/Cargo.toml` | exit 0; 47 lib + 5 bin passed, 0 failed | `ad6cfb7d718f45f0c2ee0fa41c1718693a19f41b6182a2dbbcf0b399e98d0aa9` |
+| `./scripts/test.sh --run vs/code/test/electron-main/productDebloat.test` | exit 0; **31 passing** | `3176589636deb77f29d572db153cdd2ea77fc4c210cc99c12341509e3e534f14` |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | exit 0; **10 passing** | `d053418b835de98d491928d95b0fe819b8e969b56d73d60869a38f6adcf3d723` |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` | exit 0; **30 passing** | `2d6865a5414f42b2632538db7cc7d111339eb85ebcc97a9cba6001e9f9242b8c` |
+| `./scripts/test.sh --run vs/platform/userDataProfile/test/common/userDataProfileService.test` | exit 0; **33 passing** | `3050be269ee9e7b32772b510cdde5c2976a9880e46d867e77532fc5cefdb2263` |
+| `./scripts/test.sh --run vs/platform/extensionManagement/test/common/extensionGalleryService.test` | exit 0; **39 passing** | `eda4adc3ec0e8b900f2dbde3ca62b812c6c2706e884c1b335e49b4f0033cceb4` |
+| `./scripts/test.sh --run vs/platform/tunnel/test/common/tunnel.test` | exit 0; **3 passing** | `0414506b760014f26c8a21665866156d494e72f23414b43311d91f49329e45e1` |
+| `./scripts/test.sh --run vs/platform/mcp/test/common/mcpWorkspaceConfiguration.test` | exit 0; **13 passing** | `80c03c8606d74b33af565873bf6d861c9620e59c41ccada8d2d7f06a61bb4a33` |
+| `./scripts/test.sh --run vs/platform/telemetry/test/common/nullTelemetryService.test` | exit 0; **2 passing** | `b170b30c9820cac4b98587bc4dd60ffdbb7b18fea2cb9df642613ff063719f90` |
+| `VSCODELOGSDIR="$PWD/out-build/product-debloat-integration-logs" TMPDIR="$PWD/out-build" ./scripts/test-integration.sh --suite 'git,git-base'` | **exit 0; Git 60 passing / 2 pending; Git Base 14 passing** — the round-6 pre-count defect is gone | `3fa79f9a6dc160eb86e327a767a678851624ca953787e3029aec211249e00835` |
+
+Read-only evidence operations: `git status --porcelain`, `git log`, `git branch -a`, `git reflog`, `git config --local --list`, `git merge-base --is-ancestor`, `git ls-remote --heads origin`, `git show --stat HEAD`, targeted greps of source and packaged trees, direct `product.json`/lock parsing, and the in-place ASAR header scan described above. Re-execution of the packaged UI/smoke scripts was outside this round's authorized command list; their recorded logs were verified read-only instead.
+
+## Strict TDD, assertion quality, and review boundary
+
+`strict_tdd: false` in `openspec/config.yaml`; no TDD Cycle Evidence table is required. Assertion quality of the guard surface: the `accountFreeApi` disconnected-customer loops pair negative regex assertions (no `rpcProtocol.set` registration, no contribution import) with the retained positive contracts, and the `productDebloat` suite asserts retained no-op shapes alongside absent retired symbols — physical, deletion-tolerant checks over real files, with no tautologies, ghost loops, type-only, or smoke-only assertions observed. The fix itself is minimal and in-scope. No fix, cleanup, staging, commit, or checkbox edit was performed by this verifier; the single authored write is this report.
+
+## Exact blockers and closure recommendation
+
+**Blockers: 0. Critical findings: 0.** No unchecked implementation task remains; no spec scenario is contradicted by evidence; the incident is recovered; the one round-6 substantive defect is fixed and verified in source, guards, package, and harness. The four unsubstantiated scenarios and the residual ledger above are recorded gaps with named follow-ups, not defects in the delivered tree. **Recommendation: the change is ready for sync and archive**; carry the follow-up ledger (signature-verification decision, dev-tunnels dependency cleanup, macOS/Windows smokes, environment-gated scenarios) forward as recorded post-archive items.
+
+## Evidence revision and persistence
+
+`evidence_revision` hashes sorted (path, NUL, bytes, NUL) for the four retrieved spec files, `openspec/config.yaml`, the ten change artifacts, and the six anchors inspected this round (the fix, the guard test, both packaged product manifests, the REH lock, and the three consulted evidence logs), followed by exact `git show --stat HEAD` bytes. Command outputs carry independent raw-byte hashes in the table above. The envelope was validated in memory before this single write: every required field present exactly once, no content before the fence, requirements/scenarios recomputed from the retrieved spec headings (18/38), and all hashes copied from observed output. Rounds 1–6 are preserved unmodified in the appendix below. OpenSpec is the active artifact backend.
+
+# Appendix — preserved milestone rounds 1–6
+
+```yaml
+schema: sdd.verify-result/v1
 evidence_revision: sha256:27d13044a641fd84052384fb4f6cfba6f8c488384fb429cac9889e0d3067b125
 verdict: fail
 blockers: 12
