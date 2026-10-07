@@ -24,7 +24,8 @@
 		"onCommand:walker.dotnet.recheck",
 		"onCommand:walker.dotnet.setup",
 		"onCommand:walker.dotnet.showOutput",
-		"onCommand:walker.dotnet.showActions"
+		"onCommand:walker.dotnet.showActions",
+		"onCommand:walker.dotnet.runTemplateOperation"
 	],
 	"contributes": {
 		"commands": [

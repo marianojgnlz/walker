@@ -19,6 +19,7 @@ export const DOTNET_TOOLCHAIN_COMMANDS = Object.freeze({
 	setup: 'walker.dotnet.setup',
 	showOutput: 'walker.dotnet.showOutput',
 	showActions: 'walker.dotnet.showActions',
+	runTemplateOperation: 'walker.dotnet.runTemplateOperation',
 } as const);
 
 /** Identifier of one `.NET Toolchain` command. */
@@ -152,6 +153,99 @@ export function isDotnetToolchainSnapshot(value: unknown): value is IDotnetToolc
 		return false;
 	}
 	return true;
+}
+
+/** Approved local template identities that the internal project wizard may invoke. */
+export const DOTNET_NEW_TEMPLATE_IDS = Object.freeze([
+	'console', 'classlib', 'webapi', 'webapiaot', 'mvc', 'webapp', 'razor', 'blazor', 'blazorwasm', 'worker', 'xunit', 'nunit',
+] as const);
+
+export type DotnetNewTemplateId = (typeof DOTNET_NEW_TEMPLATE_IDS)[number];
+export type DotnetTemplateOperation = 'listTemplates' | 'help' | 'dryRun' | 'generate';
+
+const DOTNET_NEW_OPTION_NAMES = Object.freeze(['framework', 'use-minimal-apis', 'use-controllers', 'include-tests', 'no-restore'] as const);
+const DOTNET_FRAMEWORK_VALUE = /^net\d+(?:\.\d+)?(?:-[A-Za-z0-9.-]+)?$/i;
+const DOTNET_PROJECT_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
+
+export interface IDotnetNewTemplateOption {
+	readonly name: (typeof DOTNET_NEW_OPTION_NAMES)[number];
+	readonly value?: string;
+}
+
+export type IDotnetTemplateOperationRequest =
+	| { readonly schemaVersion: typeof DOTNET_TOOLCHAIN_SCHEMA_VERSION; readonly operation: 'listTemplates' }
+	| { readonly schemaVersion: typeof DOTNET_TOOLCHAIN_SCHEMA_VERSION; readonly operation: 'help'; readonly template: DotnetNewTemplateId }
+	| {
+		readonly schemaVersion: typeof DOTNET_TOOLCHAIN_SCHEMA_VERSION;
+		readonly operation: 'dryRun' | 'generate';
+		readonly template: DotnetNewTemplateId;
+		readonly name: string;
+		readonly output: string;
+		readonly options: readonly IDotnetNewTemplateOption[];
+	};
+
+export type IDotnetTemplateOperationResult =
+	| {
+		readonly schemaVersion: typeof DOTNET_TOOLCHAIN_SCHEMA_VERSION;
+		readonly kind: 'executed';
+		readonly operation: DotnetTemplateOperation;
+		readonly exitCode: number;
+		readonly stdout: string;
+		readonly stderr: string;
+		readonly failure?: 'spawn' | 'timeout';
+	}
+	| { readonly schemaVersion: typeof DOTNET_TOOLCHAIN_SCHEMA_VERSION; readonly kind: 'unavailable'; readonly reason: 'sdk-not-ready' }
+	| {
+		readonly schemaVersion: typeof DOTNET_TOOLCHAIN_SCHEMA_VERSION;
+		readonly kind: 'invalid';
+		readonly reason: 'malformed-request' | 'unsupported-template' | 'unsafe-name' | 'unsafe-output' | 'unsupported-option';
+	};
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]): boolean {
+	return Object.keys(value).every(key => allowed.includes(key));
+}
+
+function isDotnetNewTemplateId(value: unknown): value is DotnetNewTemplateId {
+	return typeof value === 'string' && (DOTNET_NEW_TEMPLATE_IDS as readonly string[]).includes(value);
+}
+
+function isDotnetNewTemplateOption(value: unknown): value is IDotnetNewTemplateOption {
+	if (!isRecord(value) || !hasOnlyKeys(value, ['name', 'value']) || typeof value.name !== 'string' || !(DOTNET_NEW_OPTION_NAMES as readonly string[]).includes(value.name)) {
+		return false;
+	}
+	if (value.name === 'framework') {
+		return typeof value.value === 'string' && DOTNET_FRAMEWORK_VALUE.test(value.value);
+	}
+	return value.value === undefined;
+}
+
+/** Structural guard for the internal wizard command; arbitrary executables and arguments are rejected. */
+export function isDotnetTemplateOperationRequest(value: unknown): value is IDotnetTemplateOperationRequest {
+	if (!isRecord(value) || value.schemaVersion !== DOTNET_TOOLCHAIN_SCHEMA_VERSION || typeof value.operation !== 'string') {
+		return false;
+	}
+	if (value.operation === 'listTemplates') {
+		return hasOnlyKeys(value, ['schemaVersion', 'operation']);
+	}
+	if (value.operation === 'help') {
+		return hasOnlyKeys(value, ['schemaVersion', 'operation', 'template']) && isDotnetNewTemplateId(value.template);
+	}
+	if (value.operation !== 'dryRun' && value.operation !== 'generate') {
+		return false;
+	}
+	if (!hasOnlyKeys(value, ['schemaVersion', 'operation', 'template', 'name', 'output', 'options']) || !isDotnetNewTemplateId(value.template)) {
+		return false;
+	}
+	if (typeof value.name !== 'string' || !DOTNET_PROJECT_NAME.test(value.name)) {
+		return false;
+	}
+	if (typeof value.output !== 'string' || value.output.length === 0 || /[\0\r\n]/.test(value.output)) {
+		return false;
+	}
+	if (!Array.isArray(value.options) || !value.options.every(isDotnetNewTemplateOption)) {
+		return false;
+	}
+	return new Set(value.options.map(option => option.name)).size === value.options.length;
 }
 
 /** Result of one bounded child-process invocation; expected failures resolve instead of throwing. */

@@ -100,6 +100,30 @@ const parsedStartEntries: IWelcomePageStartEntry[] = startEntries.map((e, i) => 
 
 type RecentEntry = (IRecentFolder | IRecentWorkspace) & { id: string };
 
+export function createRecentWorkspaceLink(
+	name: string,
+	parentPath: string,
+	windowOpenable: IWindowOpenable,
+	recent: IRecentFolder | IRecentWorkspace,
+	hostService: Pick<IHostService, 'openWindow'>,
+	notificationService: Pick<INotificationService, 'error'>,
+): HTMLButtonElement {
+	const link = $<HTMLButtonElement>('button.button-link');
+	link.type = 'button';
+	link.innerText = name;
+	link.title = `${name}${parentPath.length > 0 ? ` — ${parentPath}` : ''}`;
+	link.setAttribute('aria-label', localize('welcomePage.openFolderWithPath', "Open folder {0} with path {1}", name, parentPath));
+	link.addEventListener('click', e => {
+		void hostService.openWindow([windowOpenable], {
+			forceNewWindow: e.ctrlKey || e.metaKey,
+			remoteAuthority: recent.remoteAuthority || null // local window if remoteAuthority is not set or can not be deducted from the openable
+		}).catch(() => notificationService.error(localize('welcomePage.openRecentFailure', "Could not open recent project '{0}'. Remove it from Recent if the path no longer exists.", name)));
+		e.preventDefault();
+		e.stopPropagation();
+	});
+	return link;
+}
+
 const REDUCED_MOTION_KEY = 'workbench.welcomePage.preferReducedMotion';
 export class GettingStartedPage extends EditorPane {
 
@@ -1006,19 +1030,8 @@ export class GettingStartedPage extends EditorPane {
 			const { name, parentPath } = splitRecentLabel(fullPath);
 
 			const li = $('li');
-			const link = $('button.button-link');
-
-			link.innerText = name;
+			const link = createRecentWorkspaceLink(name, parentPath, windowOpenable, recent, this.hostService, this.notificationService);
 			link.title = fullPath;
-			link.setAttribute('aria-label', localize('welcomePage.openFolderWithPath', "Open folder {0} with path {1}", name, parentPath));
-			link.addEventListener('click', e => {
-				this.hostService.openWindow([windowOpenable], {
-					forceNewWindow: e.ctrlKey || e.metaKey,
-					remoteAuthority: recent.remoteAuthority || null // local window if remoteAuthority is not set or can not be deducted from the openable
-				});
-				e.preventDefault();
-				e.stopPropagation();
-			});
 			li.appendChild(link);
 
 			const span = $('span');

@@ -5,6 +5,7 @@
 
 import * as assert from 'assert';
 import { promises as fs } from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { DOTNET_TOOLCHAIN_COMMANDS, type IEnvironmentAdapter, type IProcessAdapter, type IProcessExecution, type IToolchainUi, type IDotnetToolchainSnapshot } from '../contracts';
 import { resolveDotnetProxy } from '../download';
@@ -139,11 +140,11 @@ suite('dotnet extension command boundary', () => {
 
 		assert.strictEqual(factoryCalls, 1, 'the controller must be constructed once for a supported host');
 		assert.deepStrictEqual([...host.commands.keys()].sort(), Object.values(DOTNET_TOOLCHAIN_COMMANDS).sort(), 'all commands must be registered synchronously');
-		assert.strictEqual(host.registrations.length, 5);
+		assert.strictEqual(host.registrations.length, 6);
 		for (const registration of host.registrations) {
 			assert.ok(subscriptions.includes(registration.disposable), `${registration.id} must be owned immediately`);
 		}
-		assert.strictEqual(subscriptions.length, 7, 'status, controller and five registrations must be owned');
+		assert.strictEqual(subscriptions.length, 8, 'status, controller and six registrations must be owned');
 		assert.strictEqual(controller.recheckCalls, 1, 'activation must start exactly one detection');
 		assert.strictEqual(controller.setupRequests.length, 0, 'activation must never start setup');
 		assert.ok(controllerUi !== undefined, 'the controller must receive the status UI');
@@ -227,7 +228,7 @@ suite('dotnet extension command boundary', () => {
 			assert.strictEqual(recheck.state, 'unavailable');
 			assert.ok(host.output.lines.some(line => line.startsWith('«')), `${entry.label} must explain the unavailability in localized output`);
 			assert.strictEqual(host.statusItem.text, '«$(circle-slash) .NET SDK: Unavailable Here»');
-			assert.strictEqual(subscriptions.length, 6, 'unavailable hosts own the status and five registrations');
+			assert.strictEqual(subscriptions.length, 7, 'unavailable hosts own the status and six registrations');
 			extension.dispose();
 		}
 	});
@@ -330,6 +331,87 @@ suite('dotnet extension command boundary', () => {
 			assert.deepStrictEqual(host.quickPicks.at(-1)?.items.map(item => item.id), ['setup', 'recheck', 'showOutput'], 'a recovery failure must offer retry, recheck and output');
 			extension.dispose();
 		});
+	});
+
+	test('runs only fixed dotnet new operations through the current verified executable', async () => {
+		const host = createDotnetHostHarness();
+		const subscriptions: IDotnetDisposable[] = [];
+		const executable = '/home/test/.walker/dotnet/dotnet';
+		const output = path.join(os.tmpdir(), `CatalogApi-${process.pid}-${Date.now()}`);
+		const executions: IProcessExecution[] = [];
+		const templateProcess: IProcessAdapter = {
+			run: async execution => {
+				executions.push(execution);
+				return { exitCode: 0, stdout: 'template output', stderr: '' };
+			},
+		};
+		const controller = createControllerStub(dotnetSnapshot('ready', { verified: { executable, sdkVersion: '10.0.401' } }));
+		const extension = activateDotnetToolchain({
+			host,
+			extensionKind: 'ui',
+			subscriptions,
+			createController: () => controller,
+			createTemplateProcess: () => templateProcess,
+		});
+		const runTemplateOperation = host.commands.get('walker.dotnet.runTemplateOperation');
+		assert.ok(runTemplateOperation, 'the internal wizard operation command must be registered');
+
+		await runTemplateOperation({ schemaVersion: 1, operation: 'listTemplates' });
+		await runTemplateOperation({ schemaVersion: 1, operation: 'help', template: 'webapi' });
+		await runTemplateOperation({
+			schemaVersion: 1,
+			operation: 'generate',
+			template: 'webapi',
+			name: 'CatalogApi',
+			output,
+			options: [{ name: 'framework', value: 'net10.0' }, { name: 'use-controllers' }],
+		});
+		assert.deepStrictEqual(executions.map(execution => ({
+			executable: execution.executable,
+			args: execution.args,
+			cwd: execution.cwd,
+			env: execution.env,
+		})), [
+			{ executable, args: ['new', 'list'], cwd: os.tmpdir(), env: { DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' } },
+			{ executable, args: ['new', 'webapi', '--help'], cwd: os.tmpdir(), env: { DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' } },
+			{ executable, args: ['new', 'webapi', '--name', 'CatalogApi', '--output', output, '--framework', 'net10.0', '--use-controllers'], cwd: os.tmpdir(), env: { DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' } },
+		]);
+		extension.dispose();
+	});
+
+	test('rejects non-ready SDK states and hostile template requests before process execution', async () => {
+		const host = createDotnetHostHarness();
+		const subscriptions: IDotnetDisposable[] = [];
+		let processCalls = 0;
+		const templateProcess: IProcessAdapter = {
+			run: async () => {
+				processCalls++;
+				return { exitCode: 0, stdout: '', stderr: '' };
+			},
+		};
+		const controller = createControllerStub(dotnetSnapshot('missing'));
+		activateDotnetToolchain({
+			host,
+			extensionKind: 'ui',
+			subscriptions,
+			createController: () => controller,
+			createTemplateProcess: () => templateProcess,
+		});
+		const runTemplateOperation = host.commands.get('walker.dotnet.runTemplateOperation');
+		assert.ok(runTemplateOperation);
+		const missing = await runTemplateOperation({ schemaVersion: 1, operation: 'listTemplates' }) as { readonly kind: string };
+		assert.strictEqual(missing.kind, 'unavailable');
+		controller.setSnapshot(dotnetSnapshot('ready', { verified: { executable: '/home/test/.walker/dotnet/dotnet', sdkVersion: '10.0.401' } }));
+		const rejected = await runTemplateOperation({
+			schemaVersion: 1,
+			operation: 'generate',
+			template: 'webapi',
+			name: '--force',
+			output: '/tmp/CatalogApi',
+			options: [{ name: 'install', value: 'https://example.invalid/template' }],
+		}) as { readonly kind: string };
+		assert.strictEqual(rejected.kind, 'invalid');
+		assert.strictEqual(processCalls, 0, 'invalid and unavailable requests never reach the process adapter');
 	});
 
 	test('disposes commands, status and controller exactly once', () => {

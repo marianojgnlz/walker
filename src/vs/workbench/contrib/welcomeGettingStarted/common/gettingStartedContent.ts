@@ -13,6 +13,7 @@ import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js'
 import { NotebookSetting } from '../../notebook/common/notebookCommon.js';
 import { CONTEXT_ACCESSIBILITY_MODE_ENABLED } from '../../../../platform/accessibility/common/accessibility.js';
 import { URI } from '../../../../base/common/uri.js';
+import { CREATE_PROJECT_COMMAND_ID } from '../../projectWizard/common/projectWizard.js';
 
 interface IGettingStartedContentProvider {
 	(): string;
@@ -99,6 +100,17 @@ type GettingStartedWalkthroughContent = BuiltinGettingStartedCategory[];
 type GettingStartedStartEntryContent = BuiltinGettingStartedStartEntry[];
 
 export const startEntries: GettingStartedStartEntryContent = [
+	{
+		id: 'topLevelNewDotnetProject',
+		title: localize('gettingStarted.newDotnetProject.title', "New .NET Project"),
+		description: localize('gettingStarted.newDotnetProject.description', "Create a project from templates installed with the verified local .NET SDK."),
+		icon: Codicon.newFolder,
+		when: '!isWeb',
+		content: {
+			type: 'startEntry',
+			command: `command:${CREATE_PROJECT_COMMAND_ID}`,
+		}
+	},
 	{
 		id: 'welcome.showNewFileEntries',
 		title: localize('gettingStarted.newFile.title', "New File..."),

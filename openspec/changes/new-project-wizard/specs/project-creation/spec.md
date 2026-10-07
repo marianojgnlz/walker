@@ -33,10 +33,12 @@ Project generation MUST invoke the verified SDK executable with structured argum
 ### Requirement: Report progress, cancellation, and partial failures truthfully
 The wizard SHALL provide accessible progress and cancellation. A failed template invocation MUST be reported with actionable diagnostics through the .NET Project output channel and a report action. Walker MUST NOT report success until the output project exists and requested operations have completed or their failure is clearly identified. Restore or Git initialization failure MUST NOT erase a generated project; cancellation and failure MUST preserve user data.
 
-#### Scenario: Restore fails after generation
-- GIVEN generation succeeds and optional restore is requested
-- WHEN restore fails
-- THEN Walker leaves the generated project intact, reports generation and restore outcomes separately in output, and does not claim full success without disclosing the restore failure.
+#### Scenario: Template restore fails during generation
+- GIVEN the user leaves restore enabled and the selected template restores dependencies as part of `dotnet new`
+- WHEN that template command fails during its implicit restore
+- THEN Walker preserves any generated output and reports the generation failure with the template's restore diagnostic; it does not claim success or present restore as an independently executed stage.
+
+The approved toolchain command set does not include a separate `dotnet restore`; the `--no-restore` option disables the template's implicit restore when the selected template advertises it. Restore failure therefore cannot be distinguished from generation failure beyond the command diagnostic.
 
 ### Requirement: Open the generated project
 After successful creation, the wizard SHALL offer opening in the same or a new window using the normal workspace-opening contract. It MUST NOT claim the project opened if the open request fails. Newly created/openable projects SHALL enter canonical recent-workspace history without duplicate entries.

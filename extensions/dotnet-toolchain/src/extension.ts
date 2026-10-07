@@ -13,15 +13,20 @@
 
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
+import * as path from 'node:path';
 import type * as vscode from 'vscode';
 import type { ICandidateEnvironment } from './candidates';
 import {
 	DOTNET_TOOLCHAIN_COMMANDS,
 	DOTNET_TOOLCHAIN_SCHEMA_VERSION,
+	isDotnetTemplateOperationRequest,
 	type DotnetToolchainState,
+	type IDotnetTemplateOperationRequest,
+	type IDotnetTemplateOperationResult,
 	type IDotnetToolchainSnapshot,
 	type IEnvironmentAdapter,
 	type IFileSystemAdapter,
+	type IProcessAdapter,
 	type IToolchainUi,
 } from './contracts';
 import {
@@ -85,6 +90,8 @@ export interface IDotnetToolchainActivationOptions {
 	readonly subscriptions: IDotnetDisposable[];
 	/** Builds the local install controller; never called on an unsupported host. */
 	readonly createController: (ui: IToolchainUi) => IDotnetInstallerController;
+	/** Creates the bounded, sanitized process adapter for internal local template operations. */
+	readonly createTemplateProcess?: () => IProcessAdapter;
 	readonly refreshIntervalMs?: number;
 }
 
@@ -127,6 +134,41 @@ function describeError(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
+const TEMPLATE_OPERATION_TIMEOUT_MS = 60_000;
+const TEMPLATE_GENERATION_TIMEOUT_MS = 10 * 60 * 1000;
+const TEMPLATE_CHILD_ENVIRONMENT = Object.freeze({ DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1' });
+
+function buildDotnetNewArguments(request: IDotnetTemplateOperationRequest): readonly string[] {
+	switch (request.operation) {
+		case 'listTemplates':
+			return ['new', 'list'];
+		case 'help':
+			return ['new', request.template, '--help'];
+		case 'dryRun':
+		case 'generate': {
+			const args = ['new', request.template, '--name', request.name, '--output', request.output];
+			if (request.operation === 'dryRun') {
+				args.push('--dry-run');
+			}
+			for (const option of request.options) {
+				args.push(`--${option.name}`);
+				if (option.value !== undefined) {
+					args.push(option.value);
+				}
+			}
+			return args;
+		}
+	}
+}
+
+function invalidTemplateOperation(reason: Extract<IDotnetTemplateOperationResult, { readonly kind: 'invalid' }>['reason']): IDotnetTemplateOperationResult {
+	return { schemaVersion: DOTNET_TOOLCHAIN_SCHEMA_VERSION, kind: 'invalid', reason };
+}
+
+function isNodeErrorCode(error: unknown, code: string): boolean {
+	return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
+}
+
 /**
  * Activates the command boundary. Commands are registered synchronously before any asynchronous
  * detection starts; startup performs detection only and never installs. Unsupported hosts (browser
@@ -140,6 +182,7 @@ export function activateDotnetToolchain(options: IDotnetToolchainActivationOptio
 	let controller: IDotnetInstallerController | undefined;
 	let disposed = false;
 	const registrations: IDotnetDisposable[] = [];
+	let templateProcess: IProcessAdapter | undefined;
 
 	const source: IDotnetToolchainStateSource = {
 		getSnapshot: () => controller?.getSnapshot() ?? snapshot,
@@ -180,6 +223,78 @@ export function activateDotnetToolchain(options: IDotnetToolchainActivationOptio
 	register(DOTNET_TOOLCHAIN_COMMANDS.setup, (...args) => status.runSetup(args.length === 0 ? undefined : args));
 	register(DOTNET_TOOLCHAIN_COMMANDS.showOutput, () => { status.showOutput(); });
 	register(DOTNET_TOOLCHAIN_COMMANDS.showActions, () => status.showActions());
+	register(DOTNET_TOOLCHAIN_COMMANDS.runTemplateOperation, async (...args): Promise<IDotnetTemplateOperationResult> => {
+		if (args.length !== 1 || !isDotnetTemplateOperationRequest(args[0])) {
+			return invalidTemplateOperation('malformed-request');
+		}
+		const request = args[0];
+		const active = await source.recheck();
+		status.update(active);
+		if (active.state !== 'ready' || active.verified === undefined || !available) {
+			return { schemaVersion: DOTNET_TOOLCHAIN_SCHEMA_VERSION, kind: 'unavailable', reason: 'sdk-not-ready' };
+		}
+
+		let outputPath: string | undefined;
+		let cwd = os.tmpdir();
+		if (request.operation === 'dryRun' || request.operation === 'generate') {
+			const localPath = process.platform === 'win32' ? path.win32 : path.posix;
+			if (!localPath.isAbsolute(request.output)) {
+				return invalidTemplateOperation('unsafe-output');
+			}
+			outputPath = localPath.resolve(request.output);
+			if (localPath.basename(outputPath).length === 0 || outputPath === localPath.parse(outputPath).root) {
+				return invalidTemplateOperation('unsafe-output');
+			}
+			cwd = localPath.dirname(outputPath);
+			try {
+				const parentStat = await fs.stat(cwd);
+				if (!parentStat.isDirectory()) {
+					return invalidTemplateOperation('unsafe-output');
+				}
+			} catch {
+				return invalidTemplateOperation('unsafe-output');
+			}
+			try {
+				await fs.lstat(outputPath);
+				return invalidTemplateOperation('unsafe-output');
+			} catch (error) {
+				if (!isNodeErrorCode(error, 'ENOENT')) {
+					return invalidTemplateOperation('unsafe-output');
+				}
+			}
+		}
+
+		const normalizedRequest = outputPath === undefined ? request : { ...request, output: outputPath };
+		try {
+			templateProcess ??= options.createTemplateProcess?.() ?? createProcessRunner();
+			const result = await templateProcess.run({
+				executable: active.verified.executable,
+				args: buildDotnetNewArguments(normalizedRequest),
+				cwd,
+				env: TEMPLATE_CHILD_ENVIRONMENT,
+				timeoutMs: request.operation === 'generate' ? TEMPLATE_GENERATION_TIMEOUT_MS : TEMPLATE_OPERATION_TIMEOUT_MS,
+			});
+			return {
+				schemaVersion: DOTNET_TOOLCHAIN_SCHEMA_VERSION,
+				kind: 'executed',
+				operation: request.operation,
+				exitCode: result.exitCode,
+				stdout: result.stdout,
+				stderr: result.stderr,
+				...(result.failure === undefined ? {} : { failure: result.failure }),
+			};
+		} catch (error) {
+			return {
+				schemaVersion: DOTNET_TOOLCHAIN_SCHEMA_VERSION,
+				kind: 'executed',
+				operation: request.operation,
+				exitCode: 1,
+				stdout: '',
+				stderr: describeError(error),
+				failure: 'spawn',
+			};
+		}
+	});
 
 	status.update(source.getSnapshot());
 	if (available && controller !== undefined) {

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { DOTNET_TOOLCHAIN_COMMANDS, DOTNET_TOOLCHAIN_SCHEMA_VERSION, isDotnetToolchainSnapshot, type DotnetToolchainFailureStage, type IDotnetToolchainSnapshot } from '../contracts';
+import { DOTNET_NEW_TEMPLATE_IDS, DOTNET_TOOLCHAIN_COMMANDS, DOTNET_TOOLCHAIN_SCHEMA_VERSION, isDotnetTemplateOperationRequest, isDotnetToolchainSnapshot, type DotnetToolchainFailureStage, type IDotnetToolchainSnapshot } from '../contracts';
 
 // Local snapshot builders keep this contract suite self-contained; injected process/filesystem
 // fixtures and their disposal tests are covered by the separate fixture suite.
@@ -70,7 +70,29 @@ suite('dotnet toolchain snapshot v1', () => {
 			setup: 'walker.dotnet.setup',
 			showOutput: 'walker.dotnet.showOutput',
 			showActions: 'walker.dotnet.showActions',
+			runTemplateOperation: 'walker.dotnet.runTemplateOperation',
 		});
+	});
+
+	test('guards the internal wizard surface to approved templates and structured operations', () => {
+		const valid: readonly unknown[] = [
+			{ schemaVersion: 1, operation: 'listTemplates' },
+			{ schemaVersion: 1, operation: 'help', template: 'webapi' },
+			{ schemaVersion: 1, operation: 'help', template: 'razor' },
+			{ schemaVersion: 1, operation: 'dryRun', template: 'webapi', name: 'CatalogApi', output: '/tmp/CatalogApi', options: [{ name: 'framework', value: 'net10.0' }] },
+			{ schemaVersion: 1, operation: 'generate', template: 'console', name: 'Sample', output: '/tmp/Sample', options: [{ name: 'no-restore' }] },
+		];
+		const invalid: readonly unknown[] = [
+			{ schemaVersion: 1, operation: 'search', query: 'template' },
+			{ schemaVersion: 1, operation: 'help', template: 'https://example.invalid/template' },
+			{ schemaVersion: 1, operation: 'generate', template: 'webapi', name: '--force', output: '/tmp/Sample', options: [] },
+			{ schemaVersion: 1, operation: 'generate', template: 'webapi', name: 'Sample', output: '/tmp/Sample', executable: '/bin/sh', options: [] },
+			{ schemaVersion: 1, operation: 'generate', template: 'webapi', name: 'Sample', output: '/tmp/Sample', options: [{ name: 'install', value: 'https://example.invalid/template' }] },
+			{ schemaVersion: 1, operation: 'generate', template: 'webapi', name: 'Sample', output: '/tmp/Sample', options: [{ name: 'framework', value: '--force' }] },
+		];
+		assert.deepStrictEqual(DOTNET_NEW_TEMPLATE_IDS, ['console', 'classlib', 'webapi', 'webapiaot', 'mvc', 'webapp', 'razor', 'blazor', 'blazorwasm', 'worker', 'xunit', 'nunit']);
+		assert.deepStrictEqual(valid.map(isDotnetTemplateOperationRequest), valid.map(() => true));
+		assert.deepStrictEqual(invalid.map(isDotnetTemplateOperationRequest), invalid.map(() => false));
 	});
 });
 

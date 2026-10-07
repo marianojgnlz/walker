@@ -8,6 +8,8 @@ import {
 	DOTNET_TOOLCHAIN_COMMANDS,
 	DOTNET_TOOLCHAIN_SCHEMA_VERSION,
 	DOTNET_TOOLCHAIN_STATES,
+	isDotnetTemplateOperationRequest,
+	isDotnetTemplateOperationResult,
 	isDotnetToolchainSnapshot,
 	type IDotnetToolchainSnapshot,
 } from '../../common/dotnetToolchain.js';
@@ -30,6 +32,7 @@ suite('welcome onboarding .NET toolchain command contract', () => {
 			setup: 'walker.dotnet.setup',
 			showOutput: 'walker.dotnet.showOutput',
 			showActions: 'walker.dotnet.showActions',
+			runTemplateOperation: 'walker.dotnet.runTemplateOperation',
 		});
 		assert.strictEqual(DOTNET_TOOLCHAIN_SCHEMA_VERSION, 1);
 		assert.deepStrictEqual(DOTNET_TOOLCHAIN_STATES, [
@@ -55,5 +58,43 @@ suite('welcome onboarding .NET toolchain command contract', () => {
 			{ ...missing, failure: { stage: 'unknown', code: 'bad' } },
 		];
 		assert.deepStrictEqual(malformed.map(isDotnetToolchainSnapshot), malformed.map(() => false));
+	});
+});
+
+suite('wizard-only template operation contract', () => {
+	test('accepts only approved structured operation requests', () => {
+		const valid: readonly unknown[] = [
+			{ schemaVersion: 1, operation: 'listTemplates' },
+			{ schemaVersion: 1, operation: 'help', template: 'webapi' },
+			{ schemaVersion: 1, operation: 'help', template: 'razor' },
+			{ schemaVersion: 1, operation: 'dryRun', template: 'webapi', name: 'CatalogApi', output: '/tmp/CatalogApi', options: [{ name: 'framework', value: 'net10.0' }] },
+			{ schemaVersion: 1, operation: 'generate', template: 'console', name: 'Sample', output: '/tmp/Sample', options: [{ name: 'no-restore' }] },
+		];
+		const invalid: readonly unknown[] = [
+			{ schemaVersion: 1, operation: 'search', query: 'templates' },
+			{ schemaVersion: 1, operation: 'help', template: 'https://example.invalid/template' },
+			{ schemaVersion: 1, operation: 'generate', template: 'webapi', name: '--force', output: '/tmp/Sample', options: [] },
+			{ schemaVersion: 1, operation: 'generate', template: 'webapi', name: 'Sample', output: '/tmp/Sample', executable: '/bin/sh', options: [] },
+			{ schemaVersion: 1, operation: 'generate', template: 'webapi', name: 'Sample', output: '/tmp/Sample', options: [{ name: 'install', value: 'https://example.invalid/template' }] },
+		];
+		assert.deepStrictEqual(valid.map(isDotnetTemplateOperationRequest), valid.map(() => true));
+		assert.deepStrictEqual(invalid.map(isDotnetTemplateOperationRequest), invalid.map(() => false));
+	});
+
+	test('accepts bounded operation results and rejects malformed output contracts', () => {
+		const valid: readonly unknown[] = [
+			{ schemaVersion: 1, kind: 'executed', operation: 'listTemplates', exitCode: 0, stdout: 'templates', stderr: '' },
+			{ schemaVersion: 1, kind: 'executed', operation: 'generate', exitCode: 1, stdout: '', stderr: 'failed', failure: 'timeout' },
+			{ schemaVersion: 1, kind: 'unavailable', reason: 'sdk-not-ready' },
+			{ schemaVersion: 1, kind: 'invalid', reason: 'malformed-request' },
+		];
+		const invalid: readonly unknown[] = [
+			{ schemaVersion: 1, kind: 'executed', operation: 'install', exitCode: 0, stdout: '', stderr: '' },
+			{ schemaVersion: 1, kind: 'executed', operation: 'help', exitCode: '0', stdout: '', stderr: '' },
+			{ schemaVersion: 1, kind: 'executed', operation: 'help', exitCode: 0, stdout: '', stderr: '', environment: { SECRET: 'value' } },
+			{ schemaVersion: 1, kind: 'unavailable', reason: 'network' },
+		];
+		assert.deepStrictEqual(valid.map(isDotnetTemplateOperationResult), valid.map(() => true));
+		assert.deepStrictEqual(invalid.map(isDotnetTemplateOperationResult), invalid.map(() => false));
 	});
 });
