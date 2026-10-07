@@ -42,3 +42,6 @@ Measured: `browser/projectWizard.ts` 421 lines, `test/common/projectWizardFlow.t
 - **Leaf C** — `deferredGitInitialization.ts` (154) + `deferredGitInitialization.test.ts` (117) as their own pair (P3 split analysis stands: machine-scoped, expiring, one-shot, local-folder-only intent).
 - **Leaf D** — Welcome/recent integration (`gettingStarted.ts` +37/−17, `gettingStartedContent.ts` +12, `gettingStartedProjectWizard.test.ts` 108).
 Every leaf reviews ≤400 changed lines. Toolchain boundary diff (512/17 across 10 tracked files) reviews as its own leaf set.
+
+### Decision 6 (2026-10-08): parent review pass + leaf measurements — RATIFIED
+Independent parent review of the two security-relevant leaves (deferred git-init intent mechanics; toolchain boundary command) returned PASS with no required changes (verdicts + findings in `apply-progress.md` § "Parent review"). Measured review leaves: A=218, B=203, C=271, D≈256, boundary-source=212, boundary-tests=112, core-mirror pair=156 — every leaf ≤400 reviewed lines; no size exception. These are parent-supplied review evidence; the verification round independently confirmed the battery results and spec conformance.
