@@ -66,13 +66,10 @@ export class BaseIssueReporterService extends Disposable {
 	public selectedExtension = '';
 	public delayedSubmit = new Delayer<void>(300);
 	public publicGithubButton!: Button | ButtonWithDropdown;
-	public internalGithubButton!: Button | ButtonWithDropdown;
 	public nonGitHubIssueUrl = false;
 	public needsUpdate = false;
 	public acknowledged = false;
-	private createAction: Action;
 	private previewAction: Action;
-	private privateAction: Action;
 
 	constructor(
 		public disableExtensions: boolean,
@@ -110,31 +107,11 @@ export class BaseIssueReporterService extends Disposable {
 		const fileOnProduct = data.issueSource === IssueSource.VSCode;
 		this.issueReporterModel.update({ fileOnMarketplace, fileOnProduct });
 
-		this.createAction = this._register(new Action('issueReporter.create', localize('create', "Create on GitHub"), undefined, true, async () => {
-			this.delayedSubmit.trigger(async () => {
-				this.setSubmittingState(true);
-				try {
-					await this.createIssue(true);
-				} finally {
-					this.setSubmittingState(false);
-				}
-			});
-		}));
 		this.previewAction = this._register(new Action('issueReporter.preview', localize('preview', "Preview on GitHub"), undefined, true, async () => {
 			this.delayedSubmit.trigger(async () => {
 				this.setSubmittingState(true);
 				try {
-					await this.createIssue(false);
-				} finally {
-					this.setSubmittingState(false);
-				}
-			});
-		}));
-		this.privateAction = this._register(new Action('issueReporter.privateCreate', localize('privateCreate', "Create Internally"), undefined, true, async () => {
-			this.delayedSubmit.trigger(async () => {
-				this.setSubmittingState(true);
-				try {
-					await this.createIssue(true, true);
+					await this.createIssue();
 				} finally {
 					this.setSubmittingState(false);
 				}
@@ -230,42 +207,6 @@ export class BaseIssueReporterService extends Disposable {
 		}
 		this.updatePublicGithubButton(publicElements);
 		this.updatePublicRepoLink(publicElements);
-
-
-		// private filing section
-		// eslint-disable-next-line no-restricted-syntax
-		let internalElements = this.getElementById('internal-elements');
-		if (!internalElements) {
-			internalElements = document.createElement('div');
-			internalElements.id = 'internal-elements';
-			internalElements.classList.add('internal-elements');
-			internalElements.classList.add('hidden');
-			issueReporterElement.appendChild(internalElements);
-		}
-		// eslint-disable-next-line no-restricted-syntax
-		let filingRow = this.getElementById('internal-top-row');
-		if (!filingRow) {
-			filingRow = document.createElement('div');
-			filingRow.id = 'internal-top-row';
-			filingRow.classList.add('internal-top-row');
-			internalElements.appendChild(filingRow);
-		}
-		this.updateInternalFilingNote(filingRow);
-		this.updateInternalGithubButton(filingRow);
-		this.updateInternalElementsVisibility();
-	}
-
-	private updateInternalFilingNote(container: HTMLElement) {
-		// eslint-disable-next-line no-restricted-syntax
-		let filingNote = this.getElementById('internal-preview-message');
-		if (!filingNote) {
-			filingNote = document.createElement('span');
-			filingNote.id = 'internal-preview-message';
-			filingNote.classList.add('internal-preview-message');
-			container.appendChild(filingNote);
-		}
-
-		filingNote.textContent = escape(localize('internalPreviewMessage', 'If your copilot debug logs contain private information:'));
 	}
 
 	private updatePublicGithubButton(container: HTMLElement): void {
@@ -280,31 +221,12 @@ export class BaseIssueReporterService extends Disposable {
 			this.publicGithubButton.dispose();
 		}
 
-		// setup button + dropdown if applicable
+		// setup the button (preview only; anonymous issue reporting never carries a token)
 		if (!this.acknowledged && this.needsUpdate) { // * old version and hasn't ack'd
 			this.publicGithubButton = this._register(new Button(container, unthemedButtonStyles));
 			this.publicGithubButton.label = localize('acknowledge', "Confirm Version Acknowledgement");
 			this.publicGithubButton.enabled = false;
-		} else if (this.data.githubAccessToken && this.isPreviewEnabled()) { // * has access token, create by default, preview dropdown
-			this.publicGithubButton = this._register(new ButtonWithDropdown(container, {
-				contextMenuProvider: this.contextMenuService,
-				actions: [this.previewAction],
-				addPrimaryActionToDropdown: false,
-				...unthemedButtonStyles
-			}));
-			this._register(this.publicGithubButton.onDidClick(() => {
-				this.createAction.run();
-			}));
-			this.publicGithubButton.label = localize('createOnGitHub', "Create on GitHub");
-			this.publicGithubButton.enabled = true;
-		} else if (this.data.githubAccessToken && !this.isPreviewEnabled()) { // * Access token but invalid preview state: simple Button (create only)
-			this.publicGithubButton = this._register(new Button(container, unthemedButtonStyles));
-			this._register(this.publicGithubButton.onDidClick(() => {
-				this.createAction.run();
-			}));
-			this.publicGithubButton.label = localize('createOnGitHub', "Create on GitHub");
-			this.publicGithubButton.enabled = true;
-		} else { // * No access token: simple Button (preview only)
+		} else {
 			this.publicGithubButton = this._register(new Button(container, unthemedButtonStyles));
 			this._register(this.publicGithubButton.onDidClick(() => {
 				this.previewAction.run();
@@ -356,52 +278,6 @@ export class BaseIssueReporterService extends Disposable {
 		}
 	}
 
-	private updateInternalGithubButton(container: HTMLElement): void {
-		// eslint-disable-next-line no-restricted-syntax
-		const issueReporterElement = this.getElementById('issue-reporter');
-		if (!issueReporterElement) {
-			return;
-		}
-
-		// Dispose of the existing button
-		if (this.internalGithubButton) {
-			this.internalGithubButton.dispose();
-		}
-
-		if (this.data.githubAccessToken && this.data.privateUri) {
-			this.internalGithubButton = this._register(new Button(container, unthemedButtonStyles));
-			this._register(this.internalGithubButton.onDidClick(() => {
-				this.privateAction.run();
-			}));
-
-			this.internalGithubButton.element.id = 'internal-create-btn';
-			this.internalGithubButton.element.classList.add('internal-create-subtle');
-			this.internalGithubButton.label = localize('createInternally', "Create Internally");
-			this.internalGithubButton.enabled = true;
-			this.internalGithubButton.setTitle(this.data.privateUri.path!.slice(1));
-		}
-	}
-
-	private updateInternalElementsVisibility(): void {
-		// eslint-disable-next-line no-restricted-syntax
-		const container = this.getElementById('internal-elements');
-		if (!container) {
-			// shouldn't happen
-			return;
-		}
-
-		if (this.data.githubAccessToken && this.data.privateUri) {
-			show(container);
-			container.style.display = ''; //todo: necessary even with show?
-			if (this.internalGithubButton) {
-				this.internalGithubButton.enabled = this.publicGithubButton?.enabled ?? false;
-			}
-		} else {
-			hide(container);
-			container.style.display = 'none'; //todo: necessary even with hide?
-		}
-	}
-
 	private preSubmitButtonLabel: string | undefined;
 
 	private getSubmitButtonElement(): HTMLElement {
@@ -413,9 +289,6 @@ export class BaseIssueReporterService extends Disposable {
 
 	private setSubmittingState(submitting: boolean): void {
 		this.publicGithubButton.enabled = !submitting;
-		if (this.internalGithubButton) {
-			this.internalGithubButton.enabled = !submitting;
-		}
 
 		const buttonEl = this.getSubmitButtonElement();
 		if (submitting) {
@@ -557,8 +430,6 @@ export class BaseIssueReporterService extends Disposable {
 					}
 				}
 
-				// Update internal action visibility after explicit selection
-				this.updateInternalElementsVisibility();
 			});
 		}
 
@@ -789,34 +660,6 @@ export class BaseIssueReporterService extends Disposable {
 		this.updateProcessInfo(state);
 		this.updateWorkspaceInfo(state);
 		this.updateButtonStates();
-	}
-
-	private isPreviewEnabled() {
-		const issueType = this.issueReporterModel.getData().issueType;
-
-		if (this.loadingExtensionData) {
-			return false;
-		}
-
-		if (this.isWeb) {
-			if (issueType === IssueType.FeatureRequest || issueType === IssueType.PerformanceIssue || issueType === IssueType.Bug) {
-				return true;
-			}
-		} else {
-			if (issueType === IssueType.Bug && this.receivedSystemInfo) {
-				return true;
-			}
-
-			if (issueType === IssueType.PerformanceIssue && this.receivedSystemInfo && this.receivedPerformanceInfo) {
-				return true;
-			}
-
-			if (issueType === IssueType.FeatureRequest) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	private getExtensionRepositoryUrl(): string | undefined {
@@ -1237,33 +1080,7 @@ export class BaseIssueReporterService extends Disposable {
 		return isValid;
 	}
 
-	public async submitToGitHub(issueTitle: string, issueBody: string, gitHubDetails: { owner: string; repositoryName: string }): Promise<boolean> {
-		const url = `https://api.github.com/repos/${gitHubDetails.owner}/${gitHubDetails.repositoryName}/issues`;
-		const init = {
-			method: 'POST',
-			body: JSON.stringify({
-				title: issueTitle,
-				body: issueBody
-			}),
-			headers: new Headers({
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${this.data.githubAccessToken}`,
-				'User-Agent': 'request'
-			})
-		};
-
-		const response = await fetch(url, init);
-		if (!response.ok) {
-			console.error('Invalid GitHub URL provided.');
-			return false;
-		}
-		const result = await response.json();
-		await this.openLink(result.html_url);
-		this.close();
-		return true;
-	}
-
-	public async createIssue(shouldCreate?: boolean, privateUri?: boolean): Promise<boolean> {
+	public async createIssue(): Promise<boolean> {
 		const selectedExtension = this.issueReporterModel.getData().selectedExtension;
 		// Short circuit if the extension provides a custom issue handler
 		if (this.nonGitHubIssueUrl) {
@@ -1306,13 +1123,11 @@ export class BaseIssueReporterService extends Disposable {
 
 		this.hasBeenSubmitted = true;
 
-		// eslint-disable-next-line no-restricted-syntax
-		const issueTitle = (<HTMLInputElement>this.getElementById('issue-title')).value;
 		const issueBody = this.issueReporterModel.serialize();
 
-		let issueUrl = privateUri ? this.getPrivateIssueUrl() : this.getIssueUrl();
+		let issueUrl = this.getIssueUrl();
 		if (!issueUrl) {
-			console.error(`No ${privateUri ? 'private ' : ''}issue url found`);
+			console.error('No issue url found');
 			return false;
 		}
 		if (selectedExtension?.uri) {
@@ -1321,9 +1136,6 @@ export class BaseIssueReporterService extends Disposable {
 		}
 
 		const gitHubDetails = this.parseGitHubUrl(issueUrl);
-		if (this.data.githubAccessToken && gitHubDetails && shouldCreate) {
-			return this.submitToGitHub(issueTitle, issueBody, gitHubDetails);
-		}
 
 		// eslint-disable-next-line no-restricted-syntax
 		const baseUrl = this.getIssueUrlWithTitle((<HTMLInputElement>this.getElementById('issue-title')).value, issueUrl);
@@ -1379,12 +1191,6 @@ export class BaseIssueReporterService extends Disposable {
 			: this.issueReporterModel.getData().fileOnMarketplace
 				? this.product.reportMarketplaceIssueUrl!
 				: this.product.reportIssueUrl!;
-	}
-
-	// for when command 'workbench.action.openIssueReporter' passes along a
-	// `privateUri` UriComponents value
-	public getPrivateIssueUrl(): string | undefined {
-		return URI.revive(this.data.privateUri)?.toString();
 	}
 
 	public parseGitHubUrl(url: string): undefined | { repositoryName: string; owner: string } {

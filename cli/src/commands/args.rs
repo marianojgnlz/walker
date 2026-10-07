@@ -777,10 +777,8 @@ mod tests {
 		let constants = include_str!("../constants.rs");
 		assert!(!constants.contains("AGENT_HOST"));
 
-		let auth = include_str!("../auth.rs");
-		assert!(!auth.contains("with_namespace"));
-		assert!(auth.contains("impl AuthorizationProvider for Auth"));
-		assert!(auth.contains("PROD_FIRST_PARTY_APP_ID"));
+		let lib = include_str!("../lib.rs");
+		assert!(!lib.contains("pub mod auth;"), "lib.rs still exports the orphaned account auth module");
 	}
 
 	#[test]

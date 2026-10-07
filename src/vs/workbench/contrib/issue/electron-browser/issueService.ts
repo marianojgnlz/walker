@@ -60,7 +60,6 @@ export class NativeIssueService implements IWorkbenchIssueService {
 			restrictedMode: !this.workspaceTrustManagementService.isWorkspaceTrusted(),
 			isInstallationPure: true,
 			isSessionsWindow: this.environmentService.isSessionsWindow,
-			githubAccessToken: '',
 		}, dataOverrides);
 
 		const openPromise = this.issueFormService.openReporter(issueReporterData);
@@ -128,7 +127,6 @@ export class NativeIssueService implements IWorkbenchIssueService {
 			restrictedMode: !this.workspaceTrustManagementService.isWorkspaceTrusted(),
 			isInstallationPure,
 			isSessionsWindow: this.environmentService.isSessionsWindow,
-			githubAccessToken: '',
 		}, dataOverrides);
 
 		return this.issueFormService.openReporter(issueReporterData);

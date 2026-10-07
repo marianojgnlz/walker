@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { sumBy } from '../../base/common/arrays.js';
-import { prefixedUuid } from '../../base/common/uuid.js';
 import { LineEdit } from './core/edits/lineEdit.js';
 import { BaseStringEdit } from './core/edits/stringEdit.js';
 import { StringText } from './core/text/abstractText.js';
@@ -270,18 +269,4 @@ export class EditDeltaInfo {
  */
 export interface EditSuggestionId {
 	readonly _brand: 'EditIdentity';
-}
-
-export namespace EditSuggestionId {
-	/**
-	 * Use AiEditTelemetryServiceImpl to create a new id!
-	*/
-	export function newId(genPrefixedUuid?: (ns: string) => string): EditSuggestionId {
-		const id = genPrefixedUuid ? genPrefixedUuid('sgt') : prefixedUuid('sgt');
-		return toEditIdentity(id);
-	}
-}
-
-function toEditIdentity(id: string): EditSuggestionId {
-	return id as unknown as EditSuggestionId;
 }

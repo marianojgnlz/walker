@@ -59,21 +59,6 @@ export interface ITelemetryService {
 	setCommonProperty(name: string, value: string | boolean | undefined): void;
 }
 
-export interface ITelemetryEndpoint {
-	id: string;
-	aiKey: string;
-	sendErrorTelemetry: boolean;
-}
-
-export const ICustomEndpointTelemetryService = createDecorator<ICustomEndpointTelemetryService>('customEndpointTelemetryService');
-
-export interface ICustomEndpointTelemetryService {
-	readonly _serviceBrand: undefined;
-
-	publicLog(endpoint: ITelemetryEndpoint, eventName: string, data?: ITelemetryData): void;
-	publicLogError(endpoint: ITelemetryEndpoint, errorEventName: string, data?: ITelemetryData): void;
-}
-
 // Keys
 export const firstSessionDateStorageKey = 'telemetry.firstSessionDate';
 
@@ -82,8 +67,4 @@ export const enum TelemetryLevel {
 	CRASH = 1,
 	ERROR = 2,
 	USAGE = 3
-}
-
-export interface ICommonProperties {
-	[name: string]: string | boolean | undefined;
 }

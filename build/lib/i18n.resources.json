@@ -175,19 +175,7 @@
 			"project": "vscode-workbench"
 		},
 		{
-			"name": "vs/workbench/contrib/inlineChat",
-			"project": "vscode-workbench"
-		},
-		{
 			"name": "vs/workbench/contrib/imageCarousel",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/contrib/agentsVoice",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/contrib/chat",
 			"project": "vscode-workbench"
 		},
 		{
@@ -228,10 +216,6 @@
 		},
 		{
 			"name": "vs/workbench/contrib/format",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/contrib/tags",
 			"project": "vscode-workbench"
 		},
 		{
@@ -339,14 +323,6 @@
 			"project": "vscode-workbench"
 		},
 		{
-			"name": "vs/workbench/contrib/userDataSync",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/contrib/editSessions",
-			"project": "vscode-workbench"
-		},
-		{
 			"name": "vs/workbench/contrib/views",
 			"project": "vscode-workbench"
 		},
@@ -359,15 +335,7 @@
 			"project": "vscode-workbench"
 		},
 		{
-			"name": "vs/workbench/contrib/bracketPairColorizer2Telemetry",
-			"project": "vscode-workbench"
-		},
-		{
 			"name": "vs/workbench/contrib/scrollLocking",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/contrib/remoteTunnel",
 			"project": "vscode-workbench"
 		},
 		{
@@ -523,10 +491,6 @@
 			"project": "vscode-workbench"
 		},
 		{
-			"name": "vs/workbench/services/userDataSync",
-			"project": "vscode-workbench"
-		},
-		{
 			"name": "vs/workbench/services/editSessions",
 			"project": "vscode-workbench"
 		},
@@ -540,10 +504,6 @@
 		},
 		{
 			"name": "vs/workbench/contrib/localHistory",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/services/authentication",
 			"project": "vscode-workbench"
 		},
 		{
@@ -591,10 +551,6 @@
 			"project": "vscode-workbench"
 		},
 		{
-			"name": "vs/workbench/contrib/authentication",
-			"project": "vscode-workbench"
-		},
-		{
 			"name": "vs/workbench/contrib/replNotebook",
 			"project": "vscode-workbench"
 		},
@@ -608,10 +564,6 @@
 		},
 		{
 			"name": "vs/workbench/contrib/dropOrPasteInto",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/contrib/editTelemetry",
 			"project": "vscode-workbench"
 		},
 		{
@@ -632,22 +584,6 @@
 		},
 		{
 			"name": "vs/workbench/contrib/remoteCodingAgents",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/contrib/telemetry",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/contrib/welcomeAgentSessions",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/services/accounts",
-			"project": "vscode-workbench"
-		},
-		{
-			"name": "vs/workbench/services/chat",
 			"project": "vscode-workbench"
 		},
 		{

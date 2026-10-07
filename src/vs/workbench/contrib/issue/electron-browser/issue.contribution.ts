@@ -32,8 +32,6 @@ import { IScreenshotService } from '../browser/screenshotService.js';
 import { NativeScreenshotService } from './nativeScreenshotService.js';
 import { IRecordingService } from '../browser/recordingService.js';
 import { NativeRecordingService } from './nativeRecordingService.js';
-import { IGitHubUploadService } from '../browser/githubUploadService.js';
-import { NativeGitHubUploadService } from './nativeGitHubUploadService.js';
 import { IssueReporterEditorPane } from './issueReporterEditorPane.js';
 import { IssueReporterEditorInput } from '../browser/issueReporterEditorInput.js';
 
@@ -42,7 +40,6 @@ registerSingleton(IWorkbenchIssueService, NativeIssueService, InstantiationType.
 registerSingleton(IIssueFormService, NativeIssueFormService, InstantiationType.Delayed);
 registerSingleton(IScreenshotService, NativeScreenshotService, InstantiationType.Delayed);
 registerSingleton(IRecordingService, NativeRecordingService, InstantiationType.Delayed);
-registerSingleton(IGitHubUploadService, NativeGitHubUploadService, InstantiationType.Delayed);
 
 // Settings
 Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).registerConfiguration({

@@ -81,8 +81,6 @@ import { ExtensionTipsService } from '../platform/extensionManagement/common/ext
 import { IWorkbenchExtensionManagementService } from './services/extensionManagement/common/extensionManagement.js';
 import { ExtensionManagementService } from './services/extensionManagement/common/extensionManagementService.js';
 import { AccessibilityService } from '../platform/accessibility/browser/accessibilityService.js';
-import { ICustomEndpointTelemetryService } from '../platform/telemetry/common/telemetry.js';
-import { NullEndpointTelemetryService } from '../platform/telemetry/common/telemetryUtils.js';
 import { ITitleService } from './services/title/browser/titleService.js';
 import { BrowserTitleService } from './browser/parts/titlebar/titlebarPart.js';
 import { ITimerService, TimerService } from './services/timer/browser/timerService.js';
@@ -99,7 +97,6 @@ registerSingleton(IContextMenuService, ContextMenuService, InstantiationType.Del
 registerSingleton(ITitleService, BrowserTitleService, InstantiationType.Eager);
 registerSingleton(IExtensionTipsService, ExtensionTipsService, InstantiationType.Delayed);
 registerSingleton(ITimerService, TimerService, InstantiationType.Delayed);
-registerSingleton(ICustomEndpointTelemetryService, NullEndpointTelemetryService, InstantiationType.Delayed);
 registerSingleton(IDiagnosticsService, NullDiagnosticsService, InstantiationType.Delayed);
 registerSingleton(ILanguagePackService, WebLanguagePacksService, InstantiationType.Delayed);
 registerSingleton(IWebContentExtractorService, NullWebContentExtractorService, InstantiationType.Delayed);

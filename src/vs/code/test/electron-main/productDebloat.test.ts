@@ -582,15 +582,18 @@ suite('Product debloat process startup', () => {
 		assert.match(relaunch, /'disable-telemetry'/);
 
 		const telemetryUtils = readRepoFile('src/vs/platform/telemetry/common/telemetryUtils.ts');
-		assert.doesNotMatch(telemetryUtils, /supportsTelemetry|isLoggingOnly|isInternalTelemetry|getTelemetryLevel|TELEMETRY_SETTING_ID/);
-		// Retained: the `env` API cleaning helpers and the no-op service shapes.
-		assert.match(telemetryUtils, /export function cleanData/);
+		assert.doesNotMatch(telemetryUtils, /supportsTelemetry|isLoggingOnly|isInternalTelemetry|getTelemetryLevel|TELEMETRY_SETTING_ID|cleanData|validateTelemetryData|getPiiPathsFromEnvironment|cleanRemoteAuthority|NullEndpointTelemetryService|ITelemetryAppender|NullAppender|TelemetryLogGroup|URIDescriptor/);
+		// Retained: the no-op service and public trusted-value marker; the output log uses only this id.
 		assert.match(telemetryUtils, /export class NullTelemetryServiceShape/);
+		assert.match(telemetryUtils, /export class TelemetryTrustedValue/);
+		assert.match(telemetryUtils, /export const telemetryLogId = 'telemetry'/);
 
 		const telemetry = readRepoFile('src/vs/platform/telemetry/common/telemetry.ts');
-		assert.doesNotMatch(telemetry, /TELEMETRY_SETTING_ID|TELEMETRY_OLD_SETTING_ID|TELEMETRY_CRASH_REPORTER_SETTING_ID|telemetryLevelEnabled|escapeModelIdForTelemetry|TelemetryConfiguration/);
+		assert.doesNotMatch(telemetry, /TELEMETRY_SETTING_ID|TELEMETRY_OLD_SETTING_ID|TELEMETRY_CRASH_REPORTER_SETTING_ID|telemetryLevelEnabled|escapeModelIdForTelemetry|TelemetryConfiguration|ITelemetryEndpoint|ICustomEndpointTelemetryService/);
 		// Retained: the `TelemetryLevel` enum backs the extension API facade and the no-op shape.
 		assert.match(telemetry, /export const enum TelemetryLevel/);
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/contrib/debug/common/debugger.ts'), /getCustomTelemetryEndpoint|aiKey|cleanRemoteAuthority/);
+		assert.doesNotMatch(readRepoFile('src/vs/workbench/contrib/debug/common/debug.ts'), /getCustomTelemetryEndpoint|aiKey|ITelemetryEndpoint/);
 
 		const policyData = readRepoFile('build/lib/policies/policyData.jsonc');
 		assert.doesNotMatch(policyData, /telemetry\.telemetryLevel/);
@@ -616,6 +619,51 @@ suite('Product debloat process startup', () => {
 		// W45.a deletion candidate: `src/vs/base/node/macAddress.ts` lost its last consumer
 		// with those resolvers; the base id module must not import it again.
 		assert.doesNotMatch(baseId, /macAddress/);
+	});
+
+	test('CLI account auth is no longer exported', () => {
+		assert.doesNotMatch(readRepoFile('cli/src/lib.rs'), /^pub mod auth;/m);
+	});
+
+	test('default Chat extension unification and editorChat command mappings are absent', () => {
+		for (const relativePath of [
+			'src/vs/base/common/product.ts',
+			'src/vs/platform/configuration/common/configurationRegistry.ts',
+			'src/vs/workbench/api/common/configurationExtensionPoint.ts',
+			'src/vs/workbench/api/common/extHostApiCommands.ts',
+			'src/vs/workbench/services/inlineCompletions/common/inlineCompletionsUnification.ts',
+			'src/vs/workbench/contrib/extensions/browser/extensionsActions.ts',
+			'src/vs/workbench/services/extensionManagement/test/browser/extensionEnablementService.test.ts',
+			'src/vs/workbench/contrib/extensions/test/electron-browser/extensionsActions.test.ts',
+		]) {
+			assert.doesNotMatch(readRepoFile(relativePath), /defaultChatAgent|IDefaultChatAgent|EXTENSION_UNIFICATION_EXTENSION_IDS|vscode\.editorChat\.start|inlineChat\.start|EnableAIFeaturesInWorkspaceAction|ChatAIDisabledSettingId/, relativePath);
+		}
+
+		// The product-backed completions-enablement reader was removed with the Chat
+		// product integration; the module is a W47 deletion candidate and must not
+		// come back. Guarded deletion-tolerantly so the live assertion is the absence
+		// of the old product read while the file is still on disk.
+		if (repoFileExists('src/vs/editor/common/services/completionsEnablement.ts')) {
+			assert.doesNotMatch(readRepoFile('src/vs/editor/common/services/completionsEnablement.ts'), /defaultChatAgent|completionsEnablementSetting|isCompletionsEnabled/);
+		}
+		const editorWorker = readRepoFile('src/vs/editor/browser/services/editorWorkerService.ts');
+		assert.doesNotMatch(editorWorker, /isCompletionsEnabledWithTextResourceConfig|completionsEnablement/);
+		assert.match(editorWorker, /wordBasedSuggestions/);
+	});
+
+	test('issue reporting retains local attachments without token or upload branches', () => {
+		const issueData = readRepoFile('src/vs/workbench/contrib/issue/common/issue.ts');
+		assert.doesNotMatch(issueData, /githubAccessToken|IIssueSubmissionHost/);
+		const issueForm = readRepoFile('src/vs/workbench/contrib/issue/browser/issueFormService.ts');
+		assert.doesNotMatch(issueForm, /githubAccessToken|githubUploadService|uploadViaMobileApi|uploadIssueDataFile|extractIssueData|setAttachmentUploadState/);
+		const baseReporter = readRepoFile('src/vs/workbench/contrib/issue/browser/baseIssueReporterService.ts');
+		assert.doesNotMatch(baseReporter, /githubAccessToken|submitToGitHub|Create Internally|internalGithubButton/);
+		const nativeReporter = readRepoFile('src/vs/workbench/contrib/issue/electron-browser/issueReporterService.ts');
+		assert.doesNotMatch(nativeReporter, /githubAccessToken|submitToGitHub|Bearer/);
+		const overlay = readRepoFile('src/vs/workbench/contrib/issue/browser/issueReporterOverlay.ts');
+		assert.match(overlay, /onDidRequestOpenScreenshot/);
+		assert.match(overlay, /onDidRequestOpenRecording/);
+		assert.match(overlay, /restoreAttachments/);
 	});
 
 	test('retained TypeScript extension carries no reporter, tracing or diagnostics-telemetry payload', () => {

@@ -11,7 +11,7 @@ import { TestInstantiationService } from '../../../../../platform/instantiation/
 import { Emitter, Event } from '../../../../../base/common/event.js';
 import { IWorkspace, IWorkspaceContextService, WorkbenchState } from '../../../../../platform/workspace/common/workspace.js';
 import { IWorkbenchEnvironmentService } from '../../../environment/common/environmentService.js';
-import { IStorageService, InMemoryStorageService, StorageScope, StorageTarget } from '../../../../../platform/storage/common/storage.js';
+import { IStorageService, InMemoryStorageService } from '../../../../../platform/storage/common/storage.js';
 import { EXTENSIONS_ENABLE_AGENTS_WINDOW_CAPABILITY, IExtensionContributions, ExtensionType, IExtension, IExtensionManifest, IExtensionIdentifier } from '../../../../../platform/extensions/common/extensions.js';
 import { isUndefinedOrNull } from '../../../../../base/common/types.js';
 import { areSameExtensions } from '../../../../../platform/extensionManagement/common/extensionManagementUtil.js';
@@ -1143,42 +1143,6 @@ suite('ExtensionEnablementService Test', () => {
 		assert.strictEqual(testObject.getEnablementState(extension), EnablementState.DisabledGlobally);
 		assert.strictEqual(target.args[0][0].length, 1);
 		assert.deepStrictEqual((<IExtension>target.args[0][0][0]).identifier, { id: 'pub.a' });
-	});
-
-	test('legacy Chat product metadata does not migrate extension enablement', async () => {
-		const defaultChatAgent = {
-			extensionId: 'GitHub.copilot',
-			chatExtensionId: 'GitHub.copilot-chat',
-		} as IProductService['defaultChatAgent'];
-		const legacyProductService = { ...TestProductService, defaultChatAgent } as IProductService;
-		instantiationService.stub(IProductService, legacyProductService);
-		const chatExtension = aLocalExtension(defaultChatAgent.chatExtensionId, undefined, ExtensionType.System);
-		installed.push(chatExtension);
-
-		const storageService = instantiationService.get(IStorageService);
-		storageService.store('builtinChatExtensionEnablementMigration', false, StorageScope.PROFILE, StorageTarget.MACHINE);
-
-		testObject = disposableStore.add(new TestExtensionEnablementService(instantiationService));
-		await testObject.waitUntilInitialized();
-
-		assert.strictEqual(testObject.getEnablementState(chatExtension), EnablementState.EnabledGlobally);
-		assert.strictEqual(storageService.getBoolean('builtinChatExtensionEnablementMigration', StorageScope.PROFILE), false);
-	});
-
-	test('legacy Chat extension-unification setting does not disable ordinary extensions', async () => {
-		const defaultChatAgent = {
-			extensionId: 'pub.completions',
-			chatExtensionId: 'pub.chat',
-		} as IProductService['defaultChatAgent'];
-		const legacyProductService = { ...TestProductService, defaultChatAgent } as IProductService;
-		instantiationService.stub(IProductService, legacyProductService);
-		const configurationService = instantiationService.get(IConfigurationService) as TestConfigurationService;
-		await configurationService.setUserConfiguration('chat.extensionUnification.enabled', true);
-		instantiationService.stub(IWorkbenchEnvironmentService, { remoteAuthority: 'ssh-remote+test' });
-
-		testObject = disposableStore.add(new TestExtensionEnablementService(instantiationService));
-
-		assert.strictEqual(testObject.getEnablementState(aLocalExtension('pub.completions')), EnablementState.EnabledGlobally);
 	});
 
 	test('test extension is disabled by allowed list', async () => {

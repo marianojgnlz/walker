@@ -6,7 +6,6 @@
 
 // todo: we should reduce the exported surface area over time as things are
 // moved into a common CLI
-pub mod auth;
 pub mod constants;
 #[macro_use]
 pub mod log;

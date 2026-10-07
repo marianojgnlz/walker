@@ -125,8 +125,7 @@ export class BrowserIssueService implements IWorkbenchIssueService {
 				experiments: experiments?.join('\n'),
 				restrictedMode: !this.workspaceTrustManagementService.isWorkspaceTrusted(),
 				isInstallationPure,
-				isSessionsWindow: this.environmentService.isSessionsWindow,
-				githubAccessToken: ''
+				isSessionsWindow: this.environmentService.isSessionsWindow
 			}, options);
 
 			return this.issueFormService.openReporter(issueReporterData);

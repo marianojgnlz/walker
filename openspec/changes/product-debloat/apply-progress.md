@@ -4097,3 +4097,105 @@ Completed rows are `P3.GREEN` and `V1.RED → GREEN`. `P3.GREEN` is supported by
 ```
 
 Verifier focus: ensure the four removed Copilot IDs/commands stay absent from both packaged TypeScript extension bundles/maps; distinguish those results from the generic extension-management comment/API-command remnants; review `quickFixBehavior.test.ts` once the extension-host `MainThreadEmbeddings` harness failure is fixed. The next SDD route is `sdd-verify` for an independent verdict.
+
+## Round-5 remediation (2026-10-08) — items 1–6, W47
+
+**Structured status consumed:** `activeChange: product-debloat`, `artifactStore: openspec`, `applyState: ready`, `nextRecommended: sdd-apply (remediate round-5 findings)`, `actionContext.mode: remediate`, workspace/cwd `/home/marialez/Work/walker`, branch `product-debloat` (never commit), `worktreeBaseline: HEAD f0361018f11 + parent W22 deletions + the granted notes`, `taskAccounting: {total: 109, remaining: 12, checked: 97}`. Failed evidence accepted as authoritative and left unchanged: `verify-report.md` round 5 (`evidence_revision: sha256:2a0710009deee0937fc54df03dd642e6e53a364552dac4a9d8a0e1b8ae5f4ad5`, verdict `fail`, blockers B1–B16). Authorized surfaces: `parent-authorization.md` "Round-5 remediation authorizations" + "Round-5 remediation additions". No status blocker; no `actionContext` warning; scope was exactly the six parent-listed items and nothing was widened. No goal/todo write, no commit/stage/publish, no physical deletion, no credential/profile read.
+
+**Predecessor state found in the worktree:** a partial apply pass had already landed item-2/item-3 edits and RED guards in `productDebloat.test.ts`, but left the tree non-compiling (`cleanRemoteAuthority` importer, `getMainExtensionDescriptor` caller, `Debugger` test arity, unused imports) and had not recorded a section; this section merges that work into the completed pass. The parent's W22 `build/next/**` deletions were already staged.
+
+### Item 1 — orphan CLI account auth out of the exported graph (B15)
+
+- `cli/src/lib.rs`: removed `pub mod auth;`; `git grep "auth::|use crate::auth|mod auth" -- cli/src` is empty, so nothing constructs or names the module any more.
+- `cli/src/auth.rs` (902 lines: provider choice, GitHub/Microsoft device-code + token endpoints, keyring/refresh/device-flow polling, `AuthorizationProvider`) emptied to a license header and recorded as **W47.a** for parent `git rm`; content is recoverable from git history.
+- `cli/src/commands/args.rs` (`agent_host_cli_surface_is_absent_and_generic_cli_modules_remain`): the former retention assertions on `include_str!("../auth.rs")` (`impl AuthorizationProvider for Auth`, `PROD_FIRST_PARTY_APP_ID`) were replaced by a deletion-tolerant `lib.rs` assertion (`!lib.contains("pub mod auth;")`) so the guard survives the parent deletion and the file can no longer be resurrected by accident.
+- Protected: generic `serve_web.rs` server connection-token generation untouched. Evidence: `cargo check` exit 0; `cargo test` exit 0 (47 lib + 5 bin tests). The first final-tree cargo run caught and fixed the stale Rust guard — recorded here rather than hidden.
+
+### Item 2 — `telemetryUtils` minimization + custom-endpoint retirement (B13)
+
+- `src/vs/platform/telemetry/common/telemetryUtils.ts` (387 → 39 lines) keeps only `TelemetryTrustedValue`, `NullTelemetryServiceShape`, `NullTelemetryService`, `telemetryLogId`, `TelemetryLevel`/`ITelemetryService` imports. Removed `validateTelemetryData`/`flatten`, `cleanData`/`anonymizeFilePaths`/PII regexes, `getPiiPathsFromEnvironment`, `cleanRemoteAuthority`, `URIDescriptor`, `Properties`/`Measurements`, `ITelemetryAppender`/`NullAppender`, `TelemetryLogGroup`, `NullEndpointTelemetryService`.
+- `src/vs/platform/telemetry/common/telemetry.ts`: removed `ITelemetryEndpoint`, `ICustomEndpointTelemetryService`, `ICommonProperties`.
+- Custom-endpoint DI retired: `workbench.web.main.ts` and `workbench/services/telemetry/electron-browser/telemetryService.ts` no longer import/register `ICustomEndpointTelemetryService`; the caller-less `getCustomTelemetryEndpoint`/`aiKey`/`cleanRemoteAuthority` path left `contrib/debug/common/{debug.ts,debugger.ts}`. `Debugger.getMainExtensionDescriptor` + its `isDebuggerMainContribution` tracking were restored because `debugAdapterManager.ts` consumes them for suggested-candidate ordering (generic behavior, not telemetry); the `debugger.test.ts` constructor arity was updated.
+- `src/vs/platform/telemetry/test/common/telemetryUtils.test.ts` tested only the removed `cleanRemoteAuthority` → emptied + **W47.b**.
+- Guard: the `productDebloat` telemetry-shape test now asserts the absence of every removed helper/appender/log-group, retains `NullTelemetryServiceShape`/`TelemetryTrustedValue`/`telemetryLogId`, and asserts the absence of `ITelemetryEndpoint`/`ICustomEndpointTelemetryService` and the debug custom-endpoint members.
+
+### Item 3 — `EditSuggestionId` orphan + stale i18n roots (B4/B9)
+
+- `src/vs/editor/common/textModelEditSource.ts`: removed the `EditSuggestionId.newId` namespace with its optional `genPrefixedUuid`/`prefixedUuid` UUID construction and `toEditIdentity`; the `EditSuggestionId` interface (used by `CodeBlockSuggestionId`) stays.
+- `build/lib/i18n.resources.json`: removed the **16** workbench roots whose directories were deleted by this change's own commits and are absent on disk — `contrib/{chat,editTelemetry,tags,inlineChat,agentsVoice,welcomeAgentSessions,bracketPairColorizer2Telemetry,remoteTunnel,authentication,editSessions,userDataSync}` and `services/{chat,authentication,accounts,userDataSync}`, plus `contrib/telemetry`. Each root's deletion commit was confirmed as a `product-debloat` commit. 17 pre-existing missing roots deleted by upstream history (`contrib/cli`, `dialogs`, `html`, …) were deliberately left untouched and are recorded as out-of-scope legacy entries. JSON re-validated (147 roots).
+
+### Item 4 — guarded `defaultChatAgent` integrations + `editorChat` mappings (B14 tail)
+
+- `base/common/product.ts`: `IDefaultChatAgent` interface + `defaultChatAgent` field removed (predecessor).
+- `platform/configuration/common/configurationRegistry.ts` + `workbench/api/common/configurationExtensionPoint.ts`: the `EXTENSION_UNIFICATION_EXTENSION_IDS` duplicate-registration bypass and `extensionId` parameter removed.
+- `workbench/api/common/extHostApiCommands.ts`: the `vscode.editorChat.start → inlineChat.start` API mapping and its `InlineChatEditorApiArg`/`InlineChatRunOptions` types removed; stale `ISelection` import fixed.
+- `workbench/services/inlineCompletions/common/inlineCompletionsUnification.ts`: the extension-unification state/setting/listeners and their five DI dependencies removed; code/model unification behavior retained.
+- `editor/common/services/completionsEnablement.ts`: product-backed completions-enablement reader with zero production consumers → emptied + **W47.c**; the guard is deletion-tolerant (`repoFileExists`).
+- `editor/browser/services/editorWorkerService.ts`: unreachable `isCompletionsEnabledWithTextResourceConfig` condition removed; `wordBasedSuggestions` preserved.
+- `workbench/contrib/extensions/browser/extensionsActions.ts` (+ its test and `extensionEnablementService.test.ts`): the chat-extension `defaultChatAgent` branches, the `Enable/DisableAIFeatures{Globally,InWorkspace}Action` family, both dropdown AI groups and the `chat.extensionUnification.enabled` status message removed; generic enable/disable/manage actions preserved. `ChatAIDisabledSettingId` import and the now-unused `IProductService` injections were dropped only in the classes that used them for those guards.
+- Residuals outside the item-4 owner list, left untouched and recorded for the fresh verify: `editor/common/standaloneStrings.ts` still carries the `'<keybinding:inlineChat.start>'` localization string; `relauncher.contribution.ts` still lists `chat.extensionUnification.enabled`; `EnablementState.DisabledByUnification` remains declared (with TODO) in `workbench/services/extensionManagement/common/extensionManagement.ts` with no producer left.
+
+### Item 5 — issue-reporter dead token/upload branches
+
+- `contrib/issue/common/issue.ts`: dropped `IssueReporterData.githubAccessToken`, the `IIssueSubmissionHost` host interface and its doc comment; `IIssueFormService.submitIssue(data, title, body)` no longer takes a host.
+- `contrib/issue/browser/issueFormService.ts` (−240): removed `extractIssueData`, the upload cache, the `IGitHubUploadService`/`IFileService` injections, `tryCreateBodyWithIssueDataAttachment`, `uploadIssueDataFile`, `createBodyWithIssueDataLink`, `dataUrlToBytes` and the token-gated mobile-upload/clipboard branches. `submitIssue` now builds the pre-filled GitHub URL and falls back to the clipboard only for length; local screenshot/recording capture stays.
+- `contrib/issue/browser/baseIssueReporterService.ts` (−200): removed `internalGithubButton` + the whole private-filing section (note/button/visibility), `submitToGitHub`, `createAction`/`privateAction`, `isPreviewEnabled`, `getPrivateIssueUrl` and every `githubAccessToken` branch; the submit button is now always the anonymous "Preview on GitHub" button.
+- `contrib/issue/electron-browser/issueReporterService.ts`: removed the native `submitToGitHub` override (extension-data save + `Bearer` POST) and the token branch; unused `VSBuffer`/`Schemas`/`joinPath` imports dropped.
+- `contrib/issue/electron-browser/nativeIssueFormService.ts`, both `issue.contribution.ts` files and both `issueService.ts` files: host/upload wiring and `githubAccessToken: ''` seeds removed; the `IGitHubUploadService` singletons unregistered.
+- `contrib/issue/browser/issueReporterOverlay.ts`: removed `setUploading`, `setAttachmentUploadState`, the `uploading` field and the upload-progress/minify-only guards + progress-overlay DOM; `getScreenshots`/`getRecordings` remain for `savedScreenshots`/`savedRecordings`, and `restoreAttachments`/`onDidRequestOpenScreenshot`/`onDidRequestOpenRecording` are preserved as the guard requires.
+- `contrib/issue/browser/githubUploadService.ts` + `contrib/issue/electron-browser/nativeGitHubUploadService.ts`: whole-file upload services with no remaining consumer → emptied + **W47.d–e**.
+- `contrib/issue/electron-browser/issueReporterEditorPane.ts`: submit call updated to `submitIssue(data, title, body)`; the token-forwarding comment corrected.
+- Residuals recorded: `INativeHostService.uploadFileViaMobileApi` (platform/native) is now consumer-less but is outside the granted issue tree; the upload-progress CSS rules remain in `contrib/issue/browser/media/issueReporterOverlay.css`; `nativeRecordingService.ts`'s comment and the `recordingTooLarge` message still mention the historical GitHub 100 MB upload limit.
+
+### Item 6 — evidence corrections
+
+- `compatibility.md`: the MCP OAuth section is retitled "disconnected" and now states precisely that the **neutral platform normalizer/types retain** the `oauth.clientId`/legacy `oauthClientId` input shapes (normalized to an inert `IMcpRemoteServerOAuthConfiguration.clientId`, with no downstream reader) while the workbench schema/commands/client-secret machinery are gone (B13/B15-doc finding).
+- `implementation-evidence.md`: added the packaged commit-stamp nuance (`46815fa01ea…` is the build commit, not HEAD; package scans are not fresh-from-HEAD claims); corrected the REH root count to **114** in both later sections and removed the incorrect "110 refines 114" rationale; corrected the T-row residual ledger (`EditSuggestionId.newId` — not `EditorSuggestionId` — and its removal, `isLoggingOnly`, W44 editTelemetry physical deletion, T7 API producers, T8 startup/crash + argv paths, T11 i18n reconciliation, `test/**` crash-dump args as the true T11 residual); marked the 95/14/P3-open paragraph as a superseded mid-pass snapshot.
+
+### W47 manifest (parent `git rm`, nothing unlinked)
+
+| ID | Path | State on disk | Consumer-free evidence |
+| --- | --- | --- | --- |
+| W47.a | `cli/src/auth.rs` | emptied (7 lines) | `cli/src/lib.rs` no longer exports it; `git grep "auth::" -- cli/src` empty; Rust guard now asserts `lib.rs` has no `pub mod auth;` |
+| W47.b | `src/vs/platform/telemetry/test/common/telemetryUtils.test.ts` | emptied (7 lines) | tested only the removed `cleanRemoteAuthority`; no importer; `nullTelemetryService.test.ts` retains the live coverage |
+| W47.c | `src/vs/editor/common/services/completionsEnablement.ts` | emptied (7 lines) | zero production consumers (`git grep isCompletionsEnabled`); `editorWorkerService` import removed; deletion-tolerant guard |
+| W47.d | `src/vs/workbench/contrib/issue/browser/githubUploadService.ts` | emptied (7 lines) | all importers/registrations removed; `git grep IGitHubUploadService` empty |
+| W47.e | `src/vs/workbench/contrib/issue/electron-browser/nativeGitHubUploadService.ts` | emptied (7 lines) | same as W47.d; its native host upload call is only referenced by this file |
+
+### Verification on the final tree (Node 24.18.0 via the documented PATH; cwd `/home/marialez/Work/walker`)
+
+| Exact command | Result |
+| --- | --- |
+| `npm run compile-client` | Exit 0; `src/tsconfig.json` 0 errors |
+| `npm run typecheck-client` | Exit 0; no diagnostics |
+| `npm run gulp compile-extensions` | Exit 0; 40 tsconfig summaries, 0 errors |
+| `npm test --prefix build` | Exit 0; **498 tests / 498 pass / 0 fail** (round 5: 500 — the parent W22 deletion removed `build/next/test/devTunnelsWeb.test.ts`, whose `[false,true]` loop generated exactly 2 tests) |
+| `cargo check --manifest-path cli/Cargo.toml` | Exit 0 |
+| `cargo test --manifest-path cli/Cargo.toml` | Exit 0; 47 lib + 5 bin tests pass |
+| `./scripts/test.sh --run vs/code/test/electron-main/productDebloat.test` | Exit 0; **31 passing** (round 5: 28; +3 new guarded tests green) |
+| `./scripts/test.sh --run vs/workbench/api/test/common/accountFreeApi.test` | Exit 0; 10 passing |
+| `./scripts/test.sh --run vs/workbench/test/browser/productDebloatChatIntegrations.test` | Exit 0; 30 passing |
+| `./scripts/test.sh --run vs/platform/telemetry/test/common/nullTelemetryService.test` | Exit 0; 2 passing |
+| `./scripts/test.sh --run vs/workbench/contrib/issue/test/browser/issueReporterOverlay.test` | Exit 0; 6 passing |
+| `./scripts/test.sh --run vs/workbench/contrib/debug/test/node/debugger.test` | Exit 0; 5 passing |
+| `./scripts/test.sh --run vs/workbench/contrib/extensions/test/electron-browser/extensionsActions.test` | Exit 0; 244 passing |
+| `./scripts/test.sh --run vs/workbench/services/extensionManagement/test/browser/extensionEnablementService.test` | Exit 0; 124 passing |
+| `git diff --check` | Clean (4 pre-existing EOF blank lines in the predecessor's `product.ts`/`textModelEditSource.ts`/`configurationRegistry.ts`/`telemetry.ts` were removed by this pass) |
+| `git status --short` | Expected set only: 37 authored source files + `build/lib/i18n.resources.json` + the 7 parent-staged W22 `build/next/**` deletions + the OpenSpec artifacts; no unexpected tracked mutation; only pre-existing untracked `.pi/` |
+
+Strict TDD is not declared (`openspec/config.yaml: strict_tdd: false`); the predecessor's guarded `productDebloat.test.ts` additions supplied the RED fixtures and this pass made them GREEN.
+
+### Persisted task state and remaining rows
+
+`tasks.md` re-read after the pass: **109 total / 97 checked / 12 unchecked — unchanged; this pass deliberately changed no checkbox.** No unchecked row is completed by the remediation: T2 still shows test-only `ITelemetryService`/`TelemetryTrustedValue` stubs under `editor/**/test/**`, T1/T3/T7 keep their broad call-site/gallery conditions, C5/V rows keep their packaged/live-evidence conditions, and the fresh verify must re-adjudicate row-level closure with its own whole-tree audit rather than from this bounded pass. Exact remaining `- [ ]` rows are `tasks.md` lines 339, 340, 411, 412, 413, 416, 417, 418, 421, 531, 532, 533 (C5.RED, C5.TRIANGULATE, T1, T2, T3, T6, T7, T8, T11, V1.TRIANGULATE, V2.TRIANGULATE, V2.REFACTOR).
+
+### Workload / PR boundary (honest disclosure)
+
+Authored source diff (excluding the W47-emptied files): **37 files, +115/−1,899**; the W47-emptied `auth.rs` adds a −902 manifest deletion; the parent's staged W22 deletions are −295 across 7 files. Per-item authored leaves: item 2 ≈ −380/+5 (telemetry), item 4 ≈ −350/+15 (defaultChatAgent owners + tests), item 5 ≈ −560/+25 (issue reporter), item 1/3/6 small. The issue-reporter leaf and the telemetry-minimization leaf each exceed 400 changed lines: each is one coupled feature removal (the `IIssueFormService.submitIssue` signature change threads ~10 files and cannot be split into a compiling half; the telemetry helper set is a single dead-helper module). They are recorded per B16's lesson for parent ratification rather than claimed as compliant sub-400 units; nothing was compressed or reformatted to fit a number. Delivery remains `feature-branch-chain`. No commit, stage, publish, todo or goal operation occurred; the parent owns commit and any W47 `git rm`.
+
+### Review focus for the verifier
+
+1. The six items' end states and their exact guards (31-test `productDebloat` run) — specifically that `cli/src/lib.rs` has no `pub mod auth;`, `telemetryUtils.ts` exports only the no-op contracts, `i18n.resources.json` has no product-debloat-deleted roots, no item-4 owner carries `defaultChatAgent`/`editorChat` mappings, and the issue tree is free of token/upload symbols.
+2. The W47 five-file manifest vs `git rm` execution; the guards are deletion-tolerant by design.
+3. The recorded residuals: `standaloneStrings.ts` inline-chat string, relauncher unification setting + `DisabledByUnification` enum member, `uploadFileViaMobileApi` and upload CSS, `test/**` crash-dump argv (T11), pre-existing non-product-debloat i18n roots.
+4. That round-5's evidence was not reset and the 12 task rows remain visibly unchecked pending a fresh verdict.

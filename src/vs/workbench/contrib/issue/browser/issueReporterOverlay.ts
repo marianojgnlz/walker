@@ -130,7 +130,6 @@ export class IssueReporterOverlay {
 	private readonly reviewRenderDisposables = new DisposableStore();
 	private readonly similarIssuesDisposables = new DisposableStore();
 	private readonly descriptionGuidanceDisposables = new DisposableStore();
-	private uploading = false;
 	private includeSystemInfo = true;
 	private includeProcessInfo = true;
 	private includeWorkspaceInfo = true;
@@ -1517,14 +1516,8 @@ export class IssueReporterOverlay {
 				img.src = s.annotatedDataUrl ?? s.dataUrl;
 				img.alt = localize('screenshotAlt', "Screenshot {0}", i + 1);
 
-				// Progress overlay (hidden initially)
-				const progressOverlay = append(card, $('div.review-progress-overlay'));
-				append(progressOverlay, $('div.review-progress-ring'));
-
 				this.disposables.add(addDisposableListener(card, EventType.CLICK, () => {
-					if (!this.uploading) {
-						this._onDidRequestOpenScreenshot.fire(s);
-					}
+					this._onDidRequestOpenScreenshot.fire(s);
 				}));
 				this.reviewThumbCards.push(card);
 			}
@@ -1534,13 +1527,8 @@ export class IssueReporterOverlay {
 				const card = this.renderRecordingCard(thumbRow, rec, i);
 				card.classList.add('review-attachment-card');
 
-				const progressOverlay = append(card, $('div.review-progress-overlay'));
-				append(progressOverlay, $('div.review-progress-ring'));
-
 				this.disposables.add(addDisposableListener(card, EventType.CLICK, () => {
-					if (!this.uploading) {
-						this._onDidRequestOpenRecording.fire(rec.filePath);
-					}
+					this._onDidRequestOpenRecording.fire(rec.filePath);
 				}));
 				this.reviewThumbCards.push(card);
 			}
@@ -1863,46 +1851,6 @@ export class IssueReporterOverlay {
 		th.textContent = label;
 		const td = append(row, $('td.review-diag-val'));
 		td.textContent = value;
-	}
-
-	/** Called by the form service to show upload progress */
-	setUploading(uploading: boolean): void {
-		this.uploading = uploading;
-
-		if (uploading) {
-			this.nextButton.element.classList.add('uploading');
-			this.nextButton.label = localize('uploading', "Uploading...");
-			this.nextButton.enabled = false;
-			this.backButton.element.style.display = 'none';
-		} else {
-			this.nextButton.element.classList.remove('uploading');
-			this.nextButton.enabled = true;
-			this.updateStepUI();
-		}
-	}
-
-	/** Mark a specific attachment as uploading / done */
-	setAttachmentUploadState(index: number, state: 'pending' | 'uploading' | 'done'): void {
-		if (index < 0 || index >= this.reviewThumbCards.length) {
-			return;
-		}
-		const card = this.reviewThumbCards[index];
-		card.classList.remove('upload-pending', 'upload-uploading', 'upload-done');
-		card.classList.add(`upload-${state}`);
-
-		// eslint-disable-next-line no-restricted-syntax
-		const overlay = card.querySelector('.review-progress-overlay') as HTMLElement | null;
-		if (!overlay) {
-			return;
-		}
-
-		if (state === 'done') {
-			// Replace ring with checkmark
-			overlay.textContent = '';
-			const check = $('span.review-progress-check');
-			check.appendChild(renderIcon(Codicon.check));
-			overlay.appendChild(check);
-		}
 	}
 
 	private submit(): void {

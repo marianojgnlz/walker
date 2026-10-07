@@ -655,3 +655,29 @@ Scope: remove the shipped Agent-Host/Copilot feature remnants (the `chat.agentHo
 ### V1 residual grant (2026-10-07): TS-extension Copilot integration
 extensions/typescript-language-features/**
 Scope: remove the `github.copilot-chat` integration — the `quickFix.ts` AI-backed code-action offer (`vscode.extensions.getExtension('github.copilot-chat')` check), the `suggestNativePreview.ts` and `typescriptServiceClient.ts` extension-ID special cases. Generic TS quick-fix/suggest/native-preview behavior preserved (the non-Copilot paths).
+
+### Round-5 remediation authorizations (2026-10-07)
+- RATIFIED (coupled/owner-group batch precedent, documented split analyses on file): the T12 leaves measuring 670, 630 and 3,759 changed lines (pass-7 owner-group batching of telemetry-only tree deletions; no test/scope compression).
+- cli/src/** AUTHORIZED again: `cli/src/auth.rs` + its exports (`cli/src/lib.rs`) — the orphaned GitHub/Microsoft device-code/OAuth/token implementation has NO production constructor; it is account infrastructure and must be removed per the mandate (the earlier "keep for U07" disposition is SUPERSEDED — U07 completed and nothing constructs it).
+extensions/typescript-language-features/**
+src/vs/workbench/contrib/inlineCompletions/**
+src/vs/platform/telemetry/**
+src/vs/workbench/contrib/issue/**
+build/lib/i18n.resources.json
+Scope: the round-5 remediation items — telemetryUtils minimization (unused payload builders/classifications/appender descriptors out; keep only the documented no-op contracts), `EditSuggestionId.newId` orphan removal, stale i18n roots, the guarded `defaultChatAgent` integrations + editorChat command mappings, issue-reporter dead token/upload branches, and the compatibility.md overbroad-claim corrections (MCP oauth retained-neutral-types nuance; REH root count 114).
+
+### Round-5 remediation additions (2026-10-07, all nine approved)
+src/vs/editor/common/textModelEditSource.ts
+src/vs/editor/common/services/completionsEnablement.ts
+src/vs/workbench/services/inlineCompletions/common/inlineCompletionsUnification.ts
+src/vs/workbench/services/telemetry/electron-browser/telemetryService.ts
+src/vs/workbench/contrib/debug/common/debug.ts
+src/vs/workbench/contrib/debug/common/debugger.ts
+src/vs/code/test/electron-main/productDebloat.test.ts
+src/vs/workbench/workbench.web.main.ts (scope EXPANDED beyond the debug-log line: remove the dead custom-endpoint telemetry registration)
+openspec/changes/product-debloat/implementation-evidence.md
+src/vs/editor/browser/services/editorWorkerService.ts
+Scope (round-5 remediation, 2026-10-07): remove ONLY the unreachable `isCompletionsEnabledWithTextResourceConfig` import/condition; preserve `wordBasedSuggestions` behavior.
+
+### Round-5 remediation ratifications (2026-10-08)
+RATIFIED (coupled-batch precedent; recorded split analyses — no splitting below 400 without non-compiling halves): the issue-reporter leaf (~585 lines, one coupled signature change across ten files) and the telemetry leaf (~385 lines).

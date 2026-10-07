@@ -7,7 +7,6 @@ import { IMenuService } from '../../../../platform/actions/common/actions.js';
 import { IClipboardService } from '../../../../platform/clipboard/common/clipboardService.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
-import { IFileService } from '../../../../platform/files/common/files.js';
 import { IEnvironmentService } from '../../../../platform/environment/common/environment.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../../platform/log/common/log.js';
@@ -18,7 +17,6 @@ import { MutableDisposable } from '../../../../base/common/lifecycle.js';
 import { IAuxiliaryWindowService } from '../../../services/auxiliaryWindow/browser/auxiliaryWindowService.js';
 import { IHostService } from '../../../services/host/browser/host.js';
 import { IssueFormService } from '../browser/issueFormService.js';
-import { IGitHubUploadService } from '../browser/githubUploadService.js';
 import { IssueReporterEditorInput } from '../browser/issueReporterEditorInput.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IEditorService } from '../../../services/editor/common/editorService.js';
@@ -44,16 +42,14 @@ export class NativeIssueFormService extends IssueFormService implements IIssueFo
 		@IContextKeyService contextKeyService: IContextKeyService,
 		@IHostService hostService: IHostService,
 		@IOpenerService openerService: IOpenerService,
-		@IFileService fileService: IFileService,
 		@IEnvironmentService private readonly environmentService: IEnvironmentService,
-		@IGitHubUploadService githubUploadService: IGitHubUploadService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IEditorService editorService: IEditorService,
 		@IClipboardService clipboardService: IClipboardService,
 		@INativeHostService private readonly nativeHostService: INativeHostService,
 		@IEditorGroupsService private readonly editorGroupService: IEditorGroupsService,
 	) {
-		super(instantiationService, auxiliaryWindowService, menuService, contextKeyService, logService, dialogService, hostService, openerService, fileService, githubUploadService, editorService, clipboardService);
+		super(instantiationService, auxiliaryWindowService, menuService, contextKeyService, logService, dialogService, hostService, openerService, editorService, clipboardService);
 	}
 
 	override async openReporter(data: IssueReporterData): Promise<void> {

@@ -3,11 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { $, reset } from '../../../../base/browser/dom.js';
-import { VSBuffer } from '../../../../base/common/buffer.js';
 import { CancellationError } from '../../../../base/common/errors.js';
-import { Schemas } from '../../../../base/common/network.js';
 import { IProductConfiguration } from '../../../../base/common/product.js';
-import { joinPath } from '../../../../base/common/resources.js';
 import { URI } from '../../../../base/common/uri.js';
 import { localize } from '../../../../nls.js';
 import { IContextMenuService } from '../../../../platform/contextview/browser/contextView.js';
@@ -121,59 +118,7 @@ export class IssueReporter extends BaseIssueReporterService {
 		});
 	}
 
-	public override async submitToGitHub(issueTitle: string, issueBody: string, gitHubDetails: { owner: string; repositoryName: string }): Promise<boolean> {
-		if (issueBody.length > MAX_GITHUB_API_LENGTH) {
-			const extensionData = this.issueReporterModel.getData().extensionData;
-			if (extensionData) {
-				issueBody = issueBody.replace(extensionData, '');
-				const date = new Date();
-				const formattedDate = date.toISOString().split('T')[0]; // YYYY-MM-DD
-				const formattedTime = date.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
-				const fileName = `extensionData_${formattedDate}_${formattedTime}.md`;
-				try {
-					const downloadPath = await this.fileDialogService.showSaveDialog({
-						title: localize('saveExtensionData', "Save Extension Data"),
-						availableFileSystems: [Schemas.file],
-						defaultUri: joinPath(await this.fileDialogService.defaultFilePath(Schemas.file), fileName),
-					});
-
-					if (downloadPath) {
-						await this.fileService.writeFile(downloadPath, VSBuffer.fromString(extensionData));
-					}
-				} catch (e) {
-					console.error('Writing extension data to file failed');
-					return false;
-				}
-			} else {
-				console.error('Issue body too large to submit to GitHub');
-				return false;
-			}
-		}
-		const url = `https://api.github.com/repos/${gitHubDetails.owner}/${gitHubDetails.repositoryName}/issues`;
-		const init = {
-			method: 'POST',
-			body: JSON.stringify({
-				title: issueTitle,
-				body: issueBody
-			}),
-			headers: new Headers({
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${this.data.githubAccessToken}`
-			})
-		};
-
-		const response = await fetch(url, init);
-		if (!response.ok) {
-			console.error('Invalid GitHub URL provided.');
-			return false;
-		}
-		const result = await response.json();
-		await this.openerService.open(result.html_url, { openExternal: true });
-		this.close();
-		return true;
-	}
-
-	public override async createIssue(shouldCreate?: boolean, privateUri?: boolean): Promise<boolean> {
+	public override async createIssue(): Promise<boolean> {
 		const selectedExtension = this.issueReporterModel.getData().selectedExtension;
 		// Short circuit if the extension provides a custom issue handler
 		if (this.nonGitHubIssueUrl) {
@@ -218,16 +163,14 @@ export class IssueReporter extends BaseIssueReporterService {
 
 		this.hasBeenSubmitted = true;
 
-		// eslint-disable-next-line no-restricted-syntax
-		const issueTitle = (<HTMLInputElement>this.getElementById('issue-title')).value;
 		const issueBody = this.issueReporterModel.serialize();
 
-		let issueUrl = privateUri ? this.getPrivateIssueUrl() : this.getIssueUrl();
+		let issueUrl = this.getIssueUrl();
 		if (!issueUrl && selectedExtension?.uri) {
 			const uri = URI.revive(selectedExtension.uri);
 			issueUrl = uri.toString();
 		} else if (!issueUrl) {
-			console.error(`No ${privateUri ? 'private ' : ''}issue url found`);
+			console.error('No issue url found');
 			return false;
 		}
 
@@ -238,12 +181,6 @@ export class IssueReporter extends BaseIssueReporterService {
 		let url = baseUrl + `&body=${encodeURIComponent(issueBody)}`;
 
 		url = this.addTemplateToUrl(url, gitHubDetails?.owner, gitHubDetails?.repositoryName);
-
-		if (this.data.githubAccessToken && gitHubDetails && shouldCreate) {
-			if (await this.submitToGitHub(issueTitle, issueBody, gitHubDetails)) {
-				return true;
-			}
-		}
 
 		try {
 			if (url.length > MAX_URL_LENGTH || issueBody.length > MAX_GITHUB_API_LENGTH) {

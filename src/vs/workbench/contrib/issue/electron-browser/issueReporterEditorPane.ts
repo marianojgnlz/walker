@@ -347,12 +347,12 @@ export class IssueReporterEditorPane extends EditorPane {
 			}
 		}));
 
-		// Wire submit — delegate to form service for upload + open URL
+		// Wire submit — delegate to the form service to open the pre-filled issue URL
 		this.inputDisposables.add(this.wizard.onDidSubmit(async ({ title, body }) => {
 			if (!this.wizard) {
 				return;
 			}
-			const opened = await this.issueFormService.submitIssue(this.wizard, data, title, body);
+			const opened = await this.issueFormService.submitIssue(data, title, body);
 			if (opened) {
 				// User opened the link — keep the wizard editable, but offer an explicit close action.
 				this.wizard.markPreviewOpened();
@@ -435,10 +435,9 @@ export class IssueReporterEditorPane extends EditorPane {
 			});
 		}
 
-		// Wait for the full async population (token, integrity check, experiments)
-		// to finish so we can forward late-arriving values into the wizard model.
-		// Note: githubAccessToken doesn't need forwarding — it's read from the
-		// shared data object at submit time, not from the overlay's internal model.
+		// Wait for the full async population (extensions, integrity check,
+		// experiments) to finish so we can forward late-arriving values into the
+		// wizard model.
 		await data?.whenDataComplete;
 		if (data) {
 			this.wizard?.updateModel({
