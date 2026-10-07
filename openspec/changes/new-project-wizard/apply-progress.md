@@ -105,3 +105,12 @@
 - No implementation-owned task rows remain unchecked. Remaining verification limitation: live SDK 10.0.401 generation/per-template help evidence and a live high-contrast UI pass were not run here; use the parent-provided SDK evidence and validate those visual/runtime surfaces in independent verification if available.
 - Next review focus: verify intent matching/removal in `deferredGitInitialization.ts` and its startup contribution; confirm output-preservation and no-false-success branches in `projectWizard.ts`; inspect Welcome recent-entry keyboard/window behavior; and independently check the extension request guard/process-runner boundary.
 - No `git` operations, staging, commits, or changes to parent-owned session todos/goals were performed.
+
+## Parent review (2026-10-08) — leaf measurements + security-leaf verdicts
+
+Measured review leaves (Decision 5 ratified split): A=218 (projectWizard.ts 1–218), B=203 (219–421), C=271 (deferredGitInitialization pair), D≈256 (Welcome diff ~148 + test 108), boundary-source=212 (contracts +94, extension +115, package.json +3), boundary-tests=112, core-mirror pair=156 (dotnetToolchain.ts +114, test +41, workbench.common.main +1). Every leaf ≤400 reviewed lines; no size exception.
+
+Parent review verdicts (security-relevant leaves):
+- Leaf C (deferred git-init): schema-validated intents (file-scheme only; 10-minute TTL; expiresAt bounded to now+TTL), flush-before-dispatch with cleanup on partial persistence, ALL matching intents removed before git executes (one-shot; crash-after-removal fails safe to "no git run"), case-biased folder matching, 30-second workspace-wait timeout. PASS.
+- Toolchain boundary: fixed 12-template allowlist, 5-option allowlist (framework regex-validated; value-less options must omit value), duplicate-option rejection, strict key checks, fresh `recheck()` before every operation (verified executable never stale), output absolute + non-root + must not exist (lstat ENOENT gate — no overwrites), existing-directory parent, `DOTNET_CLI_TELEMETRY_OPTOUT=1` child env, per-operation timeouts, argv from fixed templates only (no shell, no arbitrary executable). PASS.
+- Notes (non-blocking): child-env hardening could add further opt-out variables later; wizard→contract→live-SDK composition seam remains the recorded residual (recommend a follow-up integration test).
