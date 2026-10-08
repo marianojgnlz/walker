@@ -7,7 +7,7 @@ import * as assert from 'assert';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { DOTNET_TOOLCHAIN_COMMANDS, type IEnvironmentAdapter, type IProcessAdapter, type IProcessExecution, type IToolchainUi, type IDotnetToolchainSnapshot } from '../contracts';
+import { DOTNET_TOOLCHAIN_COMMANDS, type IDotnetEditingHostResult, type IEnvironmentAdapter, type IProcessAdapter, type IProcessExecution, type IToolchainUi, type IDotnetToolchainSnapshot } from '../contracts';
 import { resolveDotnetProxy } from '../download';
 import {
 	activateDotnetToolchain,
@@ -140,16 +140,64 @@ suite('dotnet extension command boundary', () => {
 
 		assert.strictEqual(factoryCalls, 1, 'the controller must be constructed once for a supported host');
 		assert.deepStrictEqual([...host.commands.keys()].sort(), Object.values(DOTNET_TOOLCHAIN_COMMANDS).sort(), 'all commands must be registered synchronously');
-		assert.strictEqual(host.registrations.length, 6);
+		assert.strictEqual(host.registrations.length, 7);
 		for (const registration of host.registrations) {
 			assert.ok(subscriptions.includes(registration.disposable), `${registration.id} must be owned immediately`);
 		}
-		assert.strictEqual(subscriptions.length, 8, 'status, controller and six registrations must be owned');
+		assert.strictEqual(subscriptions.length, 9, 'status, controller and seven registrations must be owned');
 		assert.strictEqual(controller.recheckCalls, 1, 'activation must start exactly one detection');
 		assert.strictEqual(controller.setupRequests.length, 0, 'activation must never start setup');
 		assert.ok(controllerUi !== undefined, 'the controller must receive the status UI');
 		controllerUi.appendOutput('from-core');
 		assert.deepStrictEqual([...host.output.lines].filter(line => line === 'from-core'), ['from-core'], 'core output must flow into the status channel');
+		extension.dispose();
+	});
+
+	test('validates editing-host arity/profile and returns only the injected structured result', async () => {
+		const host = createDotnetHostHarness();
+		const subscriptions: IDotnetDisposable[] = [];
+		const controller = createControllerStub(dotnetSnapshot('checking'));
+		const ready = { schemaVersion: 1, kind: 'ready', locality: 'local', profile: 'roslyn-standalone-10', executable: '/opt/dotnet/dotnet', root: '/opt/dotnet', sdkVersion: '10.0.401', runtimeVersion: '10.0.12' } as const;
+		let resolverCreations = 0;
+		let resolverCalls = 0;
+		let resolverResult: IDotnetEditingHostResult = ready;
+		activateDotnetToolchain({
+			host,
+			extensionKind: 'ui',
+			subscriptions,
+			createController: () => controller,
+			createEditingHostResolver: activeController => {
+				resolverCreations++;
+				assert.strictEqual(activeController, controller);
+				return { resolve: async () => { resolverCalls++; return resolverResult; } };
+			},
+		});
+		const command = host.commands.get(DOTNET_TOOLCHAIN_COMMANDS.resolveEditingHost)!;
+		assert.deepStrictEqual(await command(), { schemaVersion: 1, kind: 'invalid', reason: 'malformed-request' });
+		assert.deepStrictEqual(await command({ schemaVersion: 1, profile: 'roslyn-standalone-10' }, { schemaVersion: 1, profile: 'roslyn-standalone-10' }), { schemaVersion: 1, kind: 'invalid', reason: 'malformed-request' });
+		assert.deepStrictEqual(await command({ schemaVersion: 1, profile: 'future-profile' }), { schemaVersion: 1, kind: 'invalid', reason: 'unsupported-profile' });
+		assert.strictEqual(resolverCreations, 0, 'invalid requests never construct a resolver');
+		assert.deepStrictEqual(await command({ schemaVersion: 1, profile: 'roslyn-standalone-10' }), ready);
+		resolverResult = { schemaVersion: 1, kind: 'failed', reason: 'recheck-failed' };
+		assert.deepStrictEqual(await command({ schemaVersion: 1, profile: 'roslyn-standalone-10' }), resolverResult);
+		assert.deepStrictEqual([resolverCreations, resolverCalls, controller.setupRequests.length], [1, 2, 0]);
+	});
+
+	test('unsupported hosts return without constructing or running the resolver', async () => {
+		const host = createDotnetHostHarness({ uiKind: 'web' });
+		const subscriptions: IDotnetDisposable[] = [];
+		let resolverCreations = 0;
+		const extension = activateDotnetToolchain({
+			host,
+			extensionKind: 'ui',
+			subscriptions,
+			createController: () => { throw new Error('unsupported hosts must not construct the controller'); },
+			createEditingHostResolver: () => { resolverCreations++; throw new Error('unsupported hosts must not construct a resolver'); },
+		});
+		const command = host.commands.get(DOTNET_TOOLCHAIN_COMMANDS.resolveEditingHost)!;
+		assert.deepStrictEqual(await command({ schemaVersion: 1, profile: 'roslyn-standalone-10' }), { schemaVersion: 1, kind: 'unavailable', reason: 'unsupported-host' });
+		assert.strictEqual(resolverCreations, 0);
+		assert.strictEqual(extension.available, false);
 		extension.dispose();
 	});
 
@@ -228,7 +276,7 @@ suite('dotnet extension command boundary', () => {
 			assert.strictEqual(recheck.state, 'unavailable');
 			assert.ok(host.output.lines.some(line => line.startsWith('«')), `${entry.label} must explain the unavailability in localized output`);
 			assert.strictEqual(host.statusItem.text, '«$(circle-slash) .NET SDK: Unavailable Here»');
-			assert.strictEqual(subscriptions.length, 7, 'unavailable hosts own the status and six registrations');
+			assert.strictEqual(subscriptions.length, 8, 'unavailable hosts own the status and seven registrations');
 			extension.dispose();
 		}
 	});

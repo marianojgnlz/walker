@@ -25,7 +25,8 @@
 		"onCommand:walker.dotnet.setup",
 		"onCommand:walker.dotnet.showOutput",
 		"onCommand:walker.dotnet.showActions",
-		"onCommand:walker.dotnet.runTemplateOperation"
+		"onCommand:walker.dotnet.runTemplateOperation",
+		"onCommand:walker.dotnet.resolveEditingHost"
 	],
 	"contributes": {
 		"commands": [

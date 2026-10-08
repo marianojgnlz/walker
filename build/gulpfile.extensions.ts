@@ -57,6 +57,7 @@ const compilations = [
 	'extensions/debug-auto-launch/tsconfig.json',
 	'extensions/debug-server-ready/tsconfig.json',
 	'extensions/dotnet-toolchain/tsconfig.json',
+	'extensions/solution-explorer/tsconfig.json',
 	'extensions/emmet/tsconfig.json',
 	'extensions/extension-editing/tsconfig.json',
 	'extensions/git/tsconfig.json',

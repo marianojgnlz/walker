@@ -12,6 +12,10 @@
 /** Version of the command snapshot contract; snapshots with another version are rejected. */
 export const DOTNET_TOOLCHAIN_SCHEMA_VERSION = 1;
 
+/** Independent schema for the fixed C# editing-host observation command. */
+export const DOTNET_EDITING_HOST_SCHEMA_VERSION = 1;
+export const DOTNET_EDITING_HOST_PROFILE = 'roslyn-standalone-10' as const;
+
 /** Command identifiers exposed by the built-in extension. */
 export const DOTNET_TOOLCHAIN_COMMANDS = Object.freeze({
 	getState: 'walker.dotnet.getState',
@@ -20,10 +24,23 @@ export const DOTNET_TOOLCHAIN_COMMANDS = Object.freeze({
 	showOutput: 'walker.dotnet.showOutput',
 	showActions: 'walker.dotnet.showActions',
 	runTemplateOperation: 'walker.dotnet.runTemplateOperation',
+	resolveEditingHost: 'walker.dotnet.resolveEditingHost',
 } as const);
 
 /** Identifier of one `.NET Toolchain` command. */
 export type DotnetToolchainCommandId = (typeof DOTNET_TOOLCHAIN_COMMANDS)[keyof typeof DOTNET_TOOLCHAIN_COMMANDS];
+
+export type DotnetEditingHostPlatform = 'win32' | 'darwin' | 'linux';
+export interface IDotnetEditingHostRequest {
+	readonly schemaVersion: typeof DOTNET_EDITING_HOST_SCHEMA_VERSION;
+	readonly profile: typeof DOTNET_EDITING_HOST_PROFILE;
+}
+export type DotnetEditingHostRequestClassification = 'supported' | 'unsupported-profile' | 'malformed-request';
+export type IDotnetEditingHostResult =
+	| { readonly schemaVersion: typeof DOTNET_EDITING_HOST_SCHEMA_VERSION; readonly kind: 'ready'; readonly locality: 'local'; readonly profile: typeof DOTNET_EDITING_HOST_PROFILE; readonly executable: string; readonly root: string; readonly sdkVersion: string; readonly runtimeVersion: string }
+	| { readonly schemaVersion: typeof DOTNET_EDITING_HOST_SCHEMA_VERSION; readonly kind: 'unavailable'; readonly reason: 'unsupported-host' | 'sdk-not-ready' | 'runtime-incompatible' | 'busy' }
+	| { readonly schemaVersion: typeof DOTNET_EDITING_HOST_SCHEMA_VERSION; readonly kind: 'invalid'; readonly reason: 'malformed-request' | 'unsupported-profile' }
+	| { readonly schemaVersion: typeof DOTNET_EDITING_HOST_SCHEMA_VERSION; readonly kind: 'failed'; readonly reason: 'recheck-failed' | 'unsafe-installation' | 'spawn' | 'timeout' | 'invalid-runtime-output' };
 
 /** User-visible toolchain states shared by the extension and the onboarding client. */
 export type DotnetToolchainState =
@@ -155,6 +172,110 @@ export function isDotnetToolchainSnapshot(value: unknown): value is IDotnetToolc
 	return true;
 }
 
+const EDITING_HOST_UNAVAILABLE_REASONS = ['unsupported-host', 'sdk-not-ready', 'runtime-incompatible', 'busy'] as const;
+const EDITING_HOST_INVALID_REASONS = ['malformed-request', 'unsupported-profile'] as const;
+const EDITING_HOST_FAILURE_REASONS = ['recheck-failed', 'unsafe-installation', 'spawn', 'timeout', 'invalid-runtime-output'] as const;
+const EDITING_HOST_READY_KEYS = ['schemaVersion', 'kind', 'locality', 'profile', 'executable', 'root', 'sdkVersion', 'runtimeVersion'] as const;
+
+function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
+	const keys = Object.keys(value);
+	return keys.length === expected.length && keys.every(key => expected.includes(key));
+}
+
+function isStableVersion(value: unknown): value is string {
+	if (typeof value !== 'string') {
+		return false;
+	}
+	const parts = value.split('.');
+	return parts.length === 3 && parts.every(part => /^(0|[1-9][0-9]*)$/.test(part) && Number.isSafeInteger(Number(part)));
+}
+
+function isRuntimeCompatible(value: string): boolean {
+	const actual = value.split('.').map(Number);
+	const minimum = [10, 0, 5];
+	for (let index = 0; index < minimum.length; index++) {
+		if (actual[index] !== minimum[index]) {
+			return actual[index]! > minimum[index]!;
+		}
+	}
+	return true;
+}
+
+function editingHostPathParts(value: unknown, platform: DotnetEditingHostPlatform): string[] | undefined {
+	if (typeof value !== 'string' || value.length === 0 || [...value].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) {
+		return undefined;
+	}
+	if (platform === 'win32') {
+		const drive = /^([A-Za-z]):/.exec(value);
+		const separator = String.fromCharCode(92);
+		if (!drive || (value[2] !== '/' && value[2] !== separator)) {
+			return undefined;
+		}
+		const parts = value.slice(3).split(separator).join('/').split('/').filter(Boolean);
+		if (parts.some(part => part === '.' || part === '..')) {
+			return undefined;
+		}
+		return [`${drive[1]!.toLowerCase()}:`, ...parts.map(part => part.toLowerCase())];
+	}
+	if (!value.startsWith('/') || value.startsWith('//')) {
+		return undefined;
+	}
+	const parts = value.slice(1).split('/').filter(Boolean);
+	if (parts.some(part => part === '.' || part === '..')) {
+		return undefined;
+	}
+	return ['/', ...parts];
+}
+
+function isExecutableInsideRoot(executable: unknown, root: unknown, platform: DotnetEditingHostPlatform): boolean {
+	const executableParts = editingHostPathParts(executable, platform);
+	const rootParts = editingHostPathParts(root, platform);
+	return executableParts !== undefined && rootParts !== undefined
+		&& executableParts.length > rootParts.length
+		&& rootParts.every((part, index) => executableParts[index] === part);
+}
+
+/** Classifies the exact request envelope so a known shape with an unknown profile stays distinct. */
+export function classifyDotnetEditingHostRequest(value: unknown): DotnetEditingHostRequestClassification {
+	if (!isRecord(value) || !hasExactKeys(value, ['schemaVersion', 'profile']) || value.schemaVersion !== DOTNET_EDITING_HOST_SCHEMA_VERSION || typeof value.profile !== 'string' || value.profile.length === 0) {
+		return 'malformed-request';
+	}
+	return value.profile === DOTNET_EDITING_HOST_PROFILE ? 'supported' : 'unsupported-profile';
+}
+
+/** Classifies the exact command arity and request envelope before any resolver work. */
+export function classifyDotnetEditingHostArguments(args: readonly unknown[]): DotnetEditingHostRequestClassification {
+	return args.length === 1 ? classifyDotnetEditingHostRequest(args[0]) : 'malformed-request';
+}
+
+/** Structural guard for the fixed-profile request. */
+export function isDotnetEditingHostRequest(value: unknown): value is IDotnetEditingHostRequest {
+	return classifyDotnetEditingHostRequest(value) === 'supported';
+}
+
+/** Validates an observed SDK/runtime result without exposing arbitrary process inputs. */
+export function isDotnetEditingHostResult(value: unknown, platform: DotnetEditingHostPlatform): value is IDotnetEditingHostResult {
+	if (!isRecord(value) || value.schemaVersion !== DOTNET_EDITING_HOST_SCHEMA_VERSION || typeof value.kind !== 'string') {
+		return false;
+	}
+	if (value.kind === 'ready') {
+		return hasExactKeys(value, EDITING_HOST_READY_KEYS)
+			&& value.locality === 'local' && value.profile === DOTNET_EDITING_HOST_PROFILE
+			&& isExecutableInsideRoot(value.executable, value.root, platform)
+			&& isStableVersion(value.sdkVersion) && isStableVersion(value.runtimeVersion)
+			&& isRuntimeCompatible(value.runtimeVersion);
+	}
+	if (value.kind === 'unavailable') {
+		return hasExactKeys(value, ['schemaVersion', 'kind', 'reason']) && isOneOf(value.reason, EDITING_HOST_UNAVAILABLE_REASONS);
+	}
+	if (value.kind === 'invalid') {
+		return hasExactKeys(value, ['schemaVersion', 'kind', 'reason']) && isOneOf(value.reason, EDITING_HOST_INVALID_REASONS);
+	}
+	return value.kind === 'failed'
+		&& hasExactKeys(value, ['schemaVersion', 'kind', 'reason'])
+		&& isOneOf(value.reason, EDITING_HOST_FAILURE_REASONS);
+}
+
 /** Approved local template identities that the internal project wizard may invoke. */
 export const DOTNET_NEW_TEMPLATE_IDS = Object.freeze([
 	'console', 'classlib', 'webapi', 'webapiaot', 'mvc', 'webapp', 'razor', 'blazor', 'blazorwasm', 'worker', 'xunit', 'nunit',
@@ -264,6 +385,8 @@ export interface IProcessExecution {
 	readonly cwd: string;
 	readonly env: Readonly<Record<string, string>>;
 	readonly timeoutMs: number;
+	/** Optional shared stdout/stderr capture ceiling for safety-sensitive probes. */
+	readonly maxOutputBytes?: number;
 }
 
 /** Injected process boundary; implementations must resolve bounded results, not throw, for probes. */

@@ -190,6 +190,18 @@ suite('bounded probe process runner', () => {
 		assert.deepStrictEqual([result.stdout.endsWith(`[stdout truncated at ${MAX_PROCESS_STDOUT_BYTES} bytes]`), result.stderr.endsWith(`[stderr truncated at ${MAX_PROCESS_STDERR_BYTES} bytes]`)], [true, true]);
 	});
 
+	test('applies a shared per-invocation output ceiling across both streams', async () => {
+		const spawn = new RecordingSpawn();
+		const limit = 64 * 1024;
+		const running = start(spawn, new FakeClock()).run(probeExecution({ maxOutputBytes: limit }));
+		const child = spawn.children[0];
+		child.data(Buffer.alloc(48 * 1024, 97));
+		child.error(Buffer.alloc(48 * 1024, 98));
+		child.close(0);
+		const result = await running;
+		assert.deepStrictEqual([result.stdout.length, result.stderr.slice(0, 16 * 1024).length, result.stderr.includes(`truncated at ${limit} bytes`), spawn.invocations[0].options.shell], [48 * 1024, 16 * 1024, true, false]);
+	});
+
 	test('resolves nonzero exit codes with captured diagnostics instead of throwing', async () => {
 		const spawn = new RecordingSpawn();
 		const running = start(spawn, new FakeClock()).run(probeExecution());

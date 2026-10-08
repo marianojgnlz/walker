@@ -4,7 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as assert from 'assert';
-import { DOTNET_NEW_TEMPLATE_IDS, DOTNET_TOOLCHAIN_COMMANDS, DOTNET_TOOLCHAIN_SCHEMA_VERSION, isDotnetTemplateOperationRequest, isDotnetToolchainSnapshot, type DotnetToolchainFailureStage, type IDotnetToolchainSnapshot } from '../contracts';
+import {
+	DOTNET_EDITING_HOST_PROFILE,
+	DOTNET_EDITING_HOST_SCHEMA_VERSION,
+	DOTNET_NEW_TEMPLATE_IDS,
+	DOTNET_TOOLCHAIN_COMMANDS,
+	DOTNET_TOOLCHAIN_SCHEMA_VERSION,
+	classifyDotnetEditingHostArguments,
+	classifyDotnetEditingHostRequest,
+	isDotnetEditingHostRequest,
+	isDotnetEditingHostResult,
+	isDotnetTemplateOperationRequest,
+	isDotnetToolchainSnapshot,
+	type DotnetToolchainFailureStage,
+	type IDotnetToolchainSnapshot,
+} from '../contracts';
 
 // Local snapshot builders keep this contract suite self-contained; injected process/filesystem
 // fixtures and their disposal tests are covered by the separate fixture suite.
@@ -71,6 +85,7 @@ suite('dotnet toolchain snapshot v1', () => {
 			showOutput: 'walker.dotnet.showOutput',
 			showActions: 'walker.dotnet.showActions',
 			runTemplateOperation: 'walker.dotnet.runTemplateOperation',
+			resolveEditingHost: 'walker.dotnet.resolveEditingHost',
 		});
 	});
 
@@ -123,5 +138,81 @@ suite('malformed snapshots', () => {
 			{ ...missingSnapshot(), progress: { phase: 'installing', otherWindow: 'no' } },
 		];
 		assert.deepStrictEqual(malformed.map(value => isDotnetToolchainSnapshot(value)), malformed.map(() => false));
+	});
+});
+
+suite('dotnet editing-host wire contract v1', () => {
+	const request = { schemaVersion: 1, profile: 'roslyn-standalone-10' } as const;
+	const ready = {
+		schemaVersion: 1,
+		kind: 'ready',
+		locality: 'local',
+		profile: 'roslyn-standalone-10',
+		executable: '/opt/dotnet/dotnet',
+		root: '/opt/dotnet',
+		sdkVersion: '10.0.401',
+		runtimeVersion: '10.0.12',
+	} as const;
+
+	test('uses an independent schema and one exact local-profile request', () => {
+		assert.strictEqual(DOTNET_TOOLCHAIN_SCHEMA_VERSION, 1);
+		assert.strictEqual(DOTNET_EDITING_HOST_SCHEMA_VERSION, 1);
+		assert.strictEqual(DOTNET_EDITING_HOST_PROFILE, 'roslyn-standalone-10');
+		assert.strictEqual(classifyDotnetEditingHostRequest(request), 'supported');
+		assert.strictEqual(isDotnetEditingHostRequest(request), true);
+		assert.deepStrictEqual([
+			classifyDotnetEditingHostArguments([]),
+			classifyDotnetEditingHostArguments([request]),
+			classifyDotnetEditingHostArguments([request, request]),
+		], ['malformed-request', 'supported', 'malformed-request']);
+		assert.strictEqual(isDotnetToolchainSnapshot(missingSnapshot()), true);
+		assert.strictEqual(isDotnetTemplateOperationRequest({ schemaVersion: 1, operation: 'listTemplates' }), true);
+	});
+
+	test('distinguishes unsupported profiles from malformed or process-capable requests', () => {
+		assert.strictEqual(classifyDotnetEditingHostRequest({ schemaVersion: 1, profile: 'future-profile' }), 'unsupported-profile');
+		assert.strictEqual(isDotnetEditingHostRequest({ schemaVersion: 1, profile: 'future-profile' }), false);
+		const malformed: readonly unknown[] = [
+			undefined, null, [], {}, { ...request, schemaVersion: 2 }, { schemaVersion: 1 },
+			{ ...request, executable: '/bin/dotnet' }, { ...request, argv: ['--info'] }, { ...request, cwd: '/tmp' },
+			{ ...request, url: 'https://example.invalid' }, { ...request, env: { DOTNET_ROOT: '/tmp' } }, { ...request, profile: '' },
+		];
+		assert.deepStrictEqual(malformed.map(classifyDotnetEditingHostRequest), malformed.map(() => 'malformed-request'));
+		assert.deepStrictEqual(malformed.map(isDotnetEditingHostRequest), malformed.map(() => false));
+	});
+
+	test('accepts only exact result variants with a compatible stable local runtime', () => {
+		const valid: readonly unknown[] = [
+			ready,
+			{ schemaVersion: 1, kind: 'unavailable', reason: 'unsupported-host' },
+			{ schemaVersion: 1, kind: 'unavailable', reason: 'sdk-not-ready' },
+			{ schemaVersion: 1, kind: 'unavailable', reason: 'runtime-incompatible' },
+			{ schemaVersion: 1, kind: 'unavailable', reason: 'busy' },
+			{ schemaVersion: 1, kind: 'invalid', reason: 'malformed-request' },
+			{ schemaVersion: 1, kind: 'invalid', reason: 'unsupported-profile' },
+			{ schemaVersion: 1, kind: 'failed', reason: 'recheck-failed' },
+			{ schemaVersion: 1, kind: 'failed', reason: 'unsafe-installation' },
+			{ schemaVersion: 1, kind: 'failed', reason: 'spawn' },
+			{ schemaVersion: 1, kind: 'failed', reason: 'timeout' },
+			{ schemaVersion: 1, kind: 'failed', reason: 'invalid-runtime-output' },
+		];
+		assert.deepStrictEqual(valid.map(value => isDotnetEditingHostResult(value, 'linux')), valid.map(() => true));
+		assert.strictEqual(isDotnetEditingHostResult({ ...ready, executable: 'C:\\dotnet\\dotnet.exe', root: 'C:\\dotnet' }, 'win32'), true);
+		assert.strictEqual(isDotnetEditingHostResult({ ...ready, executable: 'C:\\DOTNET\\dotnet.exe', root: 'c:\\dotnet' }, 'win32'), true);
+	});
+
+	test('rejects extra capability fields, unsafe path relations and unstable or too-old versions', () => {
+		const invalid: readonly unknown[] = [
+			{ ...ready, argv: ['--info'] }, { ...ready, cwd: '/tmp' }, { ...ready, url: 'https://example.invalid' }, { ...ready, env: {} },
+			{ schemaVersion: 1, kind: 'ready', locality: 'local', profile: 'roslyn-standalone-10', executable: '/opt/dotnet/dotnet', sdkVersion: '10.0.401', runtimeVersion: '10.0.12' },
+			{ ...ready, locality: 'remote' }, { ...ready, profile: 'other' }, { ...ready, schemaVersion: 2 },
+			{ ...ready, executable: '/opt/dotnet-old/dotnet' }, { ...ready, executable: '/opt/dotnet/../outside/dotnet' },
+			{ ...ready, root: 'relative/dotnet' }, { ...ready, executable: '/opt/dotnet/dotnet\n' },
+			{ ...ready, sdkVersion: '10.0.401-preview.1' }, { ...ready, runtimeVersion: '10.0.4' },
+			{ schemaVersion: 1, kind: 'unavailable', reason: 'busy', executable: '/bin/dotnet' },
+			{ schemaVersion: 1, kind: 'failed', reason: 'unknown' },
+		];
+		assert.deepStrictEqual(invalid.map(value => isDotnetEditingHostResult(value, 'linux')), invalid.map(() => false));
+		assert.strictEqual(isDotnetEditingHostResult({ ...ready, executable: '/opt/dotnet/dotnet.exe', root: '/opt/dotnet' }, 'win32'), false);
 	});
 });

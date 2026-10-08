@@ -17,10 +17,13 @@ import * as path from 'node:path';
 import type * as vscode from 'vscode';
 import type { ICandidateEnvironment } from './candidates';
 import {
+	classifyDotnetEditingHostArguments,
+	DOTNET_EDITING_HOST_SCHEMA_VERSION,
 	DOTNET_TOOLCHAIN_COMMANDS,
 	DOTNET_TOOLCHAIN_SCHEMA_VERSION,
 	isDotnetTemplateOperationRequest,
 	type DotnetToolchainState,
+	type IDotnetEditingHostResult,
 	type IDotnetTemplateOperationRequest,
 	type IDotnetTemplateOperationResult,
 	type IDotnetToolchainSnapshot,
@@ -36,6 +39,7 @@ import {
 	type DotnetProxySetting,
 } from './download';
 import { createDotnetInstallerController, type IDotnetInstallerController } from './installer';
+import { createDotnetEditingHostResolver, type IDotnetEditingHostResolver } from './editingHost';
 import { createInstallerProcessRunner, createProcessRunner } from './processRunner';
 import {
 	createDotnetSelectionPrompter,
@@ -92,6 +96,8 @@ export interface IDotnetToolchainActivationOptions {
 	readonly createController: (ui: IToolchainUi) => IDotnetInstallerController;
 	/** Creates the bounded, sanitized process adapter for internal local template operations. */
 	readonly createTemplateProcess?: () => IProcessAdapter;
+	/** Creates the local fixed-profile resolver; never called before the command and host guards. */
+	readonly createEditingHostResolver?: (controller: IDotnetInstallerController) => IDotnetEditingHostResolver;
 	readonly refreshIntervalMs?: number;
 }
 
@@ -165,6 +171,14 @@ function invalidTemplateOperation(reason: Extract<IDotnetTemplateOperationResult
 	return { schemaVersion: DOTNET_TOOLCHAIN_SCHEMA_VERSION, kind: 'invalid', reason };
 }
 
+function invalidEditingHostRequest(reason: Extract<IDotnetEditingHostResult, { readonly kind: 'invalid' }>['reason']): IDotnetEditingHostResult {
+	return { schemaVersion: DOTNET_EDITING_HOST_SCHEMA_VERSION, kind: 'invalid', reason };
+}
+
+function unavailableEditingHost(reason: Extract<IDotnetEditingHostResult, { readonly kind: 'unavailable' }>['reason']): IDotnetEditingHostResult {
+	return { schemaVersion: DOTNET_EDITING_HOST_SCHEMA_VERSION, kind: 'unavailable', reason };
+}
+
 function isNodeErrorCode(error: unknown, code: string): boolean {
 	return typeof error === 'object' && error !== null && 'code' in error && error.code === code;
 }
@@ -183,6 +197,7 @@ export function activateDotnetToolchain(options: IDotnetToolchainActivationOptio
 	let disposed = false;
 	const registrations: IDotnetDisposable[] = [];
 	let templateProcess: IProcessAdapter | undefined;
+	let editingHostResolver: IDotnetEditingHostResolver | undefined;
 
 	const source: IDotnetToolchainStateSource = {
 		getSnapshot: () => controller?.getSnapshot() ?? snapshot,
@@ -223,6 +238,38 @@ export function activateDotnetToolchain(options: IDotnetToolchainActivationOptio
 	register(DOTNET_TOOLCHAIN_COMMANDS.setup, (...args) => status.runSetup(args.length === 0 ? undefined : args));
 	register(DOTNET_TOOLCHAIN_COMMANDS.showOutput, () => { status.showOutput(); });
 	register(DOTNET_TOOLCHAIN_COMMANDS.showActions, () => status.showActions());
+	register(DOTNET_TOOLCHAIN_COMMANDS.resolveEditingHost, async (...args): Promise<IDotnetEditingHostResult> => {
+		const classification = classifyDotnetEditingHostArguments(args);
+		if (classification === 'malformed-request') {
+			return invalidEditingHostRequest('malformed-request');
+		}
+		if (classification === 'unsupported-profile') {
+			return invalidEditingHostRequest('unsupported-profile');
+		}
+		if (!available) {
+			return unavailableEditingHost('unsupported-host');
+		}
+		if (controller === undefined) {
+			return unavailableEditingHost('sdk-not-ready');
+		}
+		try {
+			editingHostResolver ??= options.createEditingHostResolver?.(controller) ?? createDotnetEditingHostResolver({
+				platform: process.platform,
+				recheck: () => controller!.recheck(),
+				isBusy: () => {
+					const state = controller!.getSnapshot().state;
+					return state === 'installing' || state === 'verifying';
+				},
+				fileSystem: createLocalFileSystem(),
+				process: createProcessRunner(),
+				workspaceRoots: () => host.getWorkspaceRoots(),
+				temporaryDirectory: os.tmpdir(),
+			});
+			return await editingHostResolver.resolve();
+		} catch {
+			return { schemaVersion: DOTNET_EDITING_HOST_SCHEMA_VERSION, kind: 'failed', reason: 'recheck-failed' };
+		}
+	});
 	register(DOTNET_TOOLCHAIN_COMMANDS.runTemplateOperation, async (...args): Promise<IDotnetTemplateOperationResult> => {
 		if (args.length !== 1 || !isDotnetTemplateOperationRequest(args[0])) {
 			return invalidTemplateOperation('malformed-request');

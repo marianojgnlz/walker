@@ -90,23 +90,31 @@ interface IBoundedOutput {
 	text(): string;
 }
 
-/** Collects at most `maxBytes` of one stream and marks dropped output. */
-function createBoundedOutput(stream: 'stdout' | 'stderr', maxBytes: number): IBoundedOutput {
+interface ISharedOutputBudget {
+	remaining: number;
+}
+
+/** Collects one stream under its normal cap and an optional shared invocation ceiling. */
+function createBoundedOutput(stream: 'stdout' | 'stderr', maxBytes: number, sharedBudget?: ISharedOutputBudget, displayLimitBytes = maxBytes): IBoundedOutput {
 	const chunks: Buffer[] = [];
 	let length = 0;
 	let truncated = false;
 	return {
 		push: chunk => {
-			const remaining = maxBytes - length;
+			const remaining = Math.min(maxBytes - length, sharedBudget?.remaining ?? Number.POSITIVE_INFINITY);
 			if (remaining <= 0) {
 				truncated = true;
 				return;
 			}
-			chunks.push(remaining < chunk.length ? chunk.subarray(0, remaining) : chunk);
-			length += Math.min(remaining, chunk.length);
-			truncated ||= remaining < chunk.length;
+			const captured = Math.min(remaining, chunk.length);
+			chunks.push(captured < chunk.length ? chunk.subarray(0, captured) : chunk);
+			length += captured;
+			if (sharedBudget !== undefined) {
+				sharedBudget.remaining -= captured;
+			}
+			truncated ||= captured < chunk.length;
 		},
-		text: () => Buffer.concat(chunks, length).toString('utf8') + (truncated ? `\n[${stream} truncated at ${maxBytes} bytes]` : ''),
+		text: () => Buffer.concat(chunks, length).toString('utf8') + (truncated ? `\n[${stream} truncated at ${displayLimitBytes} bytes]` : ''),
 	};
 }
 
@@ -171,8 +179,13 @@ export function createProcessRunner(options: IProcessRunnerOptions = {}): IProce
 
 	return {
 		run: (execution: IProcessExecution): Promise<IProcessExecutionResult> => new Promise<IProcessExecutionResult>(resolve => {
-			const stdout = createBoundedOutput('stdout', MAX_PROCESS_STDOUT_BYTES);
-			const stderr = createBoundedOutput('stderr', MAX_PROCESS_STDERR_BYTES);
+			const requestedOutputLimit = execution.maxOutputBytes;
+			const outputLimit = requestedOutputLimit === undefined ? undefined : Number.isSafeInteger(requestedOutputLimit) && requestedOutputLimit >= 0
+				? Math.min(requestedOutputLimit, MAX_PROCESS_STDOUT_BYTES + MAX_PROCESS_STDERR_BYTES)
+				: 0;
+			const sharedBudget = outputLimit === undefined ? undefined : { remaining: outputLimit };
+			const stdout = createBoundedOutput('stdout', MAX_PROCESS_STDOUT_BYTES, sharedBudget, outputLimit ?? MAX_PROCESS_STDOUT_BYTES);
+			const stderr = createBoundedOutput('stderr', MAX_PROCESS_STDERR_BYTES, sharedBudget, outputLimit ?? MAX_PROCESS_STDERR_BYTES);
 			let child: IProcessRunnerChild | undefined;
 			let timer: unknown;
 			let settled = false;
