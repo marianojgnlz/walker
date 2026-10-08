@@ -12,23 +12,54 @@ import { MainThreadConfigurationShape, MainContext, ExtHostContext, IConfigurati
 import { extHostNamedCustomer, IExtHostContext } from '../../services/extensions/common/extHostCustomers.js';
 import { ConfigurationTarget, IConfigurationService, IConfigurationOverrides } from '../../../platform/configuration/common/configuration.js';
 import { IEnvironmentService } from '../../../platform/environment/common/environment.js';
+import { INotificationService } from '../../../platform/notification/common/notification.js';
+import { IHostService } from '../../services/host/browser/host.js';
+import { IExtensionService } from '../../services/extensions/common/extensions.js';
+import { CSharpEditingAdmissionCoordinator, forwardCSharpEditingConfigurationChange, getCSharpEditingAdmissionCoordinator } from './mainThreadExtensionService.js';
 
 @extHostNamedCustomer(MainContext.MainThreadConfiguration)
 export class MainThreadConfiguration implements MainThreadConfigurationShape {
 
 	private readonly _configurationListener: IDisposable;
+	private readonly _admissionCoordinator: CSharpEditingAdmissionCoordinator;
+	private _configurationChangeQueue: Promise<void> = Promise.resolve();
+	private _isDisposed = false;
 
 	constructor(
 		extHostContext: IExtHostContext,
 		@IWorkspaceContextService private readonly _workspaceContextService: IWorkspaceContextService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IEnvironmentService private readonly _environmentService: IEnvironmentService,
+		@IExtensionService private readonly _extensionService: IExtensionService,
+		@INotificationService private readonly _notificationService: INotificationService,
+		@IHostService private readonly _hostService: IHostService,
 	) {
 		const proxy = extHostContext.getProxy(ExtHostContext.ExtHostConfiguration);
+		this._admissionCoordinator = getCSharpEditingAdmissionCoordinator(extHostContext);
 
 		proxy.$initializeConfiguration(this._getConfigurationData());
 		this._configurationListener = configurationService.onDidChangeConfiguration(e => {
-			proxy.$acceptConfigurationChanged(this._getConfigurationData(), e.change);
+			this._configurationChangeQueue = this._configurationChangeQueue.then(async () => {
+				if (this._isDisposed) {
+					return;
+				}
+				try {
+					await forwardCSharpEditingConfigurationChange(
+						this._admissionCoordinator,
+						e,
+						this._extensionService,
+						this._notificationService,
+						this._hostService,
+						() => {
+							if (!this._isDisposed && !this._admissionCoordinator.isBlocked) {
+								proxy.$acceptConfigurationChanged(this._getConfigurationData(), e.change);
+							}
+						}
+					);
+				} catch {
+					this._admissionCoordinator.revoke();
+				}
+			});
 		});
 	}
 
@@ -42,6 +73,7 @@ export class MainThreadConfiguration implements MainThreadConfigurationShape {
 	}
 
 	public dispose(): void {
+		this._isDisposed = true;
 		this._configurationListener.dispose();
 	}
 

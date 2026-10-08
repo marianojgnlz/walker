@@ -7,6 +7,7 @@
 
 import '../editor/editor.all.js';
 
+import './contrib/csharpEditing/browser/csharpEditing.contribution.js';
 import './api/browser/extensionHost.contribution.js';
 import './browser/workbench.contribution.js';
 import './browser/workbench.zenMode.contribution.js';

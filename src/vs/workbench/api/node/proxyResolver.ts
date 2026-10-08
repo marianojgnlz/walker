@@ -9,7 +9,7 @@ import { IExtensionHostInitData } from '../../services/extensions/common/extensi
 import { ExtHostExtensionService } from './extHostExtensionService.js';
 import { URI } from '../../../base/common/uri.js';
 import { ILogService, LogLevel as LogServiceLevel } from '../../../platform/log/common/log.js';
-import { IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
+import { ExtensionIdentifier, IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
 import { LogLevel, createHttpPatch, createProxyAuthorizationLookup, createProxyResolver, createTlsPatch, ProxySupportSetting, ProxyAgentParams, createNetPatch, loadSystemCertificates, ResolveProxyWithRequest } from '@vscode/proxy-agent';
 import { systemCertificatesNodeDefault } from '../../../platform/request/common/request.js';
 import { DisposableStore } from '../../../base/common/lifecycle.js';
@@ -135,7 +135,7 @@ export function connectProxyResolver(
 	patchGlobalWebSocket(params, resolveProxyURL);
 
 	const lookup = createPatchedModules(params, resolveProxyWithRequest);
-	return configureModuleLoading(extensionService, lookup);
+	return configureModuleLoading(extensionService, lookup, extHostLogService);
 }
 
 const unsafeHeaders = [
@@ -254,22 +254,104 @@ function certSettingV2(configProvider: ExtHostConfigProvider, isRemote: boolean)
 	return !!getExtHostConfigValue<boolean>(configProvider, isRemote, 'http.experimental.systemCertificatesV2', systemCertificatesV2Default) && !!getExtHostConfigValue<boolean>(configProvider, isRemote, 'http.systemCertificates');
 }
 
+export const CSHARP_VSWEBASSEMBLYBRIDGE_URL = 'https://vsdebugger.blob.core.windows.net/vswebassemblybridge-9-0-705702/vswebassemblybridge.zip';
+
+export function guardCSharpComponentFetchModule<T extends object>(
+	module: T,
+	extensionId: string,
+	logService: Pick<ILogService, 'info'>,
+	evaluate?: (args: readonly unknown[]) => boolean,
+	defaultProtocol: 'http:' | 'https:' = 'https:',
+): T {
+	if (ExtensionIdentifier.toKey(extensionId) !== 'muhammad-sammy.csharp') {
+		return module;
+	}
+	const guarded = Object.assign(Object.create(Object.getPrototypeOf(module)), module) as T;
+	for (const method of ['request', 'get'] as const) {
+		const original = Reflect.get(module, method);
+		if (typeof original !== 'function') {
+			continue;
+		}
+		Reflect.set(guarded, method, function (this: unknown, ...args: unknown[]) {
+			let denied: boolean;
+			try {
+				denied = evaluate ? evaluate(args) : isVSWebAssemblyBridgeRequest(args, defaultProtocol);
+			} catch {
+				logService.info('CSharpEditingComponentFetchDenied', { extensionId: 'muhammad-sammy.csharp', destination: CSHARP_VSWEBASSEMBLYBRIDGE_URL, reason: 'rule-evaluation-failed' });
+				throw componentFetchDeniedError();
+			}
+			if (denied) {
+				logService.info('CSharpEditingComponentFetchDenied', { extensionId: 'muhammad-sammy.csharp', destination: CSHARP_VSWEBASSEMBLYBRIDGE_URL, reason: 'policy' });
+				throw componentFetchDeniedError();
+			}
+			return Reflect.apply(original, this, args);
+		});
+	}
+	return guarded;
+}
+
+function isVSWebAssemblyBridgeRequest(args: readonly unknown[], defaultProtocol: 'http:' | 'https:'): boolean {
+	const first = args[0];
+	const second = args[1];
+	const options = isRecord(second) ? second : isRecord(first) ? first : undefined;
+	const input = typeof first === 'string' ? first : first instanceof URL ? first.toString() : undefined;
+	let url: URL;
+	if (input) {
+		const host = typeof options?.hostname === 'string' ? options.hostname : typeof options?.host === 'string' ? options.host : undefined;
+		const protocol = typeof options?.protocol === 'string' ? options.protocol : undefined;
+		url = host && protocol ? new URL(input, `${protocol}//${host}`) : new URL(input);
+		if (options) {
+			url.protocol = typeof options.protocol === 'string' ? options.protocol : url.protocol;
+			if (typeof options.hostname === 'string') {
+				url.hostname = options.hostname;
+			} else if (typeof options.host === 'string') {
+				url.host = options.host;
+			}
+			url.port = typeof options.port === 'string' || typeof options.port === 'number' ? String(options.port) : url.port;
+			url.pathname = typeof options.path === 'string' ? options.path.split('?')[0]! : url.pathname;
+		}
+	} else if (options) {
+		const protocol = typeof options.protocol === 'string' ? options.protocol : defaultProtocol;
+		const hostname = typeof options.hostname === 'string' ? options.hostname : typeof options.host === 'string' ? options.host : '';
+		const requestPath = typeof options.path === 'string' ? options.path : '/';
+		url = new URL(`${protocol}//${hostname}${requestPath}`);
+		url.port = typeof options.port === 'string' || typeof options.port === 'number' ? String(options.port) : url.port;
+	} else {
+		return false;
+	}
+	return url.protocol === 'https:'
+		&& url.hostname === 'vsdebugger.blob.core.windows.net'
+		&& (url.port === '' || url.port === '443')
+		&& url.pathname === '/vswebassemblybridge-9-0-705702/vswebassemblybridge.zip';
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function componentFetchDeniedError(): Error {
+	const error = new Error('VSWebAssemblyBridge installation is disabled for C# editing');
+	(error as Error & { code: string }).code = 'ERR_CSHARP_COMPONENT_FETCH_DENIED';
+	return error;
+}
+
 const modulesCache = new Map<IExtensionDescription | undefined, { http?: typeof http; https?: typeof https; undici?: typeof undiciType }>();
-function configureModuleLoading(extensionService: ExtHostExtensionService, lookup: ReturnType<typeof createPatchedModules>): Promise<void> {
+function configureModuleLoading(extensionService: ExtHostExtensionService, lookup: ReturnType<typeof createPatchedModules>, logService: ILogService): Promise<void> {
 	return extensionService.getExtensionPathIndex()
 		.then(extensionPaths => {
 			const node_module = require('module');
 			const original = node_module._load;
 			node_module._load = function load(request: string, parent: { filename: string }, isMain: boolean) {
-				if (request === 'net') {
+				const moduleRequest = request.startsWith('node:') ? request.slice(5) : request;
+				if (moduleRequest === 'net') {
 					return lookup.net;
 				}
 
-				if (request === 'tls') {
+				if (moduleRequest === 'tls') {
 					return lookup.tls;
 				}
 
-				if (request !== 'http' && request !== 'https' && request !== 'undici') {
+				if (moduleRequest !== 'http' && moduleRequest !== 'https' && moduleRequest !== 'undici') {
 					return original.apply(this, arguments);
 				}
 
@@ -278,17 +360,19 @@ function configureModuleLoading(extensionService: ExtHostExtensionService, looku
 				if (!cache) {
 					modulesCache.set(ext, cache = {});
 				}
-				if (!cache[request]) {
-					if (request === 'undici') {
+				if (!cache[moduleRequest]) {
+					if (moduleRequest === 'undici') {
 						const undici = original.apply(this, arguments);
 						proxyAgent.patchUndici(undici);
-						cache[request] = undici;
+						cache[moduleRequest] = undici;
 					} else {
-						const mod = lookup[request];
-						cache[request] = { ...mod }; // Copy to work around #93167.
+						const mod = { ...lookup[moduleRequest] }; // Copy to work around #93167.
+						cache[moduleRequest] = ext && ExtensionIdentifier.toKey(ext.identifier) === 'muhammad-sammy.csharp'
+							? guardCSharpComponentFetchModule(mod, ext.identifier.value, logService, undefined, moduleRequest === 'https' ? 'https:' : 'http:')
+							: mod;
 					}
 				}
-				return cache[request];
+				return cache[moduleRequest];
 			};
 		});
 }

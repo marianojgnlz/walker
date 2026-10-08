@@ -1486,8 +1486,15 @@ export interface MainThreadTaskShape extends IDisposable {
 	$registerSupportedExecutions(custom?: boolean, shell?: boolean, process?: boolean): Promise<void>;
 }
 
+export type CSharpEditingAdmissionHostKind = 'local' | 'remote' | 'web';
+export type CSharpEditingAdmissionDenialReason = 'invalid-request' | 'not-protected' | 'unsupported-host' | 'stale-generation' | 'identity-mismatch' | 'revoked' | 'no-permit';
+export type CSharpEditingAdmissionResult =
+	| { readonly allowed: true; readonly generation: number }
+	| { readonly allowed: false; readonly generation: number; readonly reason: CSharpEditingAdmissionDenialReason };
+
 export interface MainThreadExtensionServiceShape extends IDisposable {
 	$getExtension(extensionId: string): Promise<Dto<IExtensionDescription> | undefined>;
+	$checkCSharpEditingAdmission(extensionId: string, installedVersion: string, extensionLocation: UriComponents, hostKind: CSharpEditingAdmissionHostKind, generation: number, platform: string, architecture: string | undefined, inheritedEnvironmentVariableNames: string[]): Promise<CSharpEditingAdmissionResult>;
 	$activateExtension(extensionId: ExtensionIdentifier, reason: ExtensionActivationReason): Promise<void>;
 	$onWillActivateExtension(extensionId: ExtensionIdentifier): Promise<void>;
 	$onDidActivateExtension(extensionId: ExtensionIdentifier, codeLoadingTime: number, activateCallTime: number, activateResolvedTime: number, activationReason: ExtensionActivationReason): void;

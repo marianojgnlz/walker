@@ -12,7 +12,7 @@ import { dispose, toDisposable, Disposable, DisposableStore, IDisposable } from 
 import { TernarySearchTree } from '../../../base/common/ternarySearchTree.js';
 import { URI, UriComponents } from '../../../base/common/uri.js';
 import { ILogService } from '../../../platform/log/common/log.js';
-import { ExtHostExtensionServiceShape, MainContext, MainThreadExtensionServiceShape, MainThreadWorkspaceShape } from './extHost.protocol.js';
+import { CSharpEditingAdmissionHostKind, CSharpEditingAdmissionResult, ExtHostExtensionServiceShape, MainContext, MainThreadExtensionServiceShape, MainThreadWorkspaceShape } from './extHost.protocol.js';
 import { IExtensionDescriptionDelta, IExtensionHostInitData } from '../../services/extensions/common/extensionHostProtocol.js';
 import { ExtHostConfiguration, IExtHostConfiguration } from './extHostConfiguration.js';
 import { ActivatedExtension, EmptyExtension, ExtensionActivationTimes, ExtensionActivationTimesBuilder, ExtensionsActivator, IExtensionAPI, IExtensionModule, HostExtension } from './extHostExtensionActivator.js';
@@ -43,6 +43,7 @@ import { IResolveAuthorityResult } from '../../services/extensions/common/extens
 import { IExtHostLocalizationService } from './extHostLocalizationService.js';
 import { StopWatch } from '../../../base/common/stopwatch.js';
 import { isCI, setTimeout0 } from '../../../base/common/platform.js';
+import { arch, env, platform } from '../../../base/common/process.js';
 import { IExtHostManagedSockets } from './extHostManagedSockets.js';
 import { createLanguageModelAccessInformation } from './extHostLanguageModelAccessInformation.js';
 import { Dto } from '../../services/extensions/common/proxyIdentifier.js';
@@ -65,6 +66,59 @@ export interface IHostUtils {
 	exit(code: number): void;
 	fsExists?(path: string): Promise<boolean>;
 	fsRealpath?(path: string): Promise<string>;
+}
+
+const csharpEditingExtensionIds = new Set(['muhammad-sammy.csharp', 'ms-dotnettools.vscode-dotnet-runtime']);
+
+function isCSharpEditingAdmissionResult(value: unknown): value is CSharpEditingAdmissionResult {
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		return false;
+	}
+	const result = value as Record<string, unknown>;
+	if (typeof result.generation !== 'number' || !Number.isSafeInteger(result.generation) || result.generation < 0) {
+		return false;
+	}
+	if (result.allowed === true) {
+		return Object.keys(result).length === 2 && Object.keys(result).every(key => key === 'allowed' || key === 'generation');
+	}
+	return result.allowed === false
+		&& typeof result.reason === 'string'
+		&& ['invalid-request', 'not-protected', 'unsupported-host', 'stale-generation', 'identity-mismatch', 'revoked', 'no-permit'].includes(result.reason)
+		&& Object.keys(result).length === 3
+		&& Object.keys(result).every(key => key === 'allowed' || key === 'generation' || key === 'reason');
+}
+
+/** Ensures protected C# modules are not evaluated before main-thread admission completes. */
+export async function loadExtensionModuleAfterCSharpEditingAdmission<T>(
+	extension: Pick<IExtensionDescription, 'identifier' | 'version' | 'extensionLocation' | 'displayName'>,
+	proxy: Pick<MainThreadExtensionServiceShape, '$checkCSharpEditingAdmission'>,
+	hostKind: CSharpEditingAdmissionHostKind,
+	generation: number,
+	loadModule: () => Promise<T>,
+	timeoutMs = 10_000,
+): Promise<{ readonly module: T; readonly generation: number }> {
+	if (!csharpEditingExtensionIds.has(ExtensionIdentifier.toKey(extension.identifier))) {
+		return { module: await loadModule(), generation };
+	}
+
+	const timeoutPromise = timeout(timeoutMs);
+	let response: unknown;
+	try {
+		response = await Promise.race([
+			proxy.$checkCSharpEditingAdmission(extension.identifier.value, extension.version, extension.extensionLocation, hostKind, generation, platform, arch, Object.keys(env)), 
+			timeoutPromise.then(() => { throw new Error('C# editing admission timed out'); })
+		]);
+	} catch {
+		throw new Error(nls.localize('csharpEditingAdmissionDenied', "Extension '{0}' was not activated because its C# editing profile has not passed Walker's safety checks. Repair the configuration and reload to try again.", extension.displayName || extension.identifier.value));
+	} finally {
+		timeoutPromise.cancel();
+	}
+
+	if (!isCSharpEditingAdmissionResult(response) || !response.allowed || response.generation !== generation) {
+		throw new Error(nls.localize('csharpEditingAdmissionDenied', "Extension '{0}' was not activated because its C# editing profile has not passed Walker's safety checks. Repair the configuration and reload to try again.", extension.displayName || extension.identifier.value));
+	}
+
+	return { module: await loadModule(), generation: response.generation };
 }
 
 export abstract class AbstractExtHostExtensionService extends Disposable implements ExtHostExtensionServiceShape {
@@ -108,6 +162,7 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
 	private readonly _resolvers: { [authorityPrefix: string]: vscode.RemoteAuthorityResolver };
 
 	private _started: boolean;
+	private _csharpEditingAdmissionGeneration = 0;
 	private _isTerminating: boolean = false;
 	private _remoteConnectionData: IRemoteConnectionData | null;
 
@@ -436,12 +491,19 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
 
 		const extensionInternalStore = new DisposableStore(); // disposables that follow the extension lifecycle
 		const activationTimesBuilder = new ExtensionActivationTimesBuilder(reason.startup);
-		return Promise.all([
-			isESM
+		const hostKind: CSharpEditingAdmissionHostKind = this._initData.remote.isRemote ? 'remote' : this.extensionRuntime === ExtensionRuntime.Node ? 'local' : 'web';
+		return loadExtensionModuleAfterCSharpEditingAdmission(
+			extensionDescription,
+			this._mainThreadExtensionsProxy,
+			hostKind,
+			this._csharpEditingAdmissionGeneration,
+			() => isESM
 				? this._loadESMModule<IExtensionModule>(extensionDescription, joinPath(extensionDescription.extensionLocation, entryPoint), activationTimesBuilder)
-				: this._loadCommonJSModule<IExtensionModule>(extensionDescription, joinPath(extensionDescription.extensionLocation, entryPoint), activationTimesBuilder),
-			this._loadExtensionContext(extensionDescription, extensionInternalStore)
-		]).then(values => {
+				: this._loadCommonJSModule<IExtensionModule>(extensionDescription, joinPath(extensionDescription.extensionLocation, entryPoint), activationTimesBuilder)
+		).then(({ module, generation }) => {
+			this._csharpEditingAdmissionGeneration = generation;
+			return Promise.all([module, this._loadExtensionContext(extensionDescription, extensionInternalStore)]);
+		}).then(values => {
 			performance.mark(`code/extHost/willActivateExtension/${extensionDescription.identifier.value}`);
 			return AbstractExtHostExtensionService._callActivate(this._logService, extensionDescription.identifier, values[0], values[1], extensionInternalStore, activationTimesBuilder);
 		}).then((activatedExtension) => {

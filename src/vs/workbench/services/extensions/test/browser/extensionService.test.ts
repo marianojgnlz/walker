@@ -48,6 +48,35 @@ import { IUserDataProfileService } from '../../../userDataProfile/common/userDat
 import { WorkspaceTrustEnablementService } from '../../../workspaces/common/workspaceTrust.js';
 import { TestEnvironmentService, TestLifecycleService, TestRemoteAgentService, TestRemoteExtensionsScannerService, TestWebExtensionsScannerService, TestWorkbenchExtensionEnablementService, TestWorkbenchExtensionManagementService } from '../../../../test/browser/workbenchTestServices.js';
 import { TestContextService, TestFileService, TestUserDataProfileService } from '../../../../test/common/workbenchTestServices.js';
+import { stopExtensionHostForWorkspaceTrustTransition } from '../../../../contrib/extensions/browser/extensionEnablementWorkspaceTrustTransitionParticipant.js';
+
+suite('C# editing workspace-trust host stop order', () => {
+	test('updates enablement after stopping and restarts only after a successful stop', async () => {
+		const events: string[] = [];
+		await stopExtensionHostForWorkspaceTrustTransition(
+			{ stopExtensionHosts: async () => { events.push('stop'); return true; }, startExtensionHosts: async () => { events.push('start'); } },
+			{ reload: async () => { events.push('reload'); } },
+			{ updateExtensionsEnablementsWhenWorkspaceTrustChanges: async () => { events.push('enablement'); } },
+			{ notify: () => { events.push('notice'); return null!; } },
+		);
+		assert.deepStrictEqual(events, ['stop', 'enablement', 'start']);
+	});
+
+	test('does not restart after a failed stop and requires explicit reload', async () => {
+		const events: string[] = [];
+		let notification: Parameters<INotificationService['notify']>[0] | undefined;
+		await stopExtensionHostForWorkspaceTrustTransition(
+			{ stopExtensionHosts: async () => { events.push('stop'); return false; }, startExtensionHosts: async () => { events.push('start'); } },
+			{ reload: async () => { events.push('reload'); } },
+			{ updateExtensionsEnablementsWhenWorkspaceTrustChanges: async () => { events.push('enablement'); } },
+			{ notify: value => { events.push('notice'); notification = value; return null!; } },
+		);
+		assert.deepStrictEqual(events, ['stop', 'enablement', 'notice']);
+		assert.ok(typeof notification?.message === 'string' && notification.message.includes('may still be running'));
+		notification?.actions?.primary?.[0].run();
+		assert.deepStrictEqual(events, ['stop', 'enablement', 'notice', 'reload']);
+	});
+});
 
 suite('BrowserExtensionService', () => {
 

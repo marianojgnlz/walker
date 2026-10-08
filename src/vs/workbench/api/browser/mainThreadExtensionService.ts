@@ -5,11 +5,13 @@
 
 import { toAction } from '../../../base/common/actions.js';
 import { VSBuffer } from '../../../base/common/buffer.js';
+import { DisposableStore } from '../../../base/common/lifecycle.js';
 import { CancellationToken } from '../../../base/common/cancellation.js';
+import { IConfigurationChangeEvent } from '../../../platform/configuration/common/configuration.js';
 import { SerializedError, transformErrorFromSerialization } from '../../../base/common/errors.js';
 import { FileAccess } from '../../../base/common/network.js';
 import Severity from '../../../base/common/severity.js';
-import { URI, UriComponents } from '../../../base/common/uri.js';
+import { isUriComponents, URI, UriComponents } from '../../../base/common/uri.js';
 import { localize } from '../../../nls.js';
 import { ICommandService } from '../../../platform/commands/common/commands.js';
 import { ILocalExtension } from '../../../platform/extensionManagement/common/extensionManagement.js';
@@ -17,7 +19,7 @@ import { areSameExtensions } from '../../../platform/extensionManagement/common/
 import { ExtensionIdentifier, IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
 import { INotificationService } from '../../../platform/notification/common/notification.js';
 import { IRemoteConnectionData, ManagedRemoteConnection, RemoteConnection, RemoteConnectionType, ResolvedAuthority, WebSocketRemoteConnection } from '../../../platform/remote/common/remoteAuthorityResolver.js';
-import { ExtHostContext, ExtHostExtensionServiceShape, MainContext, MainThreadExtensionServiceShape } from '../common/extHost.protocol.js';
+import { CSharpEditingAdmissionDenialReason, CSharpEditingAdmissionHostKind, CSharpEditingAdmissionResult, ExtHostContext, ExtHostExtensionServiceShape, MainContext, MainThreadExtensionServiceShape } from '../common/extHost.protocol.js';
 import { IExtension, IExtensionsWorkbenchService } from '../../contrib/extensions/common/extensions.js';
 import { IWorkbenchEnvironmentService } from '../../services/environment/common/environmentService.js';
 import { EnablementState, IWorkbenchExtensionEnablementService } from '../../services/extensionManagement/common/extensionManagement.js';
@@ -30,11 +32,169 @@ import { Dto } from '../../services/extensions/common/proxyIdentifier.js';
 import { IHostService } from '../../services/host/browser/host.js';
 import { ITimerService } from '../../services/timer/browser/timerService.js';
 
+const csharpEditingAdmissionExtensionIds = new Set(['muhammad-sammy.csharp', 'ms-dotnettools.vscode-dotnet-runtime']);
+
+export interface ICSharpEditingAdmissionRequest {
+	readonly extensionId: string;
+	readonly installedVersion: string;
+	readonly extensionLocation: UriComponents;
+	readonly hostKind: CSharpEditingAdmissionHostKind;
+	readonly generation: number;
+	readonly platform?: string;
+	readonly architecture?: string;
+	readonly inheritedEnvironmentVariableNames?: readonly string[];
+}
+
+export class CSharpEditingAdmissionCoordinator {
+	private _generation = 0;
+	private _blocked = false;
+
+	constructor(private readonly _extensionHostKind: ExtensionHostKind) { }
+
+	get generation(): number {
+		return this._generation;
+	}
+
+	get isBlocked(): boolean {
+		return this._blocked;
+	}
+
+	revoke(block = true): void {
+		this._generation++;
+		this._blocked ||= block;
+	}
+
+	check(request: ICSharpEditingAdmissionRequest, installed: Pick<IExtensionDescription, 'identifier' | 'version' | 'extensionLocation'> | undefined, permit = false): CSharpEditingAdmissionResult {
+		const deny = (reason: CSharpEditingAdmissionDenialReason): CSharpEditingAdmissionResult => ({ allowed: false, generation: this._generation, reason });
+		if (!request || typeof request.extensionId !== 'string' || !request.extensionId.trim()
+			|| typeof request.installedVersion !== 'string' || !request.installedVersion
+			|| !isUriComponents(request.extensionLocation)
+			|| !['local', 'remote', 'web'].includes(request.hostKind)
+			|| !Number.isSafeInteger(request.generation) || request.generation < 0) {
+			return deny('invalid-request');
+		}
+
+		if (request.generation !== this._generation) {
+			return deny('stale-generation');
+		}
+		if (this._blocked) {
+			return deny('revoked');
+		}
+		const hostKind = this._extensionHostKind === ExtensionHostKind.LocalProcess ? 'local' : this._extensionHostKind === ExtensionHostKind.LocalWebWorker ? 'web' : 'remote';
+		if (hostKind !== 'local' || request.hostKind !== hostKind) {
+			return deny('unsupported-host');
+		}
+
+		const extensionId = ExtensionIdentifier.toKey(request.extensionId);
+		if (!csharpEditingAdmissionExtensionIds.has(extensionId)) {
+			return deny('not-protected');
+		}
+		if (!installed || ExtensionIdentifier.toKey(installed.identifier) !== extensionId
+			|| installed.version !== request.installedVersion
+			|| URI.revive(installed.extensionLocation).toString() !== URI.revive(request.extensionLocation).toString()) {
+			return deny('identity-mismatch');
+		}
+
+		return permit ? { allowed: true, generation: this._generation } : deny('no-permit');
+	}
+}
+
+const csharpEditingAdmissionCoordinators = new WeakMap<IExtHostContext, CSharpEditingAdmissionCoordinator>();
+
+export function revokeCSharpEditingAdmissionForExtensionChanges(
+	coordinator: CSharpEditingAdmissionCoordinator,
+	added: readonly Pick<IExtensionDescription, 'identifier'>[],
+	removed: readonly Pick<IExtensionDescription, 'identifier'>[],
+): void {
+	if ([...added, ...removed].some(extension => csharpEditingAdmissionExtensionIds.has(ExtensionIdentifier.toKey(extension.identifier)))) {
+		coordinator.revoke();
+	}
+}
+
+export function getCSharpEditingAdmissionCoordinator(extHostContext: IExtHostContext): CSharpEditingAdmissionCoordinator {
+	let coordinator = csharpEditingAdmissionCoordinators.get(extHostContext);
+	if (!coordinator) {
+		coordinator = new CSharpEditingAdmissionCoordinator(extHostContext.extensionHostKind);
+		csharpEditingAdmissionCoordinators.set(extHostContext, coordinator);
+	}
+	return coordinator;
+}
+
+const csharpEditingSafetyConfigurationKeys = new Set([
+	'dotnet.server.useOmnisharp', 'dotnet.server.path', 'dotnet.server.environmentVariables', 'dotnet.server.crashDumpPath',
+	'dotnetAcquisitionExtension.existingDotnetPath', 'dotnetAcquisitionExtension.enableTelemetry',
+	'chat.disableAIFeatures', 'dotnet.projects.enableAutomaticRestore', 'dotnet.navigation.navigateToSourceLinkAndEmbeddedSources',
+]);
+const csharpEditingConfigurationStops = new WeakMap<IExtensionService, WeakMap<object, Promise<void>>>();
+
+function hasActiveCSharpEditingExtension(extensionService: IExtensionService): boolean {
+	try {
+		return Object.values(extensionService.getExtensionsStatus()).some(status => status.activationStarted && csharpEditingAdmissionExtensionIds.has(ExtensionIdentifier.toKey(status.id)));
+	} catch {
+		return true;
+	}
+}
+
+function affectsCSharpEditingSafetyConfiguration(event: Pick<IConfigurationChangeEvent, 'affectedKeys'>): boolean {
+	return [...event.affectedKeys].some(key => csharpEditingSafetyConfigurationKeys.has(key) || [...csharpEditingSafetyConfigurationKeys].some(setting => key.startsWith(`${setting}.`) || setting.startsWith(`${key}.`)));
+}
+
+/** Stops an active shared host before any changed safety settings can be forwarded. */
+export async function forwardCSharpEditingConfigurationChange(
+	coordinator: CSharpEditingAdmissionCoordinator,
+	event: Pick<IConfigurationChangeEvent, 'affectedKeys'>,
+	extensionService: IExtensionService,
+	notificationService: INotificationService,
+	hostService: IHostService,
+	forward: () => void,
+): Promise<boolean> {
+	if (coordinator.isBlocked) {
+		return false;
+	}
+	if (!affectsCSharpEditingSafetyConfiguration(event) || !hasActiveCSharpEditingExtension(extensionService)) {
+		forward();
+		return true;
+	}
+
+	coordinator.revoke();
+	let stopsForService = csharpEditingConfigurationStops.get(extensionService);
+	if (!stopsForService) {
+		stopsForService = new WeakMap();
+		csharpEditingConfigurationStops.set(extensionService, stopsForService);
+	}
+	let stop = stopsForService.get(event);
+	if (!stop) {
+		stop = (async () => {
+			let stopAllowed = false;
+			try {
+				stopAllowed = await extensionService.stopExtensionHosts(localize('csharpEditingConfigChange', "Changing C# editing safety configuration"));
+			} catch {
+				// A failed stop is never evidence that changed settings are safe to deliver.
+			}
+			const stopped = stopAllowed && !hasActiveCSharpEditingExtension(extensionService);
+			notificationService.notify({
+				severity: stopped ? Severity.Warning : Severity.Error,
+				message: stopped
+					? localize('csharpEditingHostStopped', "C# editing was paused because its safety configuration changed. The shared extension host was stopped, temporarily interrupting its other extensions. Repair the settings and reload the window to resume safely.")
+					: localize('csharpEditingHostStopFailed', "C# editing could not be considered safe because its shared extension host did not stop. No changed configuration was sent to that host. Repair the settings and reload the window before using C# editing."),
+				actions: {
+					primary: [toAction({ id: 'reloadAfterCSharpEditingChange', label: localize('reloadWindow', "Reload Window"), run: () => hostService.reload() })]
+				}
+			});
+		})();
+		stopsForService.set(event, stop);
+	}
+	await stop;
+	return false;
+}
+
 @extHostNamedCustomer(MainContext.MainThreadExtensionService)
 export class MainThreadExtensionService implements MainThreadExtensionServiceShape {
 
 	private readonly _extensionHostKind: ExtensionHostKind;
 	private readonly _internalExtensionService: IInternalExtensionService;
+	private readonly _csharpEditingAdmissionCoordinator: CSharpEditingAdmissionCoordinator;
+	private readonly _disposables = new DisposableStore();
 
 	constructor(
 		extHostContext: IExtHostContext,
@@ -48,6 +208,9 @@ export class MainThreadExtensionService implements MainThreadExtensionServiceSha
 		@IWorkbenchEnvironmentService protected readonly _environmentService: IWorkbenchEnvironmentService,
 	) {
 		this._extensionHostKind = extHostContext.extensionHostKind;
+		this._csharpEditingAdmissionCoordinator = getCSharpEditingAdmissionCoordinator(extHostContext);
+		this._disposables.add(this._extensionService.onWillStop(() => this._csharpEditingAdmissionCoordinator.revoke()));
+		this._disposables.add(this._extensionService.onDidChangeExtensions(({ added, removed }) => revokeCSharpEditingAdmissionForExtensionChanges(this._csharpEditingAdmissionCoordinator, added, removed)));
 
 		const internalExtHostContext = (<IInternalExtHostContext>extHostContext);
 		this._internalExtensionService = internalExtHostContext.internalExtensionService;
@@ -63,10 +226,47 @@ export class MainThreadExtensionService implements MainThreadExtensionServiceSha
 	}
 
 	public dispose(): void {
+		this._csharpEditingAdmissionCoordinator.revoke();
+		this._disposables.dispose();
 	}
 
 	$getExtension(extensionId: string) {
 		return this._extensionService.getExtension(extensionId);
+	}
+
+	async $checkCSharpEditingAdmission(extensionId: string, installedVersion: string, extensionLocation: UriComponents, hostKind: CSharpEditingAdmissionHostKind, generation: number, platform: string, architecture: string | undefined, inheritedEnvironmentVariableNames: string[]): Promise<CSharpEditingAdmissionResult> {
+		const request = { extensionId, installedVersion, extensionLocation, hostKind, generation, platform, architecture, inheritedEnvironmentVariableNames };
+		let installed: IExtensionDescription | undefined;
+		if (typeof extensionId === 'string' && extensionId.trim() && typeof installedVersion === 'string' && installedVersion && isUriComponents(extensionLocation)) {
+			try {
+				installed = await this._extensionService.getExtension(extensionId);
+			} catch {
+				// Missing or failed installed-metadata lookup remains a denial.
+			}
+		}
+		const checked = this._csharpEditingAdmissionCoordinator.check(request, installed);
+		if (checked.allowed || checked.reason !== 'no-permit') {
+			return checked;
+		}
+		try {
+			const client = await this._extensionService.getExtension('muhammad-sammy.csharp');
+			const allowed = client && await this._commandService.executeCommand<boolean>('_walker.csharp.checkAdmission', {
+				extensionId,
+				hostKind,
+				platform,
+				architecture,
+				inheritedEnvironmentVariableNames,
+				clientVersion: client.version,
+				clientLocation: client.extensionLocation,
+				clientTargetPlatform: client.targetPlatform,
+			});
+			if (allowed === true) {
+				return this._csharpEditingAdmissionCoordinator.check(request, installed, true);
+			}
+		} catch {
+			// An absent early contribution, malformed result, or validator failure is a denial.
+		}
+		return this._csharpEditingAdmissionCoordinator.check(request, installed);
 	}
 	$activateExtension(extensionId: ExtensionIdentifier, reason: ExtensionActivationReason): Promise<void> {
 		return this._internalExtensionService._activateById(extensionId, reason);
