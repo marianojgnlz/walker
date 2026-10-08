@@ -15,6 +15,11 @@ export interface IGraphNode {
 	readonly kind: GraphNodeKind;
 	readonly label: string;
 	readonly resourceUri?: string;
+	/** External declarations are visible but require the separate explicit-open action. */
+	readonly displayOnly?: boolean;
+	readonly missing?: boolean;
+	/** Dependencies are openable only when graph projection marks a discovered local target. */
+	readonly navigable?: boolean;
 	readonly parentId?: string;
 	readonly childIds: readonly string[];
 }

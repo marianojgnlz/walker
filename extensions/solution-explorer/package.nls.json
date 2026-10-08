@@ -1,4 +1,11 @@
 {
 	"displayName": "Solution Explorer",
-	"description": "Browse declared solutions, projects, files, and references without evaluating projects."
+	"description": "Browse declared solutions, projects, files, and references without evaluating projects.",
+	"category": "Solution Explorer",
+	"view.name": "Solution Explorer",
+	"view.welcome": "Add a local folder containing solution or project files to browse declared metadata.\n\n[Install or Configure C# Editing](command:walker.solutionExplorer.configureEditing)",
+	"command.refresh": "Refresh",
+	"command.open": "Open",
+	"command.openExternal": "Open External Reference",
+	"command.configureEditing": "Install or Configure C# Editing"
 }

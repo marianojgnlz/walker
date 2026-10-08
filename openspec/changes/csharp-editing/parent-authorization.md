@@ -101,3 +101,10 @@ P2 measured 628 lines (228 over). Disposition: **re-slice, no exception**, split
 - **P2a — Bounded discovery and read core**: incremental directory enumeration, D5 size/count/depth limits, bin/obj/.git exclusions, stat/read overflow rejection + the core reader tests.
 - **P2b — Containment, concurrency and cancellation**: symlink skip + realpath containment, 4-concurrent-reader bound, cooperative cancellation incl. directory-handle disposal, 5-second work budget with controlled clock + the corresponding boundary tests.
 Both rows `<!-- sdd-owner: implementation -->`, one forecast sentence noting the re-slice; each hard-capped ≤400 measured lines; honest per-unit stop if over. (Row-count arithmetic note: 34 rows total after all re-slices; parent tally errors in earlier briefs are superseded by artifact readbacks.)
+
+## Decision 16 (2026-10-08): L1 re-sliced into L1a/L1b
+
+L1 measured 437 lines (37 over; implementation and tests pass, left unchecked per the honest-stop rule). Disposition: **re-slice, no exception**, split at the controller/test boundary (executor distributes authored content):
+- **L1a — Graph controller core**: `graphController.ts` generation-gated scanning + bounded parse cache source + the primary `graphController.test.ts` portion (generation gating, cache invalidation).
+- **L1b — Staleness and failure triangulation tests**: separate test module housing stale-async-read, workspace-replacement and failure-retains-partial-graph cases (reorganizing authored tests permitted; no coverage compression, no filler).
+Both rows `<!-- sdd-owner: implementation -->`, one forecast sentence noting the re-slice; each hard-capped ≤400 measured lines. L2 proceeds after L1a/L1b land.

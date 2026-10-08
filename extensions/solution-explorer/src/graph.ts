@@ -184,7 +184,7 @@ export function assembleWorkspaceGraph(input: ISolutionGraphInput, options: ISol
 	for (let rootIndex = 0; rootIndex < input.roots.length; rootIndex++) {
 		const root = input.roots[rootIndex];
 		const rootId = `workspace:${rootIndex}:${encode(root.uri)}`;
-		if (!addNode({ id: rootId, kind: 'workspace', label: root.label ?? displayName(root.uri), childIds: [] })) {
+		if (!addNode({ id: rootId, kind: 'workspace', label: root.label ?? displayName(root.uri), resourceUri: root.uri, childIds: [] })) {
 			continue;
 		}
 		rootIds.push(rootId);

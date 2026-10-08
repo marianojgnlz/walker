@@ -27,6 +27,8 @@ Parent Decision 14 (2026-10-08) re-slices over-budget S2 into S2a topology core 
 
 Parent Decision 15 (2026-10-08) re-slices over-budget P2 into P2a bounded discovery/read core and P2b containment/concurrency/cancellation tests; each unit is separately capped at 400 lines, with no size exception.
 
+Parent Decision 16 (2026-10-08) re-slices over-budget L1 into L1a graph controller core and L1b staleness/failure triangulation tests; each unit is separately capped at 400 lines, with no size exception.
+
 | Area | Leaves / estimated changed lines each | Area risk |
 | --- | --- | --- |
 | Configuration/admission | A1–A7: 180–360 | High: RPC and revocation integration |
@@ -95,16 +97,17 @@ P1 starts with no shipped graph code; finishes with testable model/packaging ske
 
 V1 starts with tested graph; finishes with stable tree nodes and partial states; rollback removes provider. V2 finishes with normal-editor commands/locality/navigation; rollback removes commands. V3 finishes with discoverable packaged view/actions; rollback removes view/config contributions, never user packages.
 
-- [ ] **V1 — Tree provider:** test then implement `treeProvider.ts` stable ancestry IDs, workspace/solution/project/file/dependency/diagnostic children, localized partial/missing/unsupported labels and standard icons. Cover multi-root/multi-solution and no-SDK/untrusted graph usability. <!-- sdd-owner: implementation -->
-- [ ] **V2 — Navigation/locality:** implement normal `vscode.open`/document command handlers with injected host tests; external references require explicit action and no prior stat/read. Verify keyboard commands, unsupported browser/remote/virtual states, no parallel recent-history storage and no SDK calls for tree navigation. <!-- sdd-owner: implementation -->
-- [ ] **V3 — View composition:** wire extension.ts/tree view/manifests/localization/build inclusion and Install/Configure editing action to the core command. Test activation/disposal and independent tree availability when language packages/toolchain are absent; use standard theme tokens and retain ordinary Explorer. <!-- sdd-owner: implementation -->
+- [x] **V1 — Tree provider:** test then implement `treeProvider.ts` stable ancestry IDs, workspace/solution/project/file/dependency/diagnostic children, localized partial/missing/unsupported labels and standard icons. Cover multi-root/multi-solution and no-SDK/untrusted graph usability. <!-- sdd-owner: implementation -->
+- [x] **V2 — Navigation/locality:** implement normal `vscode.open`/document command handlers with injected host tests; external references require explicit action and no prior stat/read. Verify keyboard commands, unsupported browser/remote/virtual states, no parallel recent-history storage and no SDK calls for tree navigation. <!-- sdd-owner: implementation -->
+- [x] **V3 — View composition:** wire extension.ts/tree view/manifests/localization/build inclusion and Install/Configure editing action to the core command. Test activation/disposal and independent tree availability when language packages/toolchain are absent; use standard theme tokens and retain ordinary Explorer. <!-- sdd-owner: implementation -->
 
 ## 6. Incremental lifecycle leaves
 
 L1 starts with explicit scan; finishes with bounded current-generation publication/cache; rollback returns to bounded explicit refresh. L2 finishes with relevant watcher refresh and owned disposal; rollback removes watchers but retains Refresh.
 
-- [ ] **L1 — Refresh generations:** implement graphController.ts with failing stale async read/workspace replacement/cache invalidation tests first; publish only current scan generation, invalidate membership on topology changes and retain truthful partial diagnostics during failure. Refactor model/parser seams after edge fixtures pass. <!-- sdd-owner: implementation -->
-- [ ] **L2 — Watchers/disposal:** add relevant metadata/file watcher tests then 150-ms debounce/coalescing, affected-project refresh, 256-event queue bound/full bounded rescan and watcher-store replacement. Triangulate repeated refresh/deactivation/workspace changes with no listener leaks or stale publication. <!-- sdd-owner: implementation -->
+- [x] **L1a — Graph controller core:** implement `graphController.ts` generation-gated scanning, bounded URI/content parse caching, graph composition and workspace-topology invalidation. Add primary tests for current-generation publication, cache invalidation and bounded solution/project/file/dependency composition. <!-- sdd-owner: implementation -->
+- [x] **L1b — Staleness and failure triangulation tests:** separate tests for stale asynchronous reads, workspace replacement and failure retaining the last truthful partial graph. Reorganizing the existing controller fixtures is permitted; preserve coverage without compression. <!-- sdd-owner: implementation -->
+- [x] **L2 — Watchers/disposal:** add relevant metadata/file watcher tests then 150-ms debounce/coalescing, affected-project refresh, 256-event queue bound/full bounded rescan and watcher-store replacement. Triangulate repeated refresh/deactivation/workspace changes with no listener leaks or stale publication. <!-- sdd-owner: implementation -->
 
 ## 7. Implementation verification leaves
 
@@ -116,4 +119,4 @@ E1 starts with admitted integration; finishes with packaged installation/securit
 
 ## Execution dependency order
 
-A1 feasibility evidence and parent disposition precede apply. Then P1 and A2/A3 can establish independent scaffolding/policy. T1→T2→T3 requires D3 approval; A4→A5 requires D2 feasibility; A6 depends on T3/A1 and A7 depends on A2–A6. Graph order: P1→P2; P1→S1→S2; P3→P4→P5→P6/P7 (read-backed fixtures throughout), then V1→V2→V3→L1→L2. E1–E3 require all relevant wiring. Language and graph leaves stay independently useful/revertible; no child task owns parent plan/review/archive/push decisions.
+A1 feasibility evidence and parent disposition precede apply. Then P1 and A2/A3 can establish independent scaffolding/policy. T1→T2→T3 requires D3 approval; A4→A5 requires D2 feasibility; A6 depends on T3/A1 and A7 depends on A2–A6. Graph order: P1→P2; P1→S1→S2; P3→P4→P5→P6/P7 (read-backed fixtures throughout), then V1→V2→V3→L1a→L1b→L2. E1–E3 require all relevant wiring. Language and graph leaves stay independently useful/revertible; no child task owns parent plan/review/archive/push decisions.

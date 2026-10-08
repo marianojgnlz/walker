@@ -19,12 +19,14 @@ suite('bounded workspace discovery and reads', () => {
 		fileSystem.addFile('/workspace/app.sln');
 		fileSystem.addFile('/workspace/src/app.csproj');
 		fileSystem.addFile('/workspace/src/Common.shproj');
+		fileSystem.addFile('/workspace/src/Program.cs');
 		fileSystem.addFile('/workspace/bin/ignored.csproj');
 		fileSystem.addFile('/workspace/obj/ignored.sln');
 		fileSystem.addFile('/workspace/.git/ignored.csproj');
 		const result = await createWorkspaceReader({ fileSystem }).scan(['/workspace']);
 		assert.deepStrictEqual(result.roots[0].solutions.map(file => file.path), ['/workspace/app.sln']);
 		assert.deepStrictEqual(result.roots[0].projects.map(file => file.path), ['/workspace/src/app.csproj', '/workspace/src/Common.shproj']);
+		assert.deepStrictEqual([...result.roots[0].localFiles].sort(), ['/workspace/app.sln', '/workspace/src/Common.shproj', '/workspace/src/Program.cs', '/workspace/src/app.csproj']);
 	});
 
 	test('rejects stat and read overflow while accepting the exact 2 MiB boundary', async () => {

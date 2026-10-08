@@ -6,24 +6,60 @@
 	"version": "0.0.1",
 	"license": "MIT",
 	"engines": {
-		"vscode": "^1.5.0"
+		"vscode": "^1.74.0"
 	},
 	"main": "./out/extension",
 	"extensionKind": [
 		"ui"
 	],
 	"capabilities": {
-		"virtualWorkspaces": false,
+		"virtualWorkspaces": true,
 		"untrustedWorkspaces": {
 			"supported": true
 		}
 	},
+	"activationEvents": [
+		"onView:walkerSolutionExplorer",
+		"onCommand:walker.solutionExplorer.refresh",
+		"onCommand:walker.solutionExplorer.open",
+		"onCommand:walker.solutionExplorer.openExternal",
+		"onCommand:walker.solutionExplorer.configureEditing"
+	],
 	"contributes": {
 		"configurationDefaults": {
 			"dotnet.server.useOmnisharp": false,
 			"chat.disableAIFeatures": true,
 			"dotnet.projects.enableAutomaticRestore": false,
 			"dotnet.navigation.navigateToSourceLinkAndEmbeddedSources": false
+		},
+		"views": {
+			"explorer": [
+				{
+					"id": "walkerSolutionExplorer",
+					"name": "%view.name%"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "walkerSolutionExplorer",
+				"contents": "%view.welcome%"
+			}
+		],
+		"commands": [
+			{ "command": "walker.solutionExplorer.refresh", "title": "%command.refresh%", "category": "%category%" },
+			{ "command": "walker.solutionExplorer.open", "title": "%command.open%", "category": "%category%" },
+			{ "command": "walker.solutionExplorer.openExternal", "title": "%command.openExternal%", "category": "%category%" },
+			{ "command": "walker.solutionExplorer.configureEditing", "title": "%command.configureEditing%", "category": "%category%" }
+		],
+		"menus": {
+			"view/title": [
+				{ "command": "walker.solutionExplorer.refresh", "when": "view == walkerSolutionExplorer", "group": "navigation" },
+				{ "command": "walker.solutionExplorer.configureEditing", "when": "view == walkerSolutionExplorer", "group": "1_setup" }
+			],
+			"view/item/context": [
+				{ "command": "walker.solutionExplorer.openExternal", "when": "view == walkerSolutionExplorer && viewItem == solution-explorer-external", "group": "inline" }
+			]
 		}
 	},
 	"scripts": {

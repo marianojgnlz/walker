@@ -55,6 +55,8 @@ export interface IWorkspaceMetadataFile {
 export interface IWorkspaceRootScan {
 	readonly path: string;
 	readonly realPath: string;
+	/** Bounded local entry paths for literal project-item/glob projection; contents are not read. */
+	readonly localFiles: readonly string[];
 	readonly solutions: readonly IWorkspaceMetadataFile[];
 	readonly projects: readonly IWorkspaceMetadataFile[];
 }
@@ -79,6 +81,7 @@ interface IMetadataCandidate {
 interface MutableRoot {
 	readonly path: string;
 	readonly realPath: string;
+	readonly localFiles: string[];
 	readonly solutions: IWorkspaceMetadataFile[];
 	readonly projects: IWorkspaceMetadataFile[];
 }
@@ -139,7 +142,7 @@ export function createWorkspaceReader(options: IWorkspaceReaderOptions = {}) {
 				const resolvedRoot = await resolveWorkspaceRoot(fileSystem, inputPath, guard, (code, message, resource) => addDiagnostic(code, message, resource));
 				if (!resolvedRoot) { continue; }
 				const { path: absolutePath, realPath: realRoot } = resolvedRoot;
-				const root: MutableRoot = { path: absolutePath, realPath: realRoot, solutions: [], projects: [] };
+				const root: MutableRoot = { path: absolutePath, realPath: realRoot, localFiles: [], solutions: [], projects: [] };
 				roots.push(root);
 				graphNodes++;
 				const stack = [{ directory: realRoot, depth: 0 }];
@@ -188,6 +191,7 @@ export function createWorkspaceReader(options: IWorkspaceReaderOptions = {}) {
 								continue;
 							}
 							if (entry.kind !== 'file') { continue; }
+							root.localFiles.push(childPath);
 							const kind = metadataKind(entry.name);
 							if (!kind) { continue; }
 							if (graphNodes >= SCAN_LIMITS.graphNodes) {
@@ -250,7 +254,7 @@ export function createWorkspaceReader(options: IWorkspaceReaderOptions = {}) {
 		}
 		guard.dispose();
 		return {
-			roots: roots.map(root => ({ ...root, solutions: [...root.solutions], projects: [...root.projects] })),
+			roots: roots.map(root => ({ ...root, localFiles: [...root.localFiles], solutions: [...root.solutions], projects: [...root.projects] })),
 			diagnostics,
 			partial: diagnostics.length > 0,
 		};
