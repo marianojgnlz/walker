@@ -1,0 +1,33 @@
+{
+	"name": "solution-explorer",
+	"displayName": "%displayName%",
+	"description": "%description%",
+	"publisher": "vscode",
+	"version": "0.0.1",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.5.0"
+	},
+	"main": "./out/extension",
+	"extensionKind": [
+		"ui"
+	],
+	"capabilities": {
+		"virtualWorkspaces": false,
+		"untrustedWorkspaces": {
+			"supported": true
+		}
+	},
+	"contributes": {
+		"configurationDefaults": {
+			"dotnet.server.useOmnisharp": false,
+			"chat.disableAIFeatures": true,
+			"dotnet.projects.enableAutomaticRestore": false,
+			"dotnet.navigation.navigateToSourceLinkAndEmbeddedSources": false
+		}
+	},
+	"scripts": {
+		"compile": "node ../../node_modules/typescript/bin/tsc6 -p tsconfig.json",
+		"test": "npm run compile && node ../../node_modules/mocha/bin/mocha.js --ui tdd \"out/test/**/*.test.js\""
+	}
+}
