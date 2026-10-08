@@ -1,0 +1,102 @@
+# E1a digest ledger
+
+SHA-256 covers the redacted durable records and the raw scratch captures used to derive them. Raw profile/log/package/fixture files remain under the isolated scratch root and are not duplicated in the repository. Absolute HOME and scratch paths are redacted in the durable excerpts; no HTTP headers, bodies, TLS payloads, credentials, or raw environment values are copied here.
+
+The first launch is the initial `logs/` capture (Run 1); `logs/run2/` and `logs/run3/` are the subsequent captures. `run1` lacks a retained process-tree snapshot, as noted in the attribution ledger. Raw logs are listed by path relative to `$SCRATCH`.
+
+| Capture | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `durable/E1a-runtime-probe.md` | 11074 | `5b6c88e95cedfdf0f7e26e225df27e64fc959c9602fad2ee822497d1d06a37ac` |
+| `durable/E1a-network-attribution.jsonl` | 27677 | `df29beb68325c898aefaf598fde331b84d1d68349cf5b3ef6525fb46b010b548` |
+| `durable/E1a-output-channel-excerpts.log` | 4004 | `d11a47366e93fca7faf59bc8326b30b16c793f5989ce350911f86ae6ed503568` |
+| `run1/proxy.jsonl` | 259 | `ec349046f749ed53dfeceb1f226bd7fd50a4adbb566b83d0c07c4dbf0f21173f` |
+| `run1/connect-app.jsonl` | 1192 | `b2b89a0efaa201c4a220c2ab13ebcbc998dc9352d9f296a141c6a9bd7d534d0d` |
+| `run1/connect-smoke.log` | 66 | `21fde6ba63b5c1c578ae49548e4d300e8ef43631b6cecbddcacd32daa52d70fb` |
+| `run1/netns.addr.txt` | 53 | `f97bfb6dd64aa8eb168dccad2aa4ae938ecdb0da61f6bb9e9d5c963b3f667850` |
+| `run1/netns.route.txt` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `run1/netns.route6.txt` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `run1/launch-command.json` | 548 | `42943bd1f54a641c4a8720468acc043cce07a0f287373cc36e3f2da18d695cd2` |
+| `run1/launch-environment.json` | 1003 | `be4b7511ab792b0b3c3b3849247f5f82f5088c5fe84f9886c34957fae2daf472` |
+| `run1/exit-status.json` | 52 | `edd8f85b435cea38b7db2f88545048a3653b3442b30d191d5d241a47a80e4655` |
+| `run2/proxy.jsonl` | 259 | `e04648613312bdb81e2df0be907fa71d1032e9a997fde8af4f7b441f6febd0fb` |
+| `run2/connect-app.jsonl` | 1360 | `2ae7f0e8453f820d4f7d6e3aceeed3a31373ffa44d6419f0223b681a1d1499a6` |
+| `run2/netns.addr.txt` | 53 | `f97bfb6dd64aa8eb168dccad2aa4ae938ecdb0da61f6bb9e9d5c963b3f667850` |
+| `run2/netns.route.txt` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `run2/netns.route6.txt` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `run2/launch-command.json` | 504 | `8984e81fe8fd0ed9119373776273ad191f88e27681ef87c2589181864157d704` |
+| `run2/launch-environment.json` | 1008 | `2bd8f5762d59fd029dcd6bb0f1fb6d0adcfd71769d2b77577599335e0fcc4d83` |
+| `run2/exit-status.json` | 82 | `b72d8f49b6ec4ffc07d335cc5c10b5791241d5724c1be6f1db8da89bade7b04b` |
+| `run2/main-proc-evidence.json` | 1551 | `427d5aea450370a5aefe8d41912945053351e7e8580c3c58c3ca76d0f0a34dfa` |
+| `run2/ui-startup.json` | 2300 | `098dafdb0524bae1c094ba764716473ca2bb4ec637322801650f49367f39c514` |
+| `run2/startup.png` | 165856 | `33ac45cc339a14b399cf02000de928574b1e21d1111a33242c8d6adaa31b3e5e` |
+| `run3/proxy.jsonl` | 1035 | `1c8fff7595fb688e72cab4a77653e1271a9a23f22ab7205d0bd5db0b0d8207a4` |
+| `run3/connect-app.jsonl` | 2043 | `73b886b7f21c394fae46f34bb93a485b2e796a6c10d4e5eeaee3f8d9877152fa` |
+| `run3/netns.addr.txt` | 53 | `f97bfb6dd64aa8eb168dccad2aa4ae938ecdb0da61f6bb9e9d5c963b3f667850` |
+| `run3/netns.route.txt` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `run3/netns.route6.txt` | 0 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| `run3/launch-command.json` | 496 | `a6c0189ccf52afa41071aa56ddc1769d01a8664b1b3bf8460cb515c7e4d3ca3e` |
+| `run3/launch-environment.json` | 1043 | `a7128171d2ca92be4239dbd294773ea94f3e5490bce03889aeb0b111ca60f202` |
+| `run3/exit-status.json` | 82 | `b72d8f49b6ec4ffc07d335cc5c10b5791241d5724c1be6f1db8da89bade7b04b` |
+| `run3/main-proc-evidence.json` | 1578 | `bd7def47fed3b3570bb917433f34f7af8e064b226e74437d68f36aaca838ba98` |
+| `run3/process-tree-evidence.json` | 7347 | `a07910cd85f17f0efa888d54942938169eafb99501646fe612f06450cab68227` |
+| `run3/csharp-output-startup.json` | 1559 | `bbf8a72abac01d8ff1b30923263a1cc856349dc3cd1e6786f4bd050d9b987907` |
+| `run3/ui-startup.json` | 1571 | `b21ee59723c532b77642d449e548c524bd61989255035b7481508b4e5a518cb7` |
+| `run3/ui-final.json` | 708 | `886abab491b855f4cbca7cccb9099900f1b3cbcc345ffe978913ec05d50a566c` |
+| `run3/completion-suggestion.png` | 128643 | `f6d244a7df7f6f93ab83e7ff1cb205a4dff61b6fe774138338c0c140cc4cda2c` |
+| `run3/diagnostic-before-completion.png` | 126320 | `6d6a5e94b5a08caeefceb51139f2205238a69fe263909c4731fe0335a7f3cde7` |
+| `run3/diagnostics-problems.png` | 65667 | `19b709784110dec79a8047793d3803f37b4b10ef7b3acafdeb425019e8bbfd9e` |
+| `run3/startup.png` | 115247 | `6ee2b17fe36d7aeabe9bf075a2e0fb5315d5b127371bb4d4dab8c57fb0279fea` |
+| `run1/walker-logs/main.log` | 18551 | `fa3fc774b93bfad4ff459951d5c24cf92c83453b47c875756818535f5c6ec2c8` |
+| `run1/walker-logs/sharedprocess.log` | 10945 | `9ad87086217b6e5db9e1c9e065aedada50024b3405597f0898cb3b0823d6edfa` |
+| `run1/walker-logs/network-shared.log` | 300 | `3bfbf7f4d06aebbc027e90b9abfd2e3da1948b65aaaff74284e4c7d93f0a3153` |
+| `run1/walker-logs/window1/exthost/exthost.log` | 1333806 | `ce48f0e45eb663f4a15efa1c0a9f9767e91603181d957ab211f5dd95669061fe` |
+| `run2/walker-logs/main.log` | 13690 | `4da528c6261ccbf3182144c679110742af7a8a00660185a0f0d7c9f36d942c4d` |
+| `run2/walker-logs/sharedprocess.log` | 10679 | `51b91cdeb7777312edcbf980b3af1ff1ca0b195c201363e200350e89cf1961dc` |
+| `run2/walker-logs/network-shared.log` | 300 | `463eeaf6bfefe46649063dcc7843e9626f1ab63e206f938bd5687914901148c4` |
+| `run2/walker-logs/window1/exthost/exthost.log` | 1576640 | `11c0c68c2fdf27c4e925347e61e728e2d90ce552e3cfae572b91a5936db3b5ec` |
+| `run3/walker-logs/main.log` | 14148 | `e2aa172e38d13019cdcc294a5495a5153d336e2a3dc8e86811d573a0af68e09d` |
+| `run3/walker-logs/sharedprocess.log` | 12591 | `b117c7fcd1c2e420655ec5c8c2e66c8b3609d4c2d49116dcb07e83e61414c3d3` |
+| `run3/walker-logs/network-shared.log` | 1800 | `73f0fc404e259924aeca6c8d321926316a74eafc7d345a344e250f4f29d32970` |
+| `run3/walker-logs/window1/exthost/exthost.log` | 1535930 | `495537010994f9d55d7e5ea4da60e417a16a461dc09753b1c5af478e17c93fb2` |
+| `run3/csharp-logs/C#.log` | 596053 | `7c37fc07cafc4beeb09b0032b0354cb2fd80a186f5b87dfd5bcd987c79807e8a` |
+| `run3/csharp-logs/C# LSP Trace Logs.log` | 528528 | `4f965b085bea61a290da0179fa8d6d1a81fcd90b346b91420b02965a5dafe2d2` |
+| `scratch-profile/settings.json` | 862 | `d5c230e11818bc947c1c18b3f5c10b7648f29bab8fdef0b6c8ce90c5f1a66faf` |
+| `instrumentation/connectlog.c` | 4111 | `bc898d7716992635fbb60434c1742d2b117ec32968ad9dd44768e94bdd28e30a` |
+| `instrumentation/proxy.py` | 2292 | `34eb48ade77ae79ffab4fc52977cf30d765de2c0a19b5dd8fa68a66ab7f0a17f` |
+| `instrumentation/runner.py` | 8702 | `7414fe9592bee4607dc49713c8861de5e4790358c6dc15ca795daf8be229025d` |
+| `instrumentation/control.py` | 580 | `088137aa80b0c906ca8226b9900b81a80e207634f5a12759a38af0bcb8274e2f` |
+| `instrumentation/drive.js` | 5370 | `92575a05ec053e94428a58a2e670ee413843357c5f8c2bb72533c0c3f689e069` |
+| `installed-package/csharp-package.json` | 196156 | `1df47320f9f20b89433164fdc9d5ada02e33767caf5421bd8649c7668d7cba1c` |
+| `installed-package/csharp-extension.js` | 2944156 | `5f516e9eb34197cae953372b2901ada3e4339cd06c2ea789545ef3ca9c2e2622` |
+| `installed-package/runtime-package.json` | 19800 | `cea54daca689cf94d11404a05ccae716a0ec3eea62b33bc8df76f0d35d9a590b` |
+| `installed-package/runtime-extension.js.map` | 4597647 | `9a3b0d1da22797d5ad8515437a90b777d9e61ef0b24e88b3d81d82e538ae7b0f` |
+| `fixture/App/App.csproj` | 328 | `67332d94197dd5f6b498aab7636530a870807485a0aa8c818f3b3bf71077333f` |
+| `fixture/App/Program.cs` | 62 | `06fc020089250b30522f628d9c5f93178d43b586628d7331e37e0297b7921dfa` |
+| `fixture/App/obj/App.csproj.nuget.dgspec.json` | 42150 | `da7452682ac4a62c4f6718295d663394f7078adce25532ea47692c48cec119d6` |
+| `fixture/App/obj/App.csproj.nuget.g.props` | 1140 | `6754dbbe931024d7613f7712d368b2feb9384511b1e79720d9b9033908523daf` |
+| `fixture/App/obj/App.csproj.nuget.g.targets` | 149 | `b14461e0cb1be3f77fcf9fe2fdd62889325ca92523d0f606980ed59eb5c4aa1c` |
+| `fixture/App/obj/Debug/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs` | 196 | `f79c1ad9a9fc76110b3655f5bfb5ff4e3168e9addceff05b937c0796f0ec34eb` |
+| `fixture/App/obj/Debug/net10.0/App.AssemblyInfo.cs` | 920 | `a7acd76b1c04ae9adcc873b61ed2329f88b3f203e249fda061d0b6945c6c8c03` |
+| `fixture/App/obj/Debug/net10.0/App.AssemblyInfoInputs.cache` | 65 | `0d49412b29cf7b4f5042479beb6951bdde62fdce26f2cb6842405effb2142385` |
+| `fixture/App/obj/Debug/net10.0/App.GeneratedMSBuildEditorConfig.editorconfig` | 794 | `ce36b300b5aaca99c33b23bb5b48d958ecb2b753f40fb6ff01473863bf011b68` |
+| `fixture/App/obj/Debug/net10.0/App.GlobalUsings.g.cs` | 231 | `8f86a2cbf00ff3eee0bda2bc0eb5e1fc19c8544d5dc650c53d0132325956b592` |
+| `fixture/App/obj/Debug/net10.0/App.assets.cache` | 158 | `1d80696ec20abd5359b9796a69a8b920a7331e56f6b2b0064834c48c142027ea` |
+| `fixture/App/obj/project.assets.json` | 21037 | `bf1ca0a667e31ebfccb6299afa05785785d066f2b0ddd30b4ed6b08a040abd6c` |
+| `fixture/App/obj/project.nuget.cache` | 183 | `8ac4e0cd1cc82898e7d022d3ea1f113870c1715bb8b8ad5716555dbbf73490e4` |
+| `fixture/E1A.sln` | 1428 | `47a0321bd7f82afaeacc3a6fe76baae0969a44427e5f02ffa4732372a964e135` |
+| `fixture/Library/Greeter.cs` | 107 | `324a7d16ba0da2d151655281591b06a5d926143aca8b054b39d984e5eb1e16cb` |
+| `fixture/Library/Library.csproj` | 205 | `3472fccce5613343d3b55f6c2bbc48cbfd3de01f9cf32fd8607b8ac3a7e26395` |
+| `fixture/Library/obj/Debug/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs` | 196 | `f79c1ad9a9fc76110b3655f5bfb5ff4e3168e9addceff05b937c0796f0ec34eb` |
+| `fixture/Library/obj/Debug/net10.0/Library.AssemblyInfo.cs` | 932 | `59b761a91789b547e17293e151ced593fc74ab39b2661bd10093a3d057dd2c1e` |
+| `fixture/Library/obj/Debug/net10.0/Library.AssemblyInfoInputs.cache` | 65 | `b6505b4c6021e152a312373dd54a314457a0b3c958c055f42964b63e8aac9aec` |
+| `fixture/Library/obj/Debug/net10.0/Library.GeneratedMSBuildEditorConfig.editorconfig` | 802 | `df8fbcfb10ca200b98465b57a9fd2327dd1414e797feb3b75079ecc8ae5953d1` |
+| `fixture/Library/obj/Debug/net10.0/Library.GlobalUsings.g.cs` | 231 | `8f86a2cbf00ff3eee0bda2bc0eb5e1fc19c8544d5dc650c53d0132325956b592` |
+| `fixture/Library/obj/Debug/net10.0/Library.assets.cache` | 158 | `56757227876c7654b3f6b94724e51424ef14c0f3ca3bc8484b16604c160c979d` |
+| `fixture/Library/obj/Library.csproj.nuget.dgspec.json` | 21061 | `b1c33b869309f2b975bb66b3dd5c20224280b4787397704c3c3d99e1b3991891` |
+| `fixture/Library/obj/Library.csproj.nuget.g.props` | 1140 | `6754dbbe931024d7613f7712d368b2feb9384511b1e79720d9b9033908523daf` |
+| `fixture/Library/obj/Library.csproj.nuget.g.targets` | 149 | `b14461e0cb1be3f77fcf9fe2fdd62889325ca92523d0f606980ed59eb5c4aa1c` |
+| `fixture/Library/obj/project.assets.json` | 20432 | `ef926bc521baa156262c99566470bd12532499f2cdbd281dec1cb661134472f8` |
+| `fixture/Library/obj/project.nuget.cache` | 191 | `e308b250b62bba377f6e7b2f393f548cca74e90cbf5dc2393ceeb6b2b92fcd02` |
+| `fixture/dotnet/runfile-discovery/fixture-f3f6438e041fc9e29e7e4a90ccda1e9997c7f8453db686aa7de0d46cebe24f31/cache.staging.json` | 233 | `83af00270f43a9e7ae8e8b5b964666c1c5e3ac245c0d61df6f6744bae9c551fc` |
+
+Existing external VSIX and audited source digests are retained in `../ext-package/EVIDENCE.md` and `../ext-package/A1-source-digests.md`; this ledger additionally hashes the exact scratch-installed package manifest/bundle and the runtime dependency source map used for the run. No tests or builds were run. The temporary application, proxy and scratch controllers were stopped; the scratch profile/log tree was retained under `$SCRATCH` for traceability (no deletion performed).

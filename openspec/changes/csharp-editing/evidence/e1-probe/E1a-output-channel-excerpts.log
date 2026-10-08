@@ -1,0 +1,41 @@
+E1a C# runtime output excerpts — redacted; local wall-clock timestamps are as emitted by Walker.
+Scratch/profile/home paths are replaced with $SCRATCH/$HOME. No headers, credentials, or raw source content are included.
+
+## C# output channel startup and host selection
+2026-10-07 18:35:05.242 [trace] Activating C# Extension
+2026-10-07 18:35:05.242 [info] Installing C# dependencies...
+2026-10-07 18:35:05.242 [info] Downloading package 'VSWebAssemblyBridge (Platform Agnostic)' 
+2026-10-07 18:35:05.245 [info] Failed to download from https://vsdebugger.blob.core.windows.net/vswebassemblybridge-9-0-705702/vswebassemblybridge.zip. Error code '502')
+2026-10-07 18:35:05.256 [info] Locating .NET runtime version 10.0.5
+2026-10-07 18:35:05.285 [info] Dotnet path: $HOME/.local/share/dotnet/dotnet
+2026-10-07 18:35:05.285 [info] Activating C# standalone...
+2026-10-07 18:35:05.333 [debug] Starting server at $SCRATCH/extensions/muhammad-sammy.csharp-2.145.21-g154a82fd27-linux-x64/.roslyn/Microsoft.CodeAnalysis.LanguageServer
+2026-10-07 18:35:05.334 [info] Custom environment variables: {"DOTNET_CLI_TELEMETRY_OPTOUT":"1","DOTNET_NOLOGO":"1","DOTNET_ROOT":"$HOME/.local/share/dotnet","DOTNET_MULTILEVEL_LOOKUP":"0"}
+2026-10-07 18:35:05.334 [debug] Starting server at $SCRATCH/extensions/muhammad-sammy.csharp-2.145.21-g154a82fd27-linux-x64/.roslyn/Microsoft.CodeAnalysis.LanguageServer
+2026-10-07 18:35:05.468 [info]         Process ID: 1595971
+2026-10-07 18:35:05.468 [info]       .NET Runtime Version: .NET 10.0.12
+
+## C# output channel project-load milestones
+2026-10-07 18:35:06.468 [debug] [project/open] [BuildHost PID 1596069] Message on stderr: info: BuildHost Runtime Version: .NET 10.0.12
+2026-10-07 18:35:06.571 [debug] [project/open] [BuildHost PID 1596082] Message on stderr: info: BuildHost Runtime Version: .NET 10.0.12
+2026-10-07 18:35:06.639 [debug] [project/open] [BuildHost PID 1596082] Message on stderr: info: Registered MSBuild 10.0.401 instance at $HOME/.local/share/dotnet/sdk/10.0.401
+2026-10-07 18:35:06.674 [debug] [project/open] [BuildHost PID 1596082] Message on stderr: info: Loading $SCRATCH/fixture/App/App.csprojinfo: Loading $SCRATCH/fixture/Library/Library.csproj
+
+## C# output channel error/recovery diagnostic counts
+2026-10-07 18:51:13.630 [debug] [textDocument/diagnostic]  Found 2 diagnostics for DocumentDiagnosticSource: $SCRATCH/fixture/App/Program.cs in App (net10.0)
+2026-10-07 18:55:47.212 [debug] [textDocument/diagnostic]  Found 0 diagnostics for DocumentDiagnosticSource: $SCRATCH/fixture/App/Program.cs in App (net10.0)
+
+## C# LSP trace selected project/completion requests
+2026-10-07 18:35:07.518 [trace] Received notification 'workspace/projectInitializationComplete'.
+2026-10-07 18:51:14.733 [trace] Sending request 'textDocument/completion - (545)'.
+2026-10-07 18:51:14.745 [trace] Received response 'textDocument/completion - (545)' in 12ms.
+2026-10-07 18:51:14.764 [trace] Sending request 'completionItem/resolve - (549)'.
+2026-10-07 18:51:14.822 [trace] Received response 'completionItem/resolve - (549)' in 58ms.
+
+## Extension Host activation and dotnet command execution
+2026-10-07 18:35:04.949 [info] ExtensionService#_doActivateExtension ms-dotnettools.vscode-dotnet-runtime, startup: true, activationEvent: 'workspaceContains:**/*.{csproj,csx,cake}', root cause: muhammad-sammy.csharp
+2026-10-07 18:35:05.026 [info] ExtensionService#_doActivateExtension muhammad-sammy.csharp, startup: true, activationEvent: 'workspaceContains:**/*.{csproj,csx,cake}'
+2026-10-07 18:35:05.252 [trace] ExtHostCommands#executeCommand dotnet.findPath
+No executeCommand records for dotnet.acquireStatus, dotnet.acquire, or dotnet.ensureDotnetDependencies appear in the selected Extension Host log excerpt.
+
+UI observation (from scratch UI snapshots, not an output-channel log): during the unsaved-buffer error, Problems showed CS1061 and CS1002; completion included Hello (detail: string Greeter.Hello()); after File: Revert File, the final UI showed no problems.

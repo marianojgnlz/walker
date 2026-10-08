@@ -1,0 +1,16 @@
+change: csharp-editing
+phase: plan (gate PASS; dispositions Decisions 1-5 in parent-authorization.md)
+artifact_store: openspec
+artifacts:
+  proposal: true
+  specs: true
+  design: true
+  tasks: true
+  apply-progress: false
+  verify-report: false
+  sync-report: false
+  archive-report: false
+tasks_progress:
+  completed: [plan]
+  pending: [apply-A1-audit, apply-lsp-enablement (A2-A7,T1-T3,E1-E2), apply-solution-explorer (P1-P7,S1-S2,V1-V3,L1-L2), verify, close]
+last_updated: 2026-10-08T01:00:00Z
