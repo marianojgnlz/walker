@@ -146,26 +146,28 @@ suite('C# editing main-thread admission coordinator', () => {
 		}, installed, true), { allowed: false, generation: 1, reason: 'stale-generation' });
 	});
 
-	test('stops an active shared host before withholding a safety configuration update', async () => {
-		const coordinator = new CSharpEditingAdmissionCoordinator(ExtensionHostKind.LocalProcess);
-		const admitted = extension(clientId);
-		coordinator.check({ extensionId: clientId, installedVersion: admitted.version, extensionLocation: admitted.extensionLocation, hostKind: 'local', generation: 0 }, admitted, true);
-		const events: string[] = [];
-		let active = true;
-		const extensionService = {
-			getExtensionsStatus: () => ({ [clientId]: { id: new ExtensionIdentifier(clientId), activationStarted: active } as IExtensionsStatus }),
-			stopExtensionHosts: async () => {
-				events.push('stop');
-				active = false;
-				return true;
-			},
-		} as unknown as IExtensionService;
-		const notifications = { notify: () => events.push('notice') } as unknown as INotificationService;
-		const hostService = { reload: () => events.push('reload') } as unknown as IHostService;
-		const change = { affectedKeys: new Set(['dotnet.server.useOmnisharp']) } as Pick<IConfigurationChangeEvent, 'affectedKeys'>;
-		const forwarded = await forwardCSharpEditingConfigurationChange(coordinator, change, extensionService, notifications, hostService, () => events.push('forward'));
+	test('revokes admission after changes to runtime mapping constraints', async () => {
+		for (const key of ['dotnetAcquisitionExtension.allowInvalidPaths', 'dotnetAcquisitionExtension.sharedExistingDotnetPath']) {
+			const coordinator = new CSharpEditingAdmissionCoordinator(ExtensionHostKind.LocalProcess);
+			const admitted = extension(clientId);
+			coordinator.check({ extensionId: clientId, installedVersion: admitted.version, extensionLocation: admitted.extensionLocation, hostKind: 'local', generation: 0 }, admitted, true);
+			const events: string[] = [];
+			const extensionService = {
+				getExtensionsStatus: () => ({}),
+				stopExtensionHosts: async () => {
+					events.push(`stop:${coordinator.isBlocked}:${coordinator.generation}`);
+					return true;
+				},
+			} as unknown as IExtensionService;
+			const notifications = { notify: () => events.push('notice') } as unknown as INotificationService;
+			const hostService = { reload: () => events.push('reload') } as unknown as IHostService;
+			const change = { affectedKeys: new Set([key]) } as Pick<IConfigurationChangeEvent, 'affectedKeys'>;
+			const forwarded = await forwardCSharpEditingConfigurationChange(coordinator, change, extensionService, notifications, hostService, () => events.push('forward'));
 
-		assert.deepStrictEqual({ events, forwarded, blocked: coordinator.isBlocked }, { events: ['stop', 'notice'], forwarded: false, blocked: true });
+			assert.deepStrictEqual({ events, forwarded, blocked: coordinator.isBlocked, generation: coordinator.generation }, {
+				events: ['stop:true:1', 'notice'], forwarded: false, blocked: true, generation: 1,
+			}, key);
+		}
 	});
 
 	test('withholds unsafe and subsequent snapshots if stopping fails, but forwards unrelated changes', async () => {

@@ -45,8 +45,8 @@ suite('C# editing pre-module admission', () => {
 		});
 	}
 
-	test('integrates admission with pre-connection Bridge denial and benign diagnostics/completion', async () => {
-		const events: string[] = [];
+	test('integrates admission with pre-connection Bridge denial without asserting language behavior', async () => {
+		let moduleLoads = 0;
 		const connections: unknown[][] = [];
 		const logs: unknown[][] = [];
 		const guarded = guardCSharpComponentFetchModule({
@@ -57,16 +57,14 @@ suite('C# editing pre-module admission', () => {
 		const loaded = await loadExtensionModuleAfterCSharpEditingAdmission(extension(clientId), {
 			$checkCSharpEditingAdmission: async () => ({ allowed: true, generation: 0 }),
 		}, 'local', 0, async () => {
-			events.push('module-loaded');
+			moduleLoads++;
 			assert.throws(() => guarded.get(CSHARP_VSWEBASSEMBLYBRIDGE_URL), /installation is disabled/);
-			events.push('diagnostics', 'completion');
 			return 'language-module';
 		});
 
-		assert.strictEqual(loaded.module, 'language-module');
-		assert.deepStrictEqual(events, ['module-loaded', 'diagnostics', 'completion']);
-		assert.strictEqual(connections.length, 0);
-		assert.strictEqual(logs[0]?.[0], 'CSharpEditingComponentFetchDenied');
+		assert.deepStrictEqual({ module: loaded.module, moduleLoads, connectionAttempts: connections.length, denialCode: logs[0]?.[0] }, {
+			module: 'language-module', moduleLoads: 1, connectionAttempts: 0, denialCode: 'CSharpEditingComponentFetchDenied',
+		});
 	});
 
 	test('waits for admission before invoking either module format and accepts only the same generation', async () => {
