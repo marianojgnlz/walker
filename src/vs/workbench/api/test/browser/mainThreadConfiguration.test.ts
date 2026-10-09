@@ -6,6 +6,7 @@
 import assert from 'assert';
 import * as sinon from 'sinon';
 import { Emitter } from '../../../../base/common/event.js';
+import { IDisposable } from '../../../../base/common/lifecycle.js';
 import { URI } from '../../../../base/common/uri.js';
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { Extensions, IConfigurationRegistry, ConfigurationScope } from '../../../../platform/configuration/common/configurationRegistry.js';
@@ -13,7 +14,7 @@ import { IWorkspaceContextService, WorkbenchState } from '../../../../platform/w
 import { TestInstantiationService } from '../../../../platform/instantiation/test/common/instantiationServiceMock.js';
 import { MainThreadConfiguration } from '../../browser/mainThreadConfiguration.js';
 import { SingleProxyRPCProtocol } from '../common/testRPCProtocol.js';
-import { IConfigurationChangeEvent, IConfigurationService, ConfigurationTarget } from '../../../../platform/configuration/common/configuration.js';
+import { IConfigurationChangeEvent, IConfigurationData, IConfigurationService, ConfigurationTarget } from '../../../../platform/configuration/common/configuration.js';
 import { WorkspaceService } from '../../../services/configuration/browser/configurationService.js';
 import { IEnvironmentService } from '../../../../platform/environment/common/environment.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
@@ -24,14 +25,13 @@ import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/c
 
 suite('MainThreadConfiguration', function () {
 
-	ensureNoDisposablesAreLeakedInTestSuite();
-
 	const proxy = {
 		$initializeConfiguration: () => { }
 	};
 	let instantiationService: TestInstantiationService;
 	let target: sinon.SinonSpy;
 	let configurationChanges: Emitter<IConfigurationChangeEvent>;
+	let configurationListeners: IDisposable[];
 
 	suiteSetup(() => {
 		Registry.as<IConfigurationRegistry>(Extensions.Configuration).registerConfiguration({
@@ -58,11 +58,16 @@ suite('MainThreadConfiguration', function () {
 	setup(() => {
 		target = sinon.spy();
 		configurationChanges = new Emitter<IConfigurationChangeEvent>();
+		configurationListeners = [];
 
 		instantiationService = new TestInstantiationService();
 		instantiationService.stub(IConfigurationService, WorkspaceService);
 		instantiationService.stub(IConfigurationService, 'onDidUpdateConfiguration', sinon.mock());
-		instantiationService.stub(IConfigurationService, 'onDidChangeConfiguration', configurationChanges.event);
+		instantiationService.stub(IConfigurationService, 'onDidChangeConfiguration', (listener: (event: IConfigurationChangeEvent) => void) => {
+			const disposable = configurationChanges.event(listener);
+			configurationListeners.push(disposable);
+			return disposable;
+		});
 		instantiationService.stub(IConfigurationService, 'updateValue', target);
 		instantiationService.stub(IEnvironmentService, {
 			isBuilt: false
@@ -78,9 +83,12 @@ suite('MainThreadConfiguration', function () {
 	});
 
 	teardown(() => {
+		configurationListeners.forEach(disposable => disposable.dispose());
 		configurationChanges.dispose();
 		instantiationService.dispose();
 	});
+
+	ensureNoDisposablesAreLeakedInTestSuite();
 
 	test('update resource configuration without configuration target defaults to workspace in multi root workspace when no resource is provided', function () {
 		instantiationService.stub(IWorkspaceContextService, <IWorkspaceContextService>{ getWorkbenchState: () => WorkbenchState.WORKSPACE });
@@ -257,7 +265,7 @@ suite('MainThreadConfiguration', function () {
 		let active = true;
 		const events: string[] = [];
 		instantiationService.stub(IExtensionService, {
-			getExtensionsStatus: () => ({ 'muhammad-sammy.csharp': { id: new ExtensionIdentifier('muhammad-sammy.csharp'), activationStarted: active } as IExtensionsStatus }),
+			getExtensionsStatus: () => ({ 'muhammad-sammy.csharp': { id: new ExtensionIdentifier('muhammad-sammy.csharp'), activationTimes: active ? {} : undefined } as IExtensionsStatus }),
 			stopExtensionHosts: async () => { events.push('stop'); return false; },
 		});
 		instantiationService.stub(INotificationService, { notify: () => { events.push('notice'); return null!; } });
@@ -277,6 +285,64 @@ suite('MainThreadConfiguration', function () {
 		await new Promise<void>(resolve => setTimeout(resolve, 0));
 
 		assert.deepStrictEqual(events, ['stop', 'notice']);
+		testObject.dispose();
+	});
+
+	test('does not forward a later unsafe snapshot through an earlier queued unrelated event', async () => {
+		const model = (contents: Record<string, unknown> = {}) => ({ contents, keys: Object.keys(contents), overrides: [] });
+		const configurationSnapshot = (allowInvalidPaths: boolean): IConfigurationData => ({
+			defaults: model(),
+			policy: model(),
+			application: model(),
+			userLocal: model({ dotnetAcquisitionExtension: { allowInvalidPaths } }),
+			userRemote: model(),
+			workspace: model(),
+			folders: [],
+		});
+		let currentConfiguration = configurationSnapshot(false);
+		instantiationService.stub(IConfigurationService, 'getConfigurationData', () => currentConfiguration);
+
+		let hostStopped = false;
+		const events: string[] = [];
+		const forwardedAllowInvalidPaths: unknown[] = [];
+		instantiationService.stub(IExtensionService, {
+			getExtensionsStatus: () => ({
+				'muhammad-sammy.csharp': {
+					id: new ExtensionIdentifier('muhammad-sammy.csharp'),
+					activationTimes: hostStopped ? undefined : {},
+				} as IExtensionsStatus,
+			}),
+			stopExtensionHosts: async () => {
+				events.push('stop:start');
+				hostStopped = true;
+				events.push('stop:complete');
+				return true;
+			},
+		});
+		instantiationService.stub(INotificationService, { notify: () => { events.push('notice'); return null!; } });
+
+		const testObject: MainThreadConfiguration = instantiationService.createInstance(MainThreadConfiguration, SingleProxyRPCProtocol({
+			...proxy,
+			$acceptConfigurationChanged: (data: IConfigurationData) => {
+				const settings = data.userLocal.contents['dotnetAcquisitionExtension'] as { allowInvalidPaths?: boolean } | undefined;
+				forwardedAllowInvalidPaths.push(settings?.allowInvalidPaths);
+				events.push(`forward:${settings?.allowInvalidPaths}`);
+			},
+		}));
+		const event = (keys: string[]): IConfigurationChangeEvent => ({
+			source: ConfigurationTarget.USER,
+			affectedKeys: new Set(keys),
+			change: { keys, overrides: [] },
+			affectsConfiguration: () => true,
+		});
+
+		configurationChanges.fire(event(['editor.fontSize']));
+		currentConfiguration = configurationSnapshot(true);
+		configurationChanges.fire(event(['dotnetAcquisitionExtension.allowInvalidPaths']));
+		await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+		assert.deepStrictEqual(events, ['forward:false', 'stop:start', 'stop:complete', 'notice']);
+		assert.deepStrictEqual(forwardedAllowInvalidPaths, [false]);
 		testObject.dispose();
 	});
 

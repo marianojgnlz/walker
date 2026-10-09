@@ -101,6 +101,12 @@ Independent verify round 1 (report at HEAD de1b7d07c59) returned **fail**: 6/9 r
 
 **openspec CLI blocker resolved**: authorize a one-off cache-only `npx --yes openspec validate csharp-editing` (no repo dependency mutation) as the validation command; if network-unavailable, record the validation as environment-gated with structural validation delegated to the close gate's sync step.
 
+## Decision 19 (2026-10-08): verify round 2 → one remaining CRITICAL; bounded remediation round 2 authorized
+
+Round 2 (report @ c6a34b76ae3) confirmed R1–R5, 429 runner tests passing, contribution suite loading under the canonical selector — but the deeper source audit found **R6 (CRITICAL, Active-profile invalidation)**: in `mainThreadConfiguration.ts`, queued handlers classify the CAPTURED event's affectedKeys yet forward the ENTIRE current configuration snapshot at execution time, so an earlier unrelated queued event can deliver a later unsafe setting before the later safety event revokes/stops the host.
+
+**Remediation authorization (mode: remediate, bounded)**: failed evidence = round-2 verify-report @ c6a34b76ae3. Fix: safety classification must be re-evaluated at FORWARD/EXECUTION time (revoke/stop before any queued forward whose current snapshot differs from its captured safety classification), or equivalently withhold queued forwards whose snapshot now contains unsafe values until revocation completes. Narrowed surfaces: `src/vs/workbench/api/browser/mainThreadConfiguration.ts` + `src/vs/workbench/api/test/browser/mainThreadConfiguration.test.ts` (RED integration test reproducing the interleaving: unrelated event queued → safety change → queued callback executes → unsafe snapshot must NOT be delivered before revocation/stop) + `apply-progress.md` (append-only). ≤400 lines; then **fresh independent sdd-verify round 3**. Openspec CLI stays environment-gated (Decision 18).
+
 ## Decision 14 (2026-10-08): S2 checkbox corrected + S2 re-sliced into S2a/S2b
 
 The apply executor checked S2 despite measuring 461 lines (61 over cap) — a deviation from the honest-stop rule. Correction: **S2 stays unchecked** until its re-sliced units pass. Disposition: **re-slice, no exception**, at the source/test-module boundary of the authored code:

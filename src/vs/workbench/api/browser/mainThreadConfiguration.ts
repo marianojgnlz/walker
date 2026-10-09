@@ -39,6 +39,7 @@ export class MainThreadConfiguration implements MainThreadConfigurationShape {
 
 		proxy.$initializeConfiguration(this._getConfigurationData());
 		this._configurationListener = configurationService.onDidChangeConfiguration(e => {
+			const configurationData = structuredClone(this._getConfigurationData());
 			this._configurationChangeQueue = this._configurationChangeQueue.then(async () => {
 				if (this._isDisposed) {
 					return;
@@ -52,7 +53,7 @@ export class MainThreadConfiguration implements MainThreadConfigurationShape {
 						this._hostService,
 						() => {
 							if (!this._isDisposed && !this._admissionCoordinator.isBlocked) {
-								proxy.$acceptConfigurationChanged(this._getConfigurationData(), e.change);
+								proxy.$acceptConfigurationChanged(configurationData, e.change);
 							}
 						}
 					);
