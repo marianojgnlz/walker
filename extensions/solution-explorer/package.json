@@ -26,6 +26,16 @@
 		"onCommand:walker.solutionExplorer.configureEditing"
 	],
 	"contributes": {
+		"configuration": {
+			"title": "%configuration.title%",
+			"properties": {
+				"chat.disableAIFeatures": {
+					"type": "boolean",
+					"default": true,
+					"description": "%configuration.chat.disableAIFeatures%"
+				}
+			}
+		},
 		"configurationDefaults": {
 			"dotnet.server.useOmnisharp": false,
 			"chat.disableAIFeatures": true,

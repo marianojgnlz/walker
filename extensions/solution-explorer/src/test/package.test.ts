@@ -15,6 +15,7 @@ interface IExtensionManifest {
 	readonly activationEvents?: readonly string[];
 	readonly capabilities?: { readonly virtualWorkspaces?: boolean; readonly untrustedWorkspaces?: { readonly supported: boolean } };
 	readonly contributes?: {
+		readonly configuration?: { readonly properties?: Readonly<Record<string, unknown>> };
 		readonly configurationDefaults?: Readonly<Record<string, unknown>>;
 		readonly views?: Readonly<Record<string, readonly { readonly id: string; readonly name: string }[]>>;
 		readonly viewsWelcome?: readonly { readonly view: string; readonly contents: string }[];
@@ -62,6 +63,13 @@ suite('solution-explorer package manifest', () => {
 			'dotnet.projects.enableAutomaticRestore': false,
 			'dotnet.navigation.navigateToSourceLinkAndEmbeddedSources': false,
 		}, 'companion defaults yield to effective user, workspace and folder values');
+		assert.deepStrictEqual(manifest.contributes?.configuration?.properties?.['chat.disableAIFeatures'], {
+			type: 'boolean',
+			default: true,
+			description: '%configuration.chat.disableAIFeatures%',
+		}, 'the owner contribution registers the AI-suppression setting schema for profile writes');
+		assert.strictEqual(typeof localization['configuration.title'], 'string');
+		assert.strictEqual(typeof localization['configuration.chat.disableAIFeatures'], 'string');
 		assert.ok(Object.keys(localization).includes('command.configureEditing'));
 		assert.ok(Object.keys(localization).includes('view.name'));
 

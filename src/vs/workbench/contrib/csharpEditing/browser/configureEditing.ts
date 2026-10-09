@@ -9,8 +9,11 @@ import {
 	CSHARP_EDITING_RUNTIME_ID,
 	CSHARP_EDITING_RUNTIME_VERSION,
 } from '../common/editingPolicy.js';
+import type { CSharpEditingRepairAction } from '../common/editingStatus.js';
+import type { IDotnetEditingHostResult } from '../common/toolchainContract.js';
 import {
 	configureCSharpEditingProfile,
+	configureCSharpEditingRuntimeTelemetryProfile,
 	IProfileConfigurationServices,
 	ProfileConfigurationResult,
 	rollbackCSharpEditingProfileConfiguration,
@@ -56,14 +59,42 @@ export type CSharpEditingFailureAction =
 	| 'repair-profile-configuration' | 'retry-gallery' | 'retry-when-online' | 'review-profile-signature-workaround'
 	| 'review-gallery-access' | 'retry-install' | 'repair-extension-state';
 
+export function getCSharpEditingFailureRepairAction(action: CSharpEditingFailureAction): CSharpEditingRepairAction {
+	switch (action) {
+		case 'repair-profile-configuration': return 'openSettings';
+		case 'retry-gallery':
+		case 'retry-when-online':
+		case 'retry-install': return 'configure';
+		case 'review-profile-signature-workaround': return 'openSignatureSettings';
+		case 'review-gallery-access':
+		case 'repair-extension-state': return 'openExtension';
+	}
+}
+
 type ProfileRefusal = Extract<ProfileConfigurationResult, { readonly kind: 'refused' }>['reason'];
 
 export type CSharpEditingConfigurationResult =
 	| { readonly kind: 'configured'; readonly installation: 'installed' | 'existing' }
+	| { readonly kind: 'pending'; readonly installation: 'installed' | 'existing'; readonly pendingSettings: readonly string[] }
 	| { readonly kind: 'refused'; readonly reason: ProfileRefusal | 'client-disabled' | 'client-unvalidated' | 'runtime-missing' | 'runtime-disabled' | 'runtime-unvalidated' }
 	| { readonly kind: 'failed'; readonly reason: CSharpEditingFailureReason; readonly action: CSharpEditingFailureAction; readonly rollback: 'not-needed' | 'complete' | 'incomplete' };
 
-/** Acquires the exact anonymous client after the profile journal and owned settings are durable. */
+export type CSharpEditingPreflightResult =
+	| { readonly kind: 'toolchain-not-ready'; readonly toolchain: Exclude<IDotnetEditingHostResult, { readonly kind: 'ready' }> }
+	| { readonly kind: 'configured'; readonly toolchain: Extract<IDotnetEditingHostResult, { readonly kind: 'ready' }>; readonly configuration: CSharpEditingConfigurationResult };
+
+export async function configureCSharpEditingWithToolchainPreflight(
+	preflight: () => Promise<IDotnetEditingHostResult>,
+	configure: () => Promise<CSharpEditingConfigurationResult>,
+): Promise<CSharpEditingPreflightResult> {
+	const toolchain = await preflight();
+	if (toolchain.kind !== 'ready') {
+		return { kind: 'toolchain-not-ready', toolchain };
+	}
+	return { kind: 'configured', toolchain, configuration: await configure() };
+}
+
+/** Acquires the exact anonymous client, then configures only settings registered by its installed extensions. */
 export async function configureCSharpEditing(services: ICSharpEditingAcquisitionServices): Promise<CSharpEditingConfigurationResult> {
 	if (!services.profileId || services.profileId !== services.configurationProfileId || services.profileId !== services.journalProfileId) {
 		return { kind: 'refused', reason: 'profile-mismatch' };
@@ -80,15 +111,8 @@ export async function configureCSharpEditing(services: ICSharpEditingAcquisition
 		return { kind: 'refused', reason: packageProblem };
 	}
 
-	const prepared = await configureCSharpEditingProfile(services);
-	if (prepared.kind === 'refused') {
-		return prepared;
-	}
-	if (prepared.kind === 'failed') {
-		return failed(prepared.reason, 'repair-profile-configuration', prepared.rollback);
-	}
 	if (packages.client) {
-		return { kind: 'configured', installation: 'existing' };
+		return configureInstalledProfile(services, packages, 'existing');
 	}
 
 	let extension: ICSharpEditingGalleryExtension | undefined;
@@ -116,15 +140,46 @@ export async function configureCSharpEditing(services: ICSharpEditingAcquisition
 		return failedWithRollback(classifyFailure(error), services);
 	}
 
+	let installed: ICSharpEditingInstalledPackages;
 	try {
-		const installed = await services.readInstalledPackages();
+		installed = await services.readInstalledPackages();
 		if (!installed.client || getPackageProblem(installed) !== undefined) {
 			return failedWithRollback({ reason: 'installed-package-unvalidated', action: 'repair-extension-state' }, services);
 		}
 	} catch {
 		return failedWithRollback({ reason: 'installed-package-unvalidated', action: 'repair-extension-state' }, services);
 	}
-	return { kind: 'configured', installation: 'installed' };
+	return configureInstalledProfile(services, installed, 'installed');
+}
+
+async function configureInstalledProfile(
+	services: ICSharpEditingAcquisitionServices,
+	packages: ICSharpEditingInstalledPackages,
+	installation: 'installed' | 'existing',
+): Promise<CSharpEditingConfigurationResult> {
+	const profile = await configureCSharpEditingProfile(services);
+	if (profile.kind === 'refused') {
+		return profile;
+	}
+	if (profile.kind === 'failed') {
+		return failed(profile.reason, 'repair-profile-configuration', profile.rollback);
+	}
+	const runtime = packages.runtime;
+	if (!runtime) {
+		return { kind: 'refused', reason: 'runtime-missing' };
+	}
+	const telemetry = await configureCSharpEditingRuntimeTelemetryProfile(services, runtime);
+	if (telemetry.kind === 'refused') {
+		return telemetry;
+	}
+	if (telemetry.kind === 'failed') {
+		return failed(telemetry.reason, 'repair-profile-configuration', telemetry.rollback);
+	}
+	const pendingSettings = [...new Set([
+		...(profile.kind === 'pending' ? profile.pendingSettings : []),
+		...(telemetry.kind === 'pending' ? telemetry.pendingSettings : []),
+	])];
+	return pendingSettings.length ? { kind: 'pending', installation, pendingSettings } : { kind: 'configured', installation };
 }
 
 async function failedWithRollback(

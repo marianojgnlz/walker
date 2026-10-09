@@ -5,7 +5,7 @@
 
 import * as assert from 'assert';
 import { CSHARP_EDITING_PROFILE_SETTINGS, CSHARP_EDITING_CLIENT_ID, CSHARP_EDITING_CLIENT_VERSION, CSHARP_EDITING_RUNTIME_ID, CSHARP_EDITING_RUNTIME_VERSION } from '../../common/editingPolicy.js';
-import { evaluateCSharpEditingAdmission } from '../../common/editingAdmission.js';
+import { evaluateCSharpEditingAdmission, evaluateCSharpRuntimeDependencyAdmission, ICSharpRuntimeDependencyAdmissionInput } from '../../common/editingAdmission.js';
 import { ICSharpEditingPolicyInput } from '../../common/editingPolicy.js';
 import { ICSharpRuntimeMappingInput } from '../../common/runtimeMapping.js';
 
@@ -60,7 +60,61 @@ function validAdmissionInput(): { policy: ICSharpEditingPolicyInput; runtimeMapp
 	};
 }
 
+function validRuntimeDependencyAdmissionInput(overrides: Partial<ICSharpRuntimeDependencyAdmissionInput> = {}): ICSharpRuntimeDependencyAdmissionInput {
+	return {
+		runtimeDependency: { id: CSHARP_EDITING_RUNTIME_ID, version: CSHARP_EDITING_RUNTIME_VERSION, enabled: true },
+		hostKind: 'local',
+		platform: 'linux',
+		architecture: 'x64',
+		telemetrySetting: { registered: true, profileValue: false, effectiveValues: [false] },
+		runtimeMapping: { eligible: true },
+		inheritedEnvironmentVariableNames: [],
+		...overrides,
+	};
+}
+
+type RuntimeDependencyDenialReason = Extract<ReturnType<typeof evaluateCSharpRuntimeDependencyAdmission>, { readonly eligible: false }>['reason'];
+
+function assertRuntimeDependencyDenied(input: ICSharpRuntimeDependencyAdmissionInput, reason: RuntimeDependencyDenialReason): void {
+	const result = evaluateCSharpRuntimeDependencyAdmission(input);
+	assert.strictEqual(result.eligible, false);
+	if (!result.eligible) {
+		assert.strictEqual(result.reason, reason);
+	}
+}
+
 suite('C# editing integrated admission', () => {
+	test('requires the persisted runtime mapping before dependency admission while C# remains independently gated', () => {
+		assert.deepStrictEqual(evaluateCSharpRuntimeDependencyAdmission(validRuntimeDependencyAdmissionInput()), { eligible: true });
+		assertRuntimeDependencyDenied(validRuntimeDependencyAdmissionInput({ runtimeMapping: { eligible: false } }), 'runtime-mapping-unavailable');
+
+		const input = validAdmissionInput();
+		assert.strictEqual(evaluateCSharpEditingAdmission({
+			...input,
+			runtimeMapping: { ...input.runtimeMapping, existingDotnetPath: [] },
+		}).eligible, false);
+		assert.strictEqual(evaluateCSharpEditingAdmission({
+			...input,
+			policy: { ...input.policy, host: { ...input.policy.host, workspaceTrusted: false } },
+		}).eligible, false);
+	});
+
+	test('denies the runtime dependency unless its exact identity, own telemetry setting, and environment pass', () => {
+		assertRuntimeDependencyDenied(validRuntimeDependencyAdmissionInput({
+			runtimeDependency: { id: CSHARP_EDITING_RUNTIME_ID, version: '3.2.1', enabled: true },
+		}), 'runtime-dependency-unvalidated');
+		assertRuntimeDependencyDenied(validRuntimeDependencyAdmissionInput({
+			telemetrySetting: { registered: false, profileValue: false, effectiveValues: [false] },
+		}), 'telemetry-unavailable');
+		assertRuntimeDependencyDenied(validRuntimeDependencyAdmissionInput({
+			telemetrySetting: { registered: true, profileValue: true, effectiveValues: [true] },
+		}), 'telemetry-enabled');
+		assertRuntimeDependencyDenied(validRuntimeDependencyAdmissionInput({ runtimeMapping: { eligible: false } }), 'runtime-mapping-unavailable');
+		assertRuntimeDependencyDenied(validRuntimeDependencyAdmissionInput({
+			inheritedEnvironmentVariableNames: ['DOTNET_STARTUP_HOOKS'],
+		}), 'unsafe-environment');
+	});
+
 	test('grants eligibility only when effective policy and the requester mapping both match the audited profile', () => {
 		const input = validAdmissionInput();
 		assert.strictEqual(evaluateCSharpEditingAdmission(input).eligible, true);

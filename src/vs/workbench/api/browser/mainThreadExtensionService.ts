@@ -48,6 +48,8 @@ export interface ICSharpEditingAdmissionRequest {
 export class CSharpEditingAdmissionCoordinator {
 	private _generation = 0;
 	private _blocked = false;
+	private _pendingValidations = 0;
+	private readonly _admittedExtensions = new Set<string>();
 
 	constructor(private readonly _extensionHostKind: ExtensionHostKind) { }
 
@@ -59,9 +61,29 @@ export class CSharpEditingAdmissionCoordinator {
 		return this._blocked;
 	}
 
+	get hasAdmittedExtension(): boolean {
+		return this._admittedExtensions.size > 0;
+	}
+
+	get hasPendingValidation(): boolean {
+		return this._pendingValidations > 0;
+	}
+
+	beginValidation(): () => void {
+		this._pendingValidations++;
+		let completed = false;
+		return () => {
+			if (!completed) {
+				completed = true;
+				this._pendingValidations--;
+			}
+		};
+	}
+
 	revoke(block = true): void {
 		this._generation++;
 		this._blocked ||= block;
+		this._admittedExtensions.clear();
 	}
 
 	check(request: ICSharpEditingAdmissionRequest, installed: Pick<IExtensionDescription, 'identifier' | 'version' | 'extensionLocation'> | undefined, permit = false): CSharpEditingAdmissionResult {
@@ -95,7 +117,11 @@ export class CSharpEditingAdmissionCoordinator {
 			return deny('identity-mismatch');
 		}
 
-		return permit ? { allowed: true, generation: this._generation } : deny('no-permit');
+		if (!permit) {
+			return deny('no-permit');
+		}
+		this._admittedExtensions.add(extensionId);
+		return { allowed: true, generation: this._generation };
 	}
 }
 
@@ -127,9 +153,12 @@ const csharpEditingSafetyConfigurationKeys = new Set([
 ]);
 const csharpEditingConfigurationStops = new WeakMap<IExtensionService, WeakMap<object, Promise<void>>>();
 
-function hasActiveCSharpEditingExtension(extensionService: IExtensionService): boolean {
+function hasActiveCSharpEditingExtension(extensionService: IExtensionService, coordinator: CSharpEditingAdmissionCoordinator): boolean {
+	if (coordinator.hasAdmittedExtension) {
+		return true;
+	}
 	try {
-		return Object.values(extensionService.getExtensionsStatus()).some(status => status.activationStarted && csharpEditingAdmissionExtensionIds.has(ExtensionIdentifier.toKey(status.id)));
+		return Object.values(extensionService.getExtensionsStatus()).some(status => status.activationTimes !== undefined && csharpEditingAdmissionExtensionIds.has(ExtensionIdentifier.toKey(status.id)));
 	} catch {
 		return true;
 	}
@@ -139,7 +168,7 @@ function affectsCSharpEditingSafetyConfiguration(event: Pick<IConfigurationChang
 	return [...event.affectedKeys].some(key => csharpEditingSafetyConfigurationKeys.has(key) || [...csharpEditingSafetyConfigurationKeys].some(setting => key.startsWith(`${setting}.`) || setting.startsWith(`${key}.`)));
 }
 
-/** Stops an active shared host before any changed safety settings can be forwarded. */
+/** Revokes in-flight admission checks and stops an active shared host before safety settings are forwarded. */
 export async function forwardCSharpEditingConfigurationChange(
 	coordinator: CSharpEditingAdmissionCoordinator,
 	event: Pick<IConfigurationChangeEvent, 'affectedKeys'>,
@@ -151,12 +180,22 @@ export async function forwardCSharpEditingConfigurationChange(
 	if (coordinator.isBlocked) {
 		return false;
 	}
-	if (!affectsCSharpEditingSafetyConfiguration(event) || !hasActiveCSharpEditingExtension(extensionService)) {
+	if (!affectsCSharpEditingSafetyConfiguration(event)) {
 		forward();
 		return true;
 	}
 
+	const mustStopHost = hasActiveCSharpEditingExtension(extensionService, coordinator);
+	if (!mustStopHost && !coordinator.hasPendingValidation) {
+		forward();
+		return true;
+	}
+	// A pre-module validator may be in flight even when no extension module is active yet.
 	coordinator.revoke();
+	if (!mustStopHost) {
+		forward();
+		return true;
+	}
 	let stopsForService = csharpEditingConfigurationStops.get(extensionService);
 	if (!stopsForService) {
 		stopsForService = new WeakMap();
@@ -171,7 +210,7 @@ export async function forwardCSharpEditingConfigurationChange(
 			} catch {
 				// A failed stop is never evidence that changed settings are safe to deliver.
 			}
-			const stopped = stopAllowed && !hasActiveCSharpEditingExtension(extensionService);
+			const stopped = stopAllowed && !hasActiveCSharpEditingExtension(extensionService, coordinator);
 			notificationService.notify({
 				severity: stopped ? Severity.Warning : Severity.Error,
 				message: stopped
@@ -248,6 +287,7 @@ export class MainThreadExtensionService implements MainThreadExtensionServiceSha
 		if (checked.allowed || checked.reason !== 'no-permit') {
 			return checked;
 		}
+		const completeValidation = this._csharpEditingAdmissionCoordinator.beginValidation();
 		try {
 			const client = await this._extensionService.getExtension('muhammad-sammy.csharp');
 			const allowed = client && await this._commandService.executeCommand<boolean>('_walker.csharp.checkAdmission', {
@@ -265,6 +305,8 @@ export class MainThreadExtensionService implements MainThreadExtensionServiceSha
 			}
 		} catch {
 			// An absent early contribution, malformed result, or validator failure is a denial.
+		} finally {
+			completeValidation();
 		}
 		return this._csharpEditingAdmissionCoordinator.check(request, installed);
 	}

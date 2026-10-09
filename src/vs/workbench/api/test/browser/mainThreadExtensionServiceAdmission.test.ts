@@ -103,8 +103,53 @@ suite('C# editing main-thread admission coordinator', () => {
 		}
 	});
 
+	test('does not stop the shared host for an activation attempt denied before module loading', async () => {
+		const coordinator = new CSharpEditingAdmissionCoordinator(ExtensionHostKind.LocalProcess);
+		const events: string[] = [];
+		let stops = 0;
+		const extensionService = {
+			getExtensionsStatus: () => ({ [runtimeId]: { id: new ExtensionIdentifier(runtimeId), activationStarted: true } as IExtensionsStatus }),
+			stopExtensionHosts: async () => { stops++; return true; },
+		} as unknown as IExtensionService;
+		const notifications = { notify: () => events.push('notice') } as unknown as INotificationService;
+		const hostService = { reload: () => events.push('reload') } as unknown as IHostService;
+		const change = { affectedKeys: new Set(['dotnetAcquisitionExtension.existingDotnetPath']) } as Pick<IConfigurationChangeEvent, 'affectedKeys'>;
+
+		const forwarded = await forwardCSharpEditingConfigurationChange(coordinator, change, extensionService, notifications, hostService, () => events.push('forward'));
+
+		assert.deepStrictEqual({ events, stops, forwarded, blocked: coordinator.isBlocked, generation: coordinator.generation }, { events: ['forward'], stops: 0, forwarded: true, blocked: false, generation: 0 });
+	});
+
+	test('revokes an in-flight admission before forwarding safety configuration without stopping the host', async () => {
+		const coordinator = new CSharpEditingAdmissionCoordinator(ExtensionHostKind.LocalProcess);
+		const completeValidation = coordinator.beginValidation();
+		const events: string[] = [];
+		let stops = 0;
+		const extensionService = {
+			getExtensionsStatus: () => ({ [runtimeId]: { id: new ExtensionIdentifier(runtimeId), activationStarted: true } as IExtensionsStatus }),
+			stopExtensionHosts: async () => { stops++; return true; },
+		} as unknown as IExtensionService;
+		const notifications = { notify: () => events.push('notice') } as unknown as INotificationService;
+		const hostService = { reload: () => events.push('reload') } as unknown as IHostService;
+		const change = { affectedKeys: new Set(['dotnetAcquisitionExtension.existingDotnetPath']) } as Pick<IConfigurationChangeEvent, 'affectedKeys'>;
+
+		const forwarded = await forwardCSharpEditingConfigurationChange(coordinator, change, extensionService, notifications, hostService, () => events.push('forward'));
+		assert.deepStrictEqual({ events, stops, forwarded, blocked: coordinator.isBlocked, generation: coordinator.generation }, { events: ['forward'], stops: 0, forwarded: true, blocked: true, generation: 1 });
+		completeValidation();
+		const installed = extension(runtimeId);
+		assert.deepStrictEqual(coordinator.check({
+			extensionId: runtimeId,
+			installedVersion: installed.version,
+			extensionLocation: installed.extensionLocation,
+			hostKind: 'local',
+			generation: 0,
+		}, installed, true), { allowed: false, generation: 1, reason: 'stale-generation' });
+	});
+
 	test('stops an active shared host before withholding a safety configuration update', async () => {
 		const coordinator = new CSharpEditingAdmissionCoordinator(ExtensionHostKind.LocalProcess);
+		const admitted = extension(clientId);
+		coordinator.check({ extensionId: clientId, installedVersion: admitted.version, extensionLocation: admitted.extensionLocation, hostKind: 'local', generation: 0 }, admitted, true);
 		const events: string[] = [];
 		let active = true;
 		const extensionService = {
@@ -125,6 +170,8 @@ suite('C# editing main-thread admission coordinator', () => {
 
 	test('withholds unsafe and subsequent snapshots if stopping fails, but forwards unrelated changes', async () => {
 		const coordinator = new CSharpEditingAdmissionCoordinator(ExtensionHostKind.LocalProcess);
+		const admitted = extension(runtimeId);
+		coordinator.check({ extensionId: runtimeId, installedVersion: admitted.version, extensionLocation: admitted.extensionLocation, hostKind: 'local', generation: 0 }, admitted, true);
 		let stops = 0;
 		const extensionService = {
 			getExtensionsStatus: () => ({ [runtimeId]: { id: new ExtensionIdentifier(runtimeId), activationStarted: true } as IExtensionsStatus }),

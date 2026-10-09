@@ -12,8 +12,10 @@ import { toAction } from '../../../../base/common/actions.js';
 import { localize } from '../../../../nls.js';
 import { CommandsRegistry, ICommandService } from '../../../../platform/commands/common/commands.js';
 import { IConfigurationService, ConfigurationTarget } from '../../../../platform/configuration/common/configuration.js';
+import { Extensions as ConfigurationExtensions, IConfigurationRegistry } from '../../../../platform/configuration/common/configurationRegistry.js';
 import { IProductService } from '../../../../platform/product/common/productService.js';
 import { ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
+import { Registry } from '../../../../platform/registry/common/platform.js';
 import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
 import { INotificationService, Severity } from '../../../../platform/notification/common/notification.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
@@ -29,12 +31,12 @@ import { IExtensionsWorkbenchService, IExtension } from '../../extensions/common
 import { ExtensionIdentifier } from '../../../../platform/extensions/common/extensions.js';
 import { CSharpEditingAdmissionHostKind } from '../../../api/common/extHost.protocol.js';
 import { CSHARP_EDITING_CLIENT_ID, CSHARP_EDITING_CLIENT_VERSION, CSHARP_EDITING_PROFILE_SETTINGS, CSHARP_EDITING_RUNTIME_ID, CSHARP_EDITING_RUNTIME_VERSION, CSHARP_EDITING_VALIDATED_PLATFORM, CSharpEditingSettingKey } from '../common/editingPolicy.js';
-import { evaluateCSharpEditingAdmission } from '../common/editingAdmission.js';
+import { evaluateCSharpEditingAdmission, evaluateCSharpRuntimeDependencyAdmission } from '../common/editingAdmission.js';
 import { CSharpRuntimeMappingGuard } from '../common/runtimeMapping.js';
 import { DOTNET_TOOLCHAIN_COMMANDS, executeDotnetEditingHostCommand } from '../common/toolchainContract.js';
 import { CSharpEditingRepairAction, CSharpEditingStatus, getCSharpEditingRepairActions, getCSharpEditingStatus, getCSharpEditingStatusLabel } from '../common/editingStatus.js';
-import { configureCSharpEditing, CSharpEditingFailureAction, CSharpEditingFailureReason, ICSharpEditingAcquisitionServices } from './configureEditing.js';
-import { configureCSharpEditingRuntimeProfile, IProfileSettingSnapshot } from './profileConfiguration.js';
+import { configureCSharpEditing, configureCSharpEditingWithToolchainPreflight, CSharpEditingFailureAction, CSharpEditingFailureReason, getCSharpEditingFailureRepairAction, ICSharpEditingAcquisitionServices } from './configureEditing.js';
+import { configureCSharpEditingRuntimeProfile, CSHARP_EDITING_CONFIGURATION_OWNERS, CSharpEditingConfigurationOwner, IProfileSettingSnapshot } from './profileConfiguration.js';
 import { platform, arch } from '../../../../base/common/process.js';
 
 export const CSHARP_EDITING_CONFIGURE_COMMAND = 'walker.csharp.configureEditing';
@@ -53,6 +55,12 @@ interface IAdmissionRequest {
 	readonly clientVersion: string;
 	readonly clientLocation: unknown;
 	readonly clientTargetPlatform: string;
+}
+
+interface ICSharpEditingRepairServices {
+	readonly notifications: INotificationService;
+	readonly command: ICommandService;
+	readonly host: IHostService;
 }
 
 function setStatus(status: CSharpEditingStatus): void {
@@ -83,7 +91,11 @@ function extensionId(extension: IExtension | undefined): string | undefined {
 function getProfileSettings(accessor: ServicesAccessor) {
 	const configuration = accessor.get(IConfigurationService);
 	const storage = accessor.get(IStorageService);
+	const workbenchExtensions = accessor.get(IExtensionsWorkbenchService);
+	const enablement = accessor.get(IWorkbenchExtensionEnablementService);
+	const extensionService = accessor.get(IExtensionService);
 	const profile = accessor.get(IUserDataProfileService).currentProfile;
+	let registeredSettings: ReadonlySet<string> | undefined;
 	const read = async (key: string): Promise<IProfileSettingSnapshot> => {
 		const value = configuration.inspect<unknown>(key).userLocal;
 		return value ? { present: true, value: value.value } : { present: false };
@@ -91,12 +103,26 @@ function getProfileSettings(accessor: ServicesAccessor) {
 	const write = async (key: string, value: IProfileSettingSnapshot): Promise<void> => {
 		await configuration.updateValue(key, value.present ? value.value : undefined, ConfigurationTarget.USER_LOCAL);
 	};
+	const isRegistered = async (key: string): Promise<boolean> => {
+		if (!registeredSettings) {
+			await extensionService.whenInstalledExtensionsRegistered();
+			registeredSettings = new Set(Object.keys(Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).getConfigurationProperties()));
+		}
+		return registeredSettings.has(key);
+	};
 	return {
 		profileId: profile.id,
 		configurationProfileId: profile.id,
 		journalProfileId: profile.id,
 		readUserProfileSetting: read,
 		writeUserProfileSetting: write,
+		async isConfigurationOwnerInstalled(owner: CSharpEditingConfigurationOwner) {
+			const expected = CSHARP_EDITING_CONFIGURATION_OWNERS[owner];
+			const local = await workbenchExtensions.queryLocal();
+			const extension = local.find(candidate => extensionId(candidate) === expected.id);
+			return !!extension?.local && extension.version === expected.version && enablement.isEnabled(extension.local);
+		},
+		isUserProfileSettingRegistered: isRegistered,
 		async readProfileJournal() {
 			const stored = storage.get(journalKey, StorageScope.PROFILE);
 			return stored === undefined ? undefined : JSON.parse(stored);
@@ -155,15 +181,122 @@ function resourceValue<T>(configuration: IConfigurationService, key: string, res
 	return { value, scope };
 }
 
+async function validateRuntimeDependencyAdmission(accessor: ServicesAccessor, request: IAdmissionRequest): Promise<boolean> {
+	try {
+		const extensionService = accessor.get(IExtensionService);
+		const extensions = accessor.get(IExtensionsWorkbenchService);
+		const enablement = accessor.get(IWorkbenchExtensionEnablementService);
+		const configuration = accessor.get(IConfigurationService);
+		const workspace = accessor.get(IWorkspaceContextService);
+		const command = accessor.get(ICommandService);
+		const profile = getProfileSettings(accessor);
+		const runtime = await extensionService.getExtension(CSHARP_EDITING_RUNTIME_ID);
+		const client = await extensionService.getExtension(CSHARP_EDITING_CLIENT_ID);
+		const local = await extensions.queryLocal();
+		const runtimeLocal = local.find(extension => extensionId(extension) === CSHARP_EDITING_RUNTIME_ID);
+		const clientLocal = local.find(extension => extensionId(extension) === CSHARP_EDITING_CLIENT_ID);
+		const telemetrySettingKey = 'dotnetAcquisitionExtension.enableTelemetry';
+		const telemetrySetting = await profile.readUserProfileSetting(telemetrySettingKey);
+		const telemetryRegistered = await profile.isUserProfileSettingRegistered(telemetrySettingKey);
+		const folders = workspace.getWorkspace().folders;
+		const resources = folders.length ? folders.map(folder => folder.uri) : [undefined];
+		const effectiveTelemetryValues = resources.map(resource => resourceValue(configuration, telemetrySettingKey, resource).value);
+		const baseAdmission = evaluateCSharpRuntimeDependencyAdmission({
+			runtimeDependency: runtime && {
+				id: ExtensionIdentifier.toKey(runtime.identifier),
+				version: runtime.version,
+				enabled: !!runtimeLocal?.local && runtimeLocal.version === runtime.version && enablement.isEnabled(runtimeLocal.local),
+			},
+			hostKind: request.hostKind,
+			platform: request.platform,
+			architecture: request.architecture,
+			telemetrySetting: {
+				registered: telemetryRegistered,
+				profileValue: telemetrySetting.present ? telemetrySetting.value : undefined,
+				effectiveValues: effectiveTelemetryValues,
+			},
+			runtimeMapping: { eligible: false },
+			inheritedEnvironmentVariableNames: request.inheritedEnvironmentVariableNames,
+		});
+		if (baseAdmission.eligible || baseAdmission.reason !== 'runtime-mapping-unavailable') {
+			setStatus(baseAdmission.eligible ? 'starting' : baseAdmission.reason === 'unsupported-host' ? 'unsupported' : 'conflict');
+			return false;
+		}
+		if (!client || client.version !== CSHARP_EDITING_CLIENT_VERSION || client.targetPlatform !== CSHARP_EDITING_VALIDATED_PLATFORM
+			|| !clientLocal?.local || clientLocal.version !== client.version || !enablement.isEnabled(clientLocal.local)) {
+			setStatus('conflict');
+			return false;
+		}
+
+		const mappingSettingKey = 'dotnetAcquisitionExtension.existingDotnetPath';
+		const allowInvalidPathsKey = 'dotnetAcquisitionExtension.allowInvalidPaths';
+		const mappingProfile = await profile.readUserProfileSetting(mappingSettingKey);
+		const allowInvalidPathsProfile = await profile.readUserProfileSetting(allowInvalidPathsKey);
+		const [mappingRegistered, allowInvalidPathsRegistered] = await Promise.all([
+			profile.isUserProfileSettingRegistered(mappingSettingKey),
+			profile.isUserProfileSettingRegistered(allowInvalidPathsKey),
+		]);
+		if (!mappingRegistered || !allowInvalidPathsRegistered || !mappingProfile.present || !allowInvalidPathsProfile.present || allowInvalidPathsProfile.value !== false) {
+			setStatus('conflict');
+			return false;
+		}
+
+		const host = await executeDotnetEditingHostCommand((id, payload) => command.executeCommand(id, payload), request.platform as 'linux');
+		if (host.kind !== 'ready') {
+			setStatus('toolchain');
+			return false;
+		}
+		const mappingEligible = resources.every(resource => CSharpRuntimeMappingGuard({
+			client: { id: CSHARP_EDITING_CLIENT_ID, version: client.version, targetPlatform: client.targetPlatform },
+			runtimeDependency: runtime && { id: ExtensionIdentifier.toKey(runtime.identifier), version: runtime.version },
+			platform: request.platform,
+			architecture: request.architecture,
+			host,
+			existingDotnetPath: resourceValue(configuration, mappingSettingKey, resource).value,
+			sharedExistingDotnetPath: resourceValue(configuration, 'dotnetAcquisitionExtension.sharedExistingDotnetPath', resource).value,
+			allowInvalidPaths: resourceValue(configuration, allowInvalidPathsKey, resource).value,
+		}).eligible);
+		const admission = evaluateCSharpRuntimeDependencyAdmission({
+			runtimeDependency: runtime && {
+				id: ExtensionIdentifier.toKey(runtime.identifier),
+				version: runtime.version,
+				enabled: !!runtimeLocal?.local && runtimeLocal.version === runtime.version && enablement.isEnabled(runtimeLocal.local),
+			},
+			hostKind: request.hostKind,
+			platform: request.platform,
+			architecture: request.architecture,
+			telemetrySetting: {
+				registered: telemetryRegistered,
+				profileValue: telemetrySetting.present ? telemetrySetting.value : undefined,
+				effectiveValues: effectiveTelemetryValues,
+			},
+			runtimeMapping: { eligible: mappingEligible },
+			inheritedEnvironmentVariableNames: request.inheritedEnvironmentVariableNames,
+		});
+		if (!admission.eligible) {
+			setStatus(admission.reason === 'unsupported-host' ? 'unsupported' : 'conflict');
+			return false;
+		}
+		return true;
+	} catch {
+		setStatus('error');
+		return false;
+	}
+}
+
 async function validateAdmission(accessor: ServicesAccessor, value: unknown): Promise<boolean> {
 	if (!isAdmissionRequest(value)) {
 		setStatus('error');
 		return false;
 	}
 	const request = value;
-	if (!['muhammad-sammy.csharp', CSHARP_EDITING_RUNTIME_ID].includes(ExtensionIdentifier.toKey(request.extensionId)) || request.hostKind !== 'local' || request.platform !== 'linux' || request.architecture !== 'x64') {
+	const requestedExtensionId = ExtensionIdentifier.toKey(request.extensionId);
+	if (!['muhammad-sammy.csharp', CSHARP_EDITING_RUNTIME_ID].includes(requestedExtensionId) || request.hostKind !== 'local' || request.platform !== 'linux' || request.architecture !== 'x64') {
 		setStatus('unsupported');
 		return false;
+	}
+	if (requestedExtensionId === CSHARP_EDITING_RUNTIME_ID) {
+		return validateRuntimeDependencyAdmission(accessor, request);
 	}
 	try {
 		const extensionService = accessor.get(IExtensionService);
@@ -253,41 +386,75 @@ async function validateAdmission(accessor: ServicesAccessor, value: unknown): Pr
 }
 
 async function configureEditing(accessor: ServicesAccessor): Promise<void> {
-	const notifications = accessor.get(INotificationService);
-	const command = accessor.get(ICommandService);
+	// ServicesAccessor is valid only during command invocation; retain every service before the first await.
+	const repairServices: ICSharpEditingRepairServices = {
+		notifications: accessor.get(INotificationService),
+		command: accessor.get(ICommandService),
+		host: accessor.get(IHostService),
+	};
+	const configuration = accessor.get(IConfigurationService);
+	const extensionService = accessor.get(IExtensionService);
+	const services = acquisitionServices(accessor);
 	admissionValidated = false;
 	try {
-		const result = await configureCSharpEditing(acquisitionServices(accessor));
+		const configurationResult = await configureCSharpEditingWithToolchainPreflight(
+			() => executeDotnetEditingHostCommand((id, payload) => repairServices.command.executeCommand(id, payload), platform as 'linux' | 'darwin' | 'win32'),
+			() => configureCSharpEditing(services),
+		);
+		if (configurationResult.kind === 'toolchain-not-ready') {
+			setStatus(configurationResult.toolchain.kind === 'unavailable' && configurationResult.toolchain.reason === 'unsupported-host' ? 'unsupported' : 'toolchain');
+			showStatus(repairServices, currentStatus);
+			return;
+		}
+		const { toolchain: host, configuration: result } = configurationResult;
+		if (result.kind === 'pending') {
+			setStatus('starting');
+			showPendingConfiguration(repairServices, result.pendingSettings);
+			return;
+		}
 		if (result.kind !== 'configured') {
 			const status = result.kind === 'refused' && result.reason === 'client-disabled' ? 'disabled'
 				: result.kind === 'refused' ? 'conflict' : 'error';
 			setStatus(status);
 			if (result.kind === 'failed') {
-				showAcquisitionFailure(accessor, result.reason, result.action, result.rollback);
+				showAcquisitionFailure(repairServices, result.reason, result.action, result.rollback);
 			} else {
-				showStatus(accessor, currentStatus);
+				showStatus(repairServices, currentStatus);
 			}
 			return;
 		}
-		const host = await executeDotnetEditingHostCommand((id, payload) => command.executeCommand(id, payload), platform as 'linux' | 'darwin' | 'win32');
-		if (host.kind !== 'ready' || platform !== 'linux' || arch !== 'x64') {
-			setStatus('toolchain');
-			showStatus(accessor, currentStatus);
-			return;
-		}
-		const client = await accessor.get(IExtensionService).getExtension(CSHARP_EDITING_CLIENT_ID);
-		const runtime = await accessor.get(IExtensionService).getExtension(CSHARP_EDITING_RUNTIME_ID);
-		if (!client || !runtime || client.version !== CSHARP_EDITING_CLIENT_VERSION || runtime.version !== CSHARP_EDITING_RUNTIME_VERSION || client.targetPlatform !== CSHARP_EDITING_VALIDATED_PLATFORM) {
+		const runtime = await extensionService.getExtension(CSHARP_EDITING_RUNTIME_ID);
+		if (!runtime) {
 			setStatus('starting');
-			showStatus(accessor, currentStatus);
+			showPendingConfiguration(repairServices, ['dotnetAcquisitionExtension.enableTelemetry']);
 			return;
 		}
-		const services = acquisitionServices(accessor);
+		if (runtime.version !== CSHARP_EDITING_RUNTIME_VERSION) {
+			setStatus('conflict');
+			showStatus(repairServices, currentStatus);
+			return;
+		}
+		const client = await extensionService.getExtension(CSHARP_EDITING_CLIENT_ID);
+		if (!client) {
+			setStatus('starting');
+			showPendingConfiguration(repairServices, ['C# client configuration schema']);
+			return;
+		}
+		if (client.version !== CSHARP_EDITING_CLIENT_VERSION || client.targetPlatform !== CSHARP_EDITING_VALIDATED_PLATFORM) {
+			setStatus('conflict');
+			showStatus(repairServices, currentStatus);
+			return;
+		}
+		if (platform !== 'linux' || arch !== 'x64') {
+			setStatus('unsupported');
+			showStatus(repairServices, currentStatus);
+			return;
+		}
 		const current = await services.readUserProfileSetting('dotnetAcquisitionExtension.existingDotnetPath');
 		const existing = current.present ? current.value : [];
 		if (!Array.isArray(existing) || existing.some(entry => !isRecord(entry) || typeof entry.extensionId !== 'string' || typeof entry.path !== 'string')) {
 			setStatus('conflict');
-			showStatus(accessor, currentStatus);
+			showStatus(repairServices, currentStatus);
 			return;
 		}
 		const mapping = existing.filter(entry => (entry as { extensionId: string }).extensionId !== CSHARP_EDITING_CLIENT_ID) as { extensionId: string; path: string }[];
@@ -300,42 +467,46 @@ async function configureEditing(accessor: ServicesAccessor): Promise<void> {
 			architecture: arch,
 			host,
 			existingDotnetPath: mapping,
-			sharedExistingDotnetPath: accessor.get(IConfigurationService).getValue('dotnetAcquisitionExtension.sharedExistingDotnetPath'),
-			allowInvalidPaths: accessor.get(IConfigurationService).getValue('dotnetAcquisitionExtension.allowInvalidPaths'),
+			sharedExistingDotnetPath: configuration.getValue('dotnetAcquisitionExtension.sharedExistingDotnetPath'),
+			allowInvalidPaths: configuration.getValue('dotnetAcquisitionExtension.allowInvalidPaths'),
 		});
 		if (!guarded.eligible) {
 			setStatus('conflict');
-			showStatus(accessor, currentStatus);
+			showStatus(repairServices, currentStatus);
 			return;
 		}
 		const configured = await configureCSharpEditingRuntimeProfile(services, { serverPath, dotnetRoot: host.root, executable: host.executable, existingDotnetPath: mapping });
+		if (configured.kind === 'pending') {
+			setStatus('starting');
+			showPendingConfiguration(repairServices, configured.pendingSettings);
+			return;
+		}
 		if (configured.kind !== 'ready') {
-			setStatus('error');
-			showStatus(accessor, currentStatus);
+			setStatus(configured.kind === 'refused' ? 'conflict' : 'error');
+			showStatus(repairServices, currentStatus);
 			return;
 		}
 		setStatus('starting');
-		notifications.notify({
+		repairServices.notifications.notify({
 			severity: Severity.Info,
 			message: localize('csharpEditing.reloadForAdmission', "C# editing was configured for the verified local Linux toolchain. Reload the window to apply the profile and recheck admission."),
-			actions: { primary: [toAction({ id: 'reloadCSharpEditing', label: localize('csharpEditing.reload', "Reload Window"), run: () => accessor.get(IHostService).reload() })] },
+			actions: { primary: [toAction({ id: 'reloadCSharpEditing', label: localize('csharpEditing.reload', "Reload Window"), run: () => repairServices.host.reload() })] },
 		});
 	} catch {
 		setStatus('error');
-		showStatus(accessor, currentStatus);
+		showStatus(repairServices, currentStatus);
 	}
 }
 
 function showAcquisitionFailure(
-	accessor: ServicesAccessor,
+	repairServices: ICSharpEditingRepairServices,
 	reason: CSharpEditingFailureReason,
 	action: CSharpEditingFailureAction,
 	rollback: 'not-needed' | 'complete' | 'incomplete',
 ): void {
-	const command = accessor.get(ICommandService);
-	const host = accessor.get(IHostService);
+	const { command, host, notifications } = repairServices;
 	const message = reason === 'signature-verification'
-		? localize('csharpEditing.install.signatureFailure', "Open VSX rejected the C# package signature. Walker left extensions.verifySignature unchanged; review the explicit profile-level workaround and its security trade-off before deciding whether to proceed.")
+		? localize('csharpEditing.install.signatureFailure', "Open VSX rejected the C# package signature. Walker left extensions.verifySignature unchanged; review the explicit profile-level workaround and its security trade-off before deciding whether to proceed. Runtime telemetry configuration remains pending, and no C# language session was admitted.")
 		: reason === 'offline'
 			? localize('csharpEditing.install.offlineFailure', "The Open VSX gallery could not be reached. C# Editing was not installed; retry when the gallery is available.")
 			: reason === 'access-denied'
@@ -346,8 +517,8 @@ function showAcquisitionFailure(
 	const rollbackNotice = rollback === 'incomplete'
 		? localize('csharpEditing.install.rollbackIncomplete', " Some Walker-owned settings could not be restored; review the profile settings before retrying.")
 		: '';
-	const repairAction = acquisitionRepairAction(action);
-	accessor.get(INotificationService).notify({
+	const repairAction = getCSharpEditingFailureRepairAction(action);
+	notifications.notify({
 		severity: Severity.Error,
 		message: message + rollbackNotice,
 		actions: {
@@ -360,22 +531,28 @@ function showAcquisitionFailure(
 	});
 }
 
-function acquisitionRepairAction(action: CSharpEditingFailureAction): CSharpEditingRepairAction {
-	switch (action) {
-		case 'repair-profile-configuration': return 'openSettings';
-		case 'retry-gallery':
-		case 'retry-when-online':
-		case 'retry-install': return 'configure';
-		case 'review-profile-signature-workaround': return 'openSignatureSettings';
-		case 'review-gallery-access':
-		case 'repair-extension-state': return 'openExtension';
-	}
+function showPendingConfiguration(repairServices: ICSharpEditingRepairServices, settings: readonly string[]): void {
+	const settingList = settings.length ? settings.join(', ') : 'runtime profile settings';
+	const hasRuntimeTelemetryPending = settings.includes('dotnetAcquisitionExtension.enableTelemetry');
+	const hasOtherSettingsPending = settings.some(setting => setting !== 'dotnetAcquisitionExtension.enableTelemetry');
+	const message = hasRuntimeTelemetryPending && !hasOtherSettingsPending
+		? localize('csharpEditing.install.pendingRuntimeSetting', "C# Editing is not ready. Profile setting {0} remains pending until the declared .NET runtime dependency is installed and registers its schema; no unregistered setting was written. Retry after the dependency is available.", settingList)
+		: localize('csharpEditing.install.pendingSettings', "C# Editing is not ready. Profile settings {0} remain pending until each owning extension is installed and registers its schema; registered settings may already be configured, but admission remains denied until all settings are validated.", settingList);
+	repairServices.notifications.notify({
+		severity: Severity.Warning,
+		message,
+		actions: {
+			primary: [toAction({
+				id: 'csharpEditing.retryPendingConfiguration',
+				label: actionLabel('configure'),
+				run: () => runRepairAction('configure', repairServices.command, repairServices.host),
+			})],
+		},
+	});
 }
 
-function showStatus(accessor: ServicesAccessor, status: CSharpEditingStatus): void {
-	const notifications = accessor.get(INotificationService);
-	const command = accessor.get(ICommandService);
-	const host = accessor.get(IHostService);
+function showStatus(repairServices: ICSharpEditingRepairServices, status: CSharpEditingStatus): void {
+	const { notifications, command, host } = repairServices;
 	const actions = getCSharpEditingRepairActions(status).map(action => toAction({
 		id: `csharpEditing.${action}`,
 		label: actionLabel(action),

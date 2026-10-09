@@ -3,14 +3,35 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CSHARP_EDITING_PROFILE_SETTINGS, CSharpEditingSettingKey } from '../common/editingPolicy.js';
+import { CSHARP_EDITING_CLIENT_ID, CSHARP_EDITING_CLIENT_VERSION, CSHARP_EDITING_CONFIGURATION_DEFAULTS, CSHARP_EDITING_PROFILE_SETTINGS, CSHARP_EDITING_RUNTIME_ID, CSHARP_EDITING_RUNTIME_VERSION, CSharpEditingSettingKey } from '../common/editingPolicy.js';
 
 export type IProfileSettingSnapshot =
 	| { readonly present: false }
 	| { readonly present: true; readonly value: unknown };
 
 export type CSharpEditingRuntimeSettingKey = 'dotnet.server.path' | 'dotnet.server.environmentVariables' | 'dotnet.server.crashDumpPath' | 'dotnetAcquisitionExtension.existingDotnetPath' | 'dotnetAcquisitionExtension.allowInvalidPaths';
-type CSharpEditingProfileSettingKey = CSharpEditingSettingKey | CSharpEditingRuntimeSettingKey;
+export type CSharpEditingRuntimeTelemetrySettingKey = 'dotnetAcquisitionExtension.enableTelemetry';
+export type CSharpEditingProfileSettingKey = CSharpEditingSettingKey | CSharpEditingRuntimeSettingKey;
+export type CSharpEditingConfigurationOwner = 'solution-explorer' | 'csharp-client' | 'dotnet-runtime';
+
+export const CSHARP_EDITING_CONFIGURATION_OWNERS = {
+	'solution-explorer': { id: 'vscode.solution-explorer', version: '0.0.1' },
+	'csharp-client': { id: CSHARP_EDITING_CLIENT_ID, version: CSHARP_EDITING_CLIENT_VERSION },
+	'dotnet-runtime': { id: CSHARP_EDITING_RUNTIME_ID, version: CSHARP_EDITING_RUNTIME_VERSION },
+} as const;
+
+const configurationOwnerBySetting: Record<CSharpEditingProfileSettingKey, CSharpEditingConfigurationOwner> = {
+	'dotnet.server.useOmnisharp': 'csharp-client',
+	'chat.disableAIFeatures': 'solution-explorer',
+	'dotnet.projects.enableAutomaticRestore': 'csharp-client',
+	'dotnet.navigation.navigateToSourceLinkAndEmbeddedSources': 'csharp-client',
+	'dotnetAcquisitionExtension.enableTelemetry': 'dotnet-runtime',
+	'dotnet.server.path': 'csharp-client',
+	'dotnet.server.environmentVariables': 'csharp-client',
+	'dotnet.server.crashDumpPath': 'csharp-client',
+	'dotnetAcquisitionExtension.existingDotnetPath': 'dotnet-runtime',
+	'dotnetAcquisitionExtension.allowInvalidPaths': 'dotnet-runtime',
+};
 
 export interface ICSharpEditingConfigurationJournalEntry {
 	readonly value: unknown;
@@ -29,13 +50,16 @@ export interface IProfileConfigurationServices {
 	readonly journalProfileId: string;
 	readUserProfileSetting(key: CSharpEditingProfileSettingKey): Promise<IProfileSettingSnapshot>;
 	writeUserProfileSetting(key: CSharpEditingProfileSettingKey, value: IProfileSettingSnapshot): Promise<void>;
+	isConfigurationOwnerInstalled(owner: CSharpEditingConfigurationOwner): Promise<boolean>;
+	isUserProfileSettingRegistered(key: CSharpEditingProfileSettingKey): Promise<boolean>;
 	readProfileJournal(): Promise<unknown>;
 	writeProfileJournal(journal: ICSharpEditingConfigurationJournal): Promise<void>;
 	removeProfileJournal(): Promise<void>;
 }
 
 export type ProfileConfigurationResult =
-	| { readonly kind: 'ready' }
+	| { readonly kind: 'ready'; readonly pendingSettings?: readonly CSharpEditingProfileSettingKey[] }
+	| { readonly kind: 'pending'; readonly pendingSettings: readonly CSharpEditingProfileSettingKey[] }
 	| { readonly kind: 'refused'; readonly reason: 'profile-mismatch' | 'journal-invalid' | 'profile-setting-changed' | 'profile-setting-invalid' }
 	| { readonly kind: 'failed'; readonly reason: 'configuration-failed' | 'storage-failed'; readonly rollback: 'not-needed' | 'complete' | 'incomplete' };
 
@@ -63,6 +87,22 @@ export async function configureCSharpEditingRuntimeProfile(services: IProfileCon
 		return { kind: 'refused', reason: isJournalForAnyProfile(stored) ? 'profile-mismatch' : 'journal-invalid' };
 	}
 	const previousJournal = stored as ICSharpEditingConfigurationJournal | undefined;
+	const pendingSettings: CSharpEditingRuntimeSettingKey[] = [];
+	const configuredSettings: CSharpEditingRuntimeSettingKey[] = [];
+	try {
+		for (const key of runtimeSettingKeys()) {
+			if (await isSettingReady(services, key)) {
+				configuredSettings.push(key);
+			} else {
+				pendingSettings.push(key);
+			}
+		}
+	} catch {
+		return { kind: 'failed', reason: 'configuration-failed', rollback: 'not-needed' };
+	}
+	if (configuredSettings.length === 0) {
+		return { kind: 'pending', pendingSettings };
+	}
 	const valuesByKey: Record<CSharpEditingRuntimeSettingKey, unknown> = {
 		'dotnet.server.path': values.serverPath,
 		'dotnet.server.environmentVariables': { DOTNET_CLI_TELEMETRY_OPTOUT: '1', DOTNET_NOLOGO: '1', DOTNET_ROOT: values.dotnetRoot, DOTNET_MULTILEVEL_LOOKUP: '0' },
@@ -72,16 +112,16 @@ export async function configureCSharpEditingRuntimeProfile(services: IProfileCon
 	};
 	const settings: ICSharpEditingConfigurationJournal['settings'] = { ...previousJournal?.settings };
 	try {
-		for (const key of runtimeSettingKeys()) {
+		for (const key of configuredSettings) {
 			const current = await services.readUserProfileSetting(key);
 			if (!isProfileSettingSnapshot(current)) {
 				return { kind: 'refused', reason: 'profile-setting-invalid' };
 			}
 			const previous = previousJournal?.settings[key];
-			if (previous && !isOwnedValue(current, previous.value)) {
+			if (previous && !isUnchangedOrOwnedValue(current, previous)) {
 				return { kind: 'refused', reason: 'profile-setting-changed' };
 			}
-			settings[key] = previous ?? { value: valuesByKey[key], previous: current };
+			settings[key] = previous ? { ...previous, value: valuesByKey[key] } : { value: valuesByKey[key], previous: current };
 		}
 	} catch {
 		return { kind: 'failed', reason: 'configuration-failed', rollback: 'not-needed' };
@@ -92,9 +132,72 @@ export async function configureCSharpEditingRuntimeProfile(services: IProfileCon
 		return { kind: 'failed', reason: 'storage-failed', rollback: 'not-needed' };
 	}
 	try {
-		for (const key of runtimeSettingKeys()) {
+		for (const key of configuredSettings) {
+			if (!await services.isConfigurationOwnerInstalled(configurationOwnerBySetting[key])) {
+				const rollback = await rollbackCSharpEditingProfileConfiguration(services);
+				return rollback.kind === 'complete'
+					? { kind: 'pending', pendingSettings: [...new Set([...pendingSettings, key])] }
+					: { kind: 'failed', reason: 'configuration-failed', rollback: rollback.kind };
+			}
 			await services.writeUserProfileSetting(key, { present: true, value: valuesByKey[key] });
 		}
+	} catch {
+		const rollback = await rollbackCSharpEditingProfileConfiguration(services);
+		return { kind: 'failed', reason: 'configuration-failed', rollback: rollback.kind };
+	}
+	return pendingSettings.length ? { kind: 'pending', pendingSettings } : { kind: 'ready' };
+}
+
+/** Applies runtime-extension telemetry suppression only after its exact dependency and setting schema exist. */
+export async function configureCSharpEditingRuntimeTelemetryProfile(
+	services: IProfileConfigurationServices,
+	dependency: { readonly id: string; readonly version: string },
+): Promise<ProfileConfigurationResult> {
+	const key: CSharpEditingRuntimeTelemetrySettingKey = 'dotnetAcquisitionExtension.enableTelemetry';
+	if (!hasOneProfile(services) || dependency.id !== CSHARP_EDITING_RUNTIME_ID || dependency.version !== CSHARP_EDITING_RUNTIME_VERSION) {
+		return { kind: 'refused', reason: 'profile-mismatch' };
+	}
+	let stored: unknown;
+	try {
+		stored = await services.readProfileJournal();
+	} catch {
+		return { kind: 'failed', reason: 'storage-failed', rollback: 'not-needed' };
+	}
+	if (stored !== undefined && !isJournalForProfile(stored, services.profileId)) {
+		return { kind: 'refused', reason: isJournalForAnyProfile(stored) ? 'profile-mismatch' : 'journal-invalid' };
+	}
+	try {
+		if (!await isSettingReady(services, key)) {
+			return { kind: 'pending', pendingSettings: [key] };
+		}
+	} catch {
+		return { kind: 'failed', reason: 'configuration-failed', rollback: 'not-needed' };
+	}
+	const previousJournal = stored as ICSharpEditingConfigurationJournal | undefined;
+	let current: IProfileSettingSnapshot;
+	try {
+		current = await services.readUserProfileSetting(key);
+	} catch {
+		return { kind: 'failed', reason: 'configuration-failed', rollback: 'not-needed' };
+	}
+	if (!isProfileSettingSnapshot(current) || (current.present && typeof current.value !== 'boolean')) {
+		return { kind: 'refused', reason: 'profile-setting-invalid' };
+	}
+	const previous = previousJournal?.settings[key];
+	if (previous && !isUnchangedOrOwnedValue(current, previous)) {
+		return { kind: 'refused', reason: 'profile-setting-changed' };
+	}
+	const settings: ICSharpEditingConfigurationJournal['settings'] = {
+		...previousJournal?.settings,
+		[key]: previous ? { ...previous, value: false } : { value: false, previous: current },
+	};
+	try {
+		await services.writeProfileJournal({ version: 1, profileId: services.profileId, settings });
+	} catch {
+		return { kind: 'failed', reason: 'storage-failed', rollback: 'not-needed' };
+	}
+	try {
+		await services.writeUserProfileSetting(key, { present: true, value: false });
 	} catch {
 		const rollback = await rollbackCSharpEditingProfileConfiguration(services);
 		return { kind: 'failed', reason: 'configuration-failed', rollback: rollback.kind };
@@ -106,6 +209,23 @@ export async function configureCSharpEditingRuntimeProfile(services: IProfileCon
 export async function configureCSharpEditingProfile(services: IProfileConfigurationServices): Promise<ProfileConfigurationResult> {
 	if (!hasOneProfile(services)) {
 		return { kind: 'refused', reason: 'profile-mismatch' };
+	}
+
+	const pendingSettings: CSharpEditingSettingKey[] = [];
+	const configuredSettings: CSharpEditingSettingKey[] = [];
+	try {
+		for (const key of settingKeys()) {
+			if (await isSettingReady(services, key)) {
+				configuredSettings.push(key);
+			} else {
+				pendingSettings.push(key);
+			}
+		}
+	} catch {
+		return { kind: 'failed', reason: 'configuration-failed', rollback: 'not-needed' };
+	}
+	if (configuredSettings.length === 0) {
+		return { kind: 'pending', pendingSettings };
 	}
 
 	let stored: unknown;
@@ -121,16 +241,16 @@ export async function configureCSharpEditingProfile(services: IProfileConfigurat
 	const previousJournal = stored as ICSharpEditingConfigurationJournal | undefined;
 	const settings: ICSharpEditingConfigurationJournal['settings'] = { ...previousJournal?.settings };
 	try {
-		for (const key of settingKeys()) {
+		for (const key of configuredSettings) {
 			const current = await services.readUserProfileSetting(key);
 			if (!isProfileSettingSnapshot(current) || (current.present && typeof current.value !== typeof CSHARP_EDITING_PROFILE_SETTINGS[key])) {
 				return { kind: 'refused', reason: 'profile-setting-invalid' };
 			}
 			const previous = previousJournal?.settings[key];
-			if (previous && !isOwnedValue(current, previous.value)) {
+			if (previous && !isUnchangedOrOwnedValue(current, previous)) {
 				return { kind: 'refused', reason: 'profile-setting-changed' };
 			}
-			settings[key] = previous ?? { value: CSHARP_EDITING_PROFILE_SETTINGS[key], previous: current };
+			settings[key] = previous ? { ...previous, value: CSHARP_EDITING_PROFILE_SETTINGS[key] } : { value: CSHARP_EDITING_PROFILE_SETTINGS[key], previous: current };
 		}
 	} catch {
 		return { kind: 'failed', reason: 'configuration-failed', rollback: 'not-needed' };
@@ -142,14 +262,20 @@ export async function configureCSharpEditingProfile(services: IProfileConfigurat
 		return { kind: 'failed', reason: 'storage-failed', rollback: 'not-needed' };
 	}
 	try {
-		for (const key of settingKeys()) {
+		for (const key of configuredSettings) {
+			if (!await services.isConfigurationOwnerInstalled(configurationOwnerBySetting[key])) {
+				const rollback = await rollbackCSharpEditingProfileConfiguration(services);
+				return rollback.kind === 'complete'
+					? { kind: 'pending', pendingSettings: [...new Set([...pendingSettings, key])] }
+					: { kind: 'failed', reason: 'configuration-failed', rollback: rollback.kind };
+			}
 			await services.writeUserProfileSetting(key, { present: true, value: CSHARP_EDITING_PROFILE_SETTINGS[key] });
 		}
 	} catch {
 		const rollback = await rollbackCSharpEditingProfileConfiguration(services);
 		return { kind: 'failed', reason: 'configuration-failed', rollback: rollback.kind };
 	}
-	return { kind: 'ready' };
+	return pendingSettings.length ? { kind: 'pending', pendingSettings } : { kind: 'ready' };
 }
 
 /** Restores unchanged owned values and keeps unresolved entries in the profile journal for retry. */
@@ -209,16 +335,30 @@ function isOwnedValue(snapshot: IProfileSettingSnapshot, value: unknown): boolea
 	return snapshot.present && JSON.stringify(snapshot.value) === JSON.stringify(value);
 }
 
+function isUnchangedOrOwnedValue(snapshot: IProfileSettingSnapshot, entry: ICSharpEditingConfigurationJournalEntry): boolean {
+	if (isOwnedValue(snapshot, entry.value)) {
+		return true;
+	}
+	const previous = entry.previous;
+	return snapshot.present === previous.present
+		&& (!snapshot.present || (previous.present && JSON.stringify(snapshot.value) === JSON.stringify(previous.value)));
+}
+
+/** Schema readiness is preflighted before writes; commits only recheck ownership because revocation can unregister settings mid-batch. */
+async function isSettingReady(services: IProfileConfigurationServices, key: CSharpEditingProfileSettingKey): Promise<boolean> {
+	return await services.isConfigurationOwnerInstalled(configurationOwnerBySetting[key]) && await services.isUserProfileSettingRegistered(key);
+}
+
 function settingKeys(): CSharpEditingSettingKey[] {
-	return Object.keys(CSHARP_EDITING_PROFILE_SETTINGS) as CSharpEditingSettingKey[];
+	return Object.keys(CSHARP_EDITING_CONFIGURATION_DEFAULTS) as CSharpEditingSettingKey[];
 }
 
 function runtimeSettingKeys(): CSharpEditingRuntimeSettingKey[] {
-	return ['dotnet.server.path', 'dotnet.server.environmentVariables', 'dotnet.server.crashDumpPath', 'dotnetAcquisitionExtension.existingDotnetPath', 'dotnetAcquisitionExtension.allowInvalidPaths'];
+	return ['dotnetAcquisitionExtension.existingDotnetPath', 'dotnetAcquisitionExtension.allowInvalidPaths', 'dotnet.server.path', 'dotnet.server.environmentVariables', 'dotnet.server.crashDumpPath'];
 }
 
 function profileSettingKeys(): CSharpEditingProfileSettingKey[] {
-	return [...settingKeys(), ...runtimeSettingKeys()];
+	return [...Object.keys(CSHARP_EDITING_PROFILE_SETTINGS) as CSharpEditingSettingKey[], ...runtimeSettingKeys()];
 }
 
 function isValidRuntimeProfileValues(values: ICSharpEditingRuntimeProfileValues): boolean {

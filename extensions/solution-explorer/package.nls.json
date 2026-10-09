@@ -7,5 +7,7 @@
 	"command.refresh": "Refresh",
 	"command.open": "Open",
 	"command.openExternal": "Open External Reference",
-	"command.configureEditing": "Install or Configure C# Editing"
+	"command.configureEditing": "Install or Configure C# Editing",
+	"configuration.title": "C# Editing Safety",
+	"configuration.chat.disableAIFeatures": "Disable AI features contributed by compatible extensions."
 }

@@ -82,6 +82,10 @@ const unsafeEnvironmentVariables = new Set([
 	'MSBUILD_EXE_PATH', 'MSBuildExtensionsPath', 'MSBuildExtensionsPath32', 'MSBuildExtensionsPath64', 'MSBuildSDKsPath', 'MSBuildToolsPath', 'MSBuildToolsPath32',
 ].map(name => name.toLowerCase()));
 
+export function hasUnsafeCSharpEditingEnvironment(variableNames: readonly string[]): boolean {
+	return variableNames.some(name => unsafeEnvironmentVariables.has(name.toLowerCase()));
+}
+
 const expectedChildEnvironment = {
 	DOTNET_CLI_TELEMETRY_OPTOUT: '1',
 	DOTNET_NOLOGO: '1',
