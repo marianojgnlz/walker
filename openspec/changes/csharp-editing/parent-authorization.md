@@ -86,7 +86,20 @@ A6a (232) and A6b (214) accepted within cap. A7 measured 775 lines (375 over). D
 - **A7b — Contribution wiring + configure command + registration**: `browser/csharpEditing.contribution.ts` remaining wiring, early coordinator startup registration, `walker.csharp.configureEditing`, `workbench.common.main.ts` import, integration tests.
 Both rows `<!-- sdd-owner: implementation -->`, one forecast sentence noting the re-slice; each hard-capped ≤400 measured lines; honest per-unit stop if over.
 
-**Remediation ordered**: the canonical Electron runner exposed **3 failing tests in completed leaves** (2 in `profileConfiguration.test.ts` — invalid owned settings accepted/overwritten vs expected `profile-setting-invalid`, and runtime-profile `profile-mismatch`; 1 in main-thread admission tests). After A7a/A7b complete, a bounded remediation unit (mode: remediate, narrow surfaces limited to the failing modules and their production code) MUST make the canonical suites green or return evidence-backed incompatibility — completed-leaf contracts require green unit tests. The unrelated note about the read-only `git status --short` inspection run is accepted; correct the apply-progress wording as offered. (Remediation COMPLETED 2026-10-08: 2 product defects fixed in profileConfiguration.ts, 1 test expectation corrected; both canonical selectors green.)
+## Decision 18 (2026-10-08): verify round 1 FAIL → bounded remediation authorized
+
+Independent verify round 1 (report at HEAD de1b7d07c59) returned **fail**: 6/9 requirements, 22/25 scenarios; 416 focused tests passing; 3 CRITICAL findings + 2 blockers. Parent confirmed all three criticals by direct inspection:
+- **R1** (revocation gap): `csharpEditingSafetyConfigurationKeys` omits `dotnetAcquisitionExtension.allowInvalidPaths` + `sharedExistingDotnetPath` though admission validates both → post-admission changes bypass revocation.
+- **R2** (parser): implicit `.cs` inclusion processed after `Compile Remove` → excluded files reintroduced without a partial warning.
+- **R3** (missing test): `csharpEditing.contribution.test.ts` does not exist — the canonical selector pointed at a nonexistent file.
+- **R4** (truthful wording): install-failure text says "Open VSX rejected the C# package signature" but the durable observed error is "Signature verification was not executed".
+- **R5** (assertion quality): a mock test manually fabricates diagnostics/completion events — locate and fix within the csharpEditing/solution-explorer test trees.
+
+**Remediation authorization (mode: remediate, bounded)**: failed evidence revision = verify-report @ de1b7d07c59; narrowed surfaces = exactly `src/vs/workbench/api/browser/mainThreadExtensionService.ts` (R1), `extensions/solution-explorer/src/projectItems.ts` + `src/test/projectItems.test.ts` (R2), `src/vs/workbench/contrib/csharpEditing/test/browser/csharpEditing.contribution.test.ts` (R3, new), `src/vs/workbench/contrib/csharpEditing/browser/configureEditing.ts` + `test/browser/configureEditing.test.ts` (R4), the flagged mock test file once identified (R5), plus `apply-progress.md` (append-only remediation section). Each fix ≤400 lines, RED→GREEN where applicable, historical evidence preserved, then **fresh independent sdd-verify**.
+
+**Accounting reconciliation**: the accumulated E-phase fix surface (943+/88− across 8 csharpEditing files between commits 36c6538a530..de1b7d07c59) is ACCEPTED as multiple distinct probe-driven micro-fix units (staged-write race, dependency-permit ordering, mapping-write, configure sequencing — each RED→GREEN at the time). Recorded as accounting reconciliation; not a precedent for single-leaf sizes.
+
+**openspec CLI blocker resolved**: authorize a one-off cache-only `npx --yes openspec validate csharp-editing` (no repo dependency mutation) as the validation command; if network-unavailable, record the validation as environment-gated with structural validation delegated to the close gate's sync step.
 
 ## Decision 14 (2026-10-08): S2 checkbox corrected + S2 re-sliced into S2a/S2b
 

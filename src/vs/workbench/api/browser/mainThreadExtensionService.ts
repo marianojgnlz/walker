@@ -148,7 +148,8 @@ export function getCSharpEditingAdmissionCoordinator(extHostContext: IExtHostCon
 
 const csharpEditingSafetyConfigurationKeys = new Set([
 	'dotnet.server.useOmnisharp', 'dotnet.server.path', 'dotnet.server.environmentVariables', 'dotnet.server.crashDumpPath',
-	'dotnetAcquisitionExtension.existingDotnetPath', 'dotnetAcquisitionExtension.enableTelemetry',
+	'dotnetAcquisitionExtension.existingDotnetPath', 'dotnetAcquisitionExtension.allowInvalidPaths', 'dotnetAcquisitionExtension.sharedExistingDotnetPath',
+	'dotnetAcquisitionExtension.enableTelemetry',
 	'chat.disableAIFeatures', 'dotnet.projects.enableAutomaticRestore', 'dotnet.navigation.navigateToSourceLinkAndEmbeddedSources',
 ]);
 const csharpEditingConfigurationStops = new WeakMap<IExtensionService, WeakMap<object, Promise<void>>>();

@@ -25,6 +25,23 @@ suite('project file item projection', () => {
 		assert.deepStrictEqual(result.diagnostics.map(diagnostic => diagnostic.code).sort(), ['duplicate-project-file', 'missing-project-file']);
 	});
 
+	test('keeps SDK Compile Remove exclusions out of implicit items and diagnoses local matches', () => {
+		const metadata = parseProject('<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><Compile Remove="Excluded.cs" /></ItemGroup></Project>', '/workspace/app.csproj');
+		const result = projectProjectItems(metadata, {
+			projectDirectory: '/workspace', workspaceRoot: '/workspace', localFiles: ['/workspace/Excluded.cs', '/workspace/Included.cs'],
+		});
+
+		assert.deepStrictEqual({
+			files: result.files.map(file => [file.label, file.implicit]),
+			partial: result.partial,
+			diagnostics: result.diagnostics.map(diagnostic => diagnostic.code),
+		}, {
+			files: [['Included.cs', true]],
+			partial: true,
+			diagnostics: ['compile-remove-excluded-local-file'],
+		});
+	});
+
 	test('respects disabled and conditional SDK implicit-item controls without evaluating them', () => {
 		const disabled = parseProject('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><EnableDefaultItems>false</EnableDefaultItems></PropertyGroup><ItemGroup><Compile Include="Explicit.cs" /></ItemGroup></Project>', '/workspace/app.csproj');
 		const options = { projectDirectory: '/workspace', workspaceRoot: '/workspace', localFiles: ['/workspace/Explicit.cs', '/workspace/Implicit.cs', '/workspace/bin/Excluded.cs', '/workspace/obj/Excluded.cs', '/workspace/.git/Excluded.cs'] };

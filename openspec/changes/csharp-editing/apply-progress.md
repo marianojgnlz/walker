@@ -210,3 +210,72 @@ At the end of L2, E1, E2 and E3 were the only unchecked implementation-owned tas
 - Procedure B completed after tests ended: no dev-build Walker main/child or Walker window remained; the exact scratch proxy launcher, proxy and 50 `socat` bridges were verified by full command line and sent `SIGTERM`; final inventory found no scratch-owned Python/socat helpers, no listener on harness ports and no named harness network namespace. Scratch logs/profiles were retained; no temp-root deletion occurred. Details are in `evidence/e3-regression.md`.
 - Review focus: independently inspect the canonical import failures versus the direct/in-memory fallback, retain only the demonstrated preservation claims, and have the parent account the historical E1 fix surface before delivery. Next recommended phase after this completed apply slice: `sdd-verify`.
 
+## Bounded remediation — Decision 18 (R1–R5)
+
+- Structured status consumed: active change `csharp-editing`; `artifactStore=openspec`; prior `applyState=all_done`; remediation explicitly authorized by parent Decision 18 against failed evidence `verify-report.md` at `de1b7d07c59`; assigned units R1–R5, stop after R5; strict TDD false, RED→GREEN used for R1/R2; 400-line budget per fix, no size exception. The parent-resolved delivery path remains `feature-branch-chain`. Action context was bounded to the exact launch surfaces plus the parent-approved R4 addition `src/vs/workbench/contrib/csharpEditing/browser/csharpEditing.contribution.ts`; no warnings or workspace-root conflicts were observed.
+- `tasks.md` was read before and after remediation: all 36 implementation rows remain `[x]`. No task checkbox was edited. The historical verify report was not edited; this section is appended to the cumulative record.
+- Per-fix accounting below includes the affected source/test lines and allocated remediation-progress lines. It is based on the scoped authored edits, not Git metadata (Git operations were prohibited); each fix remains comfortably below the 400-line hard cap.
+
+### R1 — Revoke admission when either runtime-mapping safety key changes
+
+- Added `dotnetAcquisitionExtension.allowInvalidPaths` and `dotnetAcquisitionExtension.sharedExistingDotnetPath` to `csharpEditingSafetyConfigurationKeys` in `src/vs/workbench/api/browser/mainThreadExtensionService.ts`.
+- Extended `src/vs/workbench/api/test/browser/mainThreadExtensionServiceAdmission.test.ts` to admit a client, change each key in turn, and assert generation revocation occurs before host-stop handling, unsafe forwarding is withheld, and the host-stop/notice path is reached.
+- RED: after a fresh pre-fix compile, the focused selector exited 1 with **9 passing / 1 failing**. The new assertion observed forwarding without a stop, generation 0 and `blocked=false` for `allowInvalidPaths`.
+- GREEN: after the source change and final compile, the focused selector exited 0 with **10 passing**; both keys now exercise revocation.
+- Review accounting: **54 lines** (source/test edit accounting plus this fix's allocated progress lines; below 400).
+
+### R2 — Apply Compile Remove to SDK implicit items and report local exclusions
+
+- Updated `extensions/solution-explorer/src/projectItems.ts` to collect paths matched by explicit `Compile Remove` declarations before implicit expansion, omit those paths from SDK implicit Compile items, and emit `compile-remove-excluded-local-file` with a partial result when the excluded path exists in bounded local files.
+- Added the requested SDK fixture to `extensions/solution-explorer/src/test/projectItems.test.ts`: `<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><Compile Remove="Excluded.cs" /></ItemGroup></Project>` with `Excluded.cs` present locally; the assertion also confirms an unrelated local source stays implicitly included.
+- RED: `mise exec node@24.18.0 -- npm test --prefix extensions/solution-explorer` exited 1 with **61 passing / 1 failing**. The fixture reproduced the defect: `Excluded.cs` appeared as an implicit item, with no partial diagnostic.
+- GREEN: the same focused package suite exited 0 with **62 passing**; the excluded file is absent and the partial diagnostic is present.
+- Review accounting: **75 lines** including allocated progress; below 400.
+
+### R3 — Add and load the contribution integration suite
+
+- Created `src/vs/workbench/contrib/csharpEditing/test/browser/csharpEditing.contribution.test.ts`. It loads the contribution module, verifies both the public configure command and internal admission command are registered, verifies the contribution is registered in the startup phase, instantiates it with focused service stubs, and checks the status-item content/command/placement and disposal.
+- The exact canonical selector `VSCODE_SKIP_PRELAUNCH=1 mise exec node@24.18.0 -- ./scripts/test.sh --run src/vs/workbench/contrib/csharpEditing/test/browser/csharpEditing.contribution.test.ts` loaded the new suite and exited 0 with **3 passing** (including the R4 message assertion). This is a canonical-selector pass, not a source-only or fallback claim.
+- Review accounting: **106 lines** allocated to R3's new contribution wiring/status coverage and progress; below 400.
+
+### R4 — Use the durable signature-verification wording
+
+- With the parent's explicit added-path authorization, updated `src/vs/workbench/contrib/csharpEditing/browser/csharpEditing.contribution.ts` to say “Signature verification was not executed for the C# package” rather than claiming Open VSX rejected its signature. The existing security setting remains unchanged and the notice still explains the explicit profile-level workaround and that no language session was admitted.
+- The R4 test in the new contribution suite drives the registered configure command with an injected durable signature-verification failure, then asserts the user-facing notification contains the observed wording and does not contain the rejected-signature claim. The canonical contribution selector passed as recorded under R3.
+- Review accounting: **63 lines** including message/test and allocated progress; below 400.
+
+### R5 — Remove fabricated diagnostics/completion assertions
+
+- Located the flagged test at `src/vs/workbench/api/test/common/extHostExtensionServiceAdmission.test.ts` (the verify-report finding; the csharpEditing and Solution Explorer test-tree search itself found no other fabricated language-client event sequence).
+- Removed the synthetic `diagnostics` and `completion` event pushes and their assertions. The test now asserts only the exercised pathways: admission invokes the module loader once, the Bridge guard rejects the exact component request, no underlying connection occurs, and a denial log is emitted. The test name no longer claims language-feature behavior.
+- This test selector was not rerun: it is not among the parent-authorized verification commands and the failed round already records its canonical dynamic-import harness limitation. The final compile typechecked the edited source/test; no runtime pass is claimed for this suite.
+- Review accounting: **57 lines** including the test-only replacement and allocated progress; below 400.
+
+### Remediation verification ledger
+
+All commands ran from `/home/marialez/Work/walker` unless noted. The early main-thread selector run before a fresh compile is retained as a stale-output observation, not counted as RED or GREEN.
+
+| Exact command | Observed result |
+| --- | --- |
+| `VSCODE_SKIP_PRELAUNCH=1 mise exec node@24.18.0 -- ./scripts/test.sh --run src/vs/workbench/api/test/browser/mainThreadExtensionServiceAdmission.test.ts` (before fresh compile) | Exit 0, **10 passing**, but emitted output still contained the old test name; new source assertion was not loaded. Excluded from RED/GREEN evidence. |
+| `mise exec node@24.18.0 -- npm run compile` (pre-fix RED compile) | Exit 0; compiled source and test output with zero errors. |
+| `VSCODE_SKIP_PRELAUNCH=1 mise exec node@24.18.0 -- ./scripts/test.sh --run src/vs/workbench/api/test/browser/mainThreadExtensionServiceAdmission.test.ts` (fresh RED) | Exit 1; **9 passing / 1 failing** on R1 as detailed above. |
+| `mise exec node@24.18.0 -- npm test --prefix extensions/solution-explorer` (R2 RED) | Exit 1; **61 passing / 1 failing** on the SDK Remove fixture as detailed above. |
+| `mise exec node@24.18.0 -- npm run typecheck-client` (first run) | Exit 2 on the new contribution test's then-unused `WorkbenchContributionsRegistry` import and missing `IWorkbenchContributionsRegistry` type name. Both test-code issues were corrected; no production behavior failure was reported by this run. |
+| `mise exec node@24.18.0 -- npm run compile` (post-fix full compile) | Exit 0; core and extension compilation completed with zero TypeScript errors. |
+| `VSCODE_SKIP_PRELAUNCH=1 mise exec node@24.18.0 -- ./scripts/test.sh --run src/vs/workbench/contrib/csharpEditing/test/browser/csharpEditing.contribution.test.ts` | Exit 0; **3 passing**, canonical selector loaded. |
+| `VSCODE_SKIP_PRELAUNCH=1 mise exec node@24.18.0 -- ./scripts/test.sh --run src/vs/workbench/contrib/csharpEditing/test/browser/profileConfiguration.test.ts` | Exit 0; **16 passing**. |
+| `VSCODE_SKIP_PRELAUNCH=1 mise exec node@24.18.0 -- ./scripts/test.sh --run src/vs/workbench/contrib/csharpEditing/test/browser/configureEditing.test.ts` | Exit 0; **9 passing**. |
+| `VSCODE_SKIP_PRELAUNCH=1 mise exec node@24.18.0 -- ./scripts/test.sh --run src/vs/workbench/api/test/browser/mainThreadExtensionServiceAdmission.test.ts` (post-fix GREEN) | Exit 0; **10 passing**. |
+| `mise exec node@24.18.0 -- npm test --prefix extensions/solution-explorer` (post-fix GREEN) | Exit 0; **62 passing**. |
+| `mise exec node@24.18.0 -- npm run typecheck-client` (parent-approved post-fix rerun) | Exit 0; TypeScript no-emit client check passed. |
+| `npx --yes openspec validate csharp-editing` | Exit 1: `npm error could not determine executable to run`. Parent accepted this as **environment-unavailable** under Decision 18; structural validation remains assigned to the close gate's sync step. No alternate CLI, package install or repository dependency mutation was attempted. |
+
+### Scope, remaining risks, and verifier focus
+
+- Files changed: `src/vs/workbench/api/browser/mainThreadExtensionService.ts`; `src/vs/workbench/api/test/browser/mainThreadExtensionServiceAdmission.test.ts`; `extensions/solution-explorer/src/projectItems.ts`; `extensions/solution-explorer/src/test/projectItems.test.ts`; new `src/vs/workbench/contrib/csharpEditing/test/browser/csharpEditing.contribution.test.ts`; parent-approved R4 wording in `src/vs/workbench/contrib/csharpEditing/browser/csharpEditing.contribution.ts`; R5 test-only correction in `src/vs/workbench/api/test/common/extHostExtensionServiceAdmission.test.ts`; and this append-only progress file.
+- No design change or broader implementation was introduced. No checkbox or historical verify artifact was touched. Assigned scope stops after R5; all existing task rows remain checked, so this remediation does not reopen general implementation.
+- Environment-gated: OpenSpec executable validation could not run. Also, R5's ext-host selector was not rerun by this authorization; its canonical dynamic-import limitation remains as documented in the failed report. Do not infer a new ext-host runtime pass from compilation.
+- Review focus for fresh independent verification: both newly guarded configuration keys and stop-before-forward ordering; SDK implicit `Compile Remove` exclusion and its partial diagnostic; contribution command/status/startup registration through the canonical selector; exact truthful signature wording; and the revised R5 test's narrower claims.
+- Next recommended phase: `sdd-verify` for a fresh independent verdict.
+

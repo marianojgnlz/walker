@@ -118,6 +118,7 @@ export function projectProjectItems(project: IProjectMetadata, options: IProject
 
 	const diagnostics: IGraphDiagnostic[] = [...project.diagnostics];
 	const files = new Map<string, IMutableProjectFile>();
+	const removedCompilePaths = new Set<string>();
 	let partial = project.partial;
 	let diagnosticIndex = 0;
 	let globChecks = 0;
@@ -227,6 +228,23 @@ export function projectProjectItems(project: IProjectMetadata, options: IProject
 		if (!excludePatterns) { continue; }
 
 		if (declaration.operation === 'remove') {
+			if (itemType === 'compile') {
+				for (const candidate of availableFiles.values()) {
+					if (!isWithin(projectDirectory, candidate)) { continue; }
+					const relative = relativePath(projectDirectory, candidate);
+					for (const pattern of patterns) {
+						if (!withinBudget(declaration.provenance)) { break; }
+						if (pattern.regex.test(relative)) {
+							if (!removedCompilePaths.has(candidate)) {
+								removedCompilePaths.add(candidate);
+								report('compile-remove-excluded-local-file', `Local file '${relative}' matches an explicit Compile Remove declaration.`, declaration.provenance);
+							}
+							break;
+						}
+					}
+					if (globLimitReached) { break; }
+				}
+			}
 			for (const pattern of patterns) {
 				if (globLimitReached) { break; }
 				const matcher = compileGlob(pattern.value)!;
@@ -286,7 +304,7 @@ export function projectProjectItems(project: IProjectMetadata, options: IProject
 		} else {
 			for (const candidate of availableFiles.values()) {
 				if (!isWithin(projectDirectory, candidate) || path.extname(candidate).toLowerCase() !== '.cs') { continue; }
-				if (isExcludedPath(relativePath(workspaceRoot, candidate))) { continue; }
+				if (isExcludedPath(relativePath(workspaceRoot, candidate)) || removedCompilePaths.has(candidate)) { continue; }
 				addFile(candidate, 'Compile', relativePath(projectDirectory, candidate), false, false, true);
 			}
 		}

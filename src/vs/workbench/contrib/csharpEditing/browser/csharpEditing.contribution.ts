@@ -506,7 +506,7 @@ function showAcquisitionFailure(
 ): void {
 	const { command, host, notifications } = repairServices;
 	const message = reason === 'signature-verification'
-		? localize('csharpEditing.install.signatureFailure', "Open VSX rejected the C# package signature. Walker left extensions.verifySignature unchanged; review the explicit profile-level workaround and its security trade-off before deciding whether to proceed. Runtime telemetry configuration remains pending, and no C# language session was admitted.")
+		? localize('csharpEditing.install.signatureFailure', "Signature verification was not executed for the C# package. Walker left extensions.verifySignature unchanged; review the explicit profile-level workaround and its security trade-off before deciding whether to proceed. Runtime telemetry configuration remains pending, and no C# language session was admitted.")
 		: reason === 'offline'
 			? localize('csharpEditing.install.offlineFailure', "The Open VSX gallery could not be reached. C# Editing was not installed; retry when the gallery is available.")
 			: reason === 'access-denied'
